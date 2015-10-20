@@ -1,0 +1,65 @@
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script>
+// using jQuery deals with CSRF token
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie != '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+};
+var csrftoken = getCookie('csrftoken');
+
+function csrfSafeMethod(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+};
+
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+</script>
+
+//ajax look for getting pics
+<script>
+	//call get_pic when window loads
+	window.onload=function loop_get_pics(){
+		get_pic();
+	}
+
+	//generate html for pic, increments pic_number by 1
+	function place_pic_in_window(var pic_number){
+		//yet to be implemented
+		pic_number++;
+	}
+	//get pic forever every 3 seconds
+	function get_pic(){
+		var pic_number = 1;
+
+		windows.setInterval(
+			function(){
+				$.post("{%url 'uploader'%}",{"pk":pic_number},place_pic_in_window())			
+			}
+		,3000);
+
+	}
+
+
+</script>
+<head>
+	<title>IMAGE VIEWER</title>
+
+</head>
