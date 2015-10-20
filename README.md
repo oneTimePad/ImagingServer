@@ -10,6 +10,7 @@ Current Assignments:
 		Postgresql/Django storing images
 		Javascript Ajax with JSON sending images via BASE64 encoding
 		Django accepting Base64 encoded images
+		UNIT TESTING IN DJANGO
 	Flex due data Friday 30th
 		highly suggested(stupid me not commented): view my simple twitter app code
 		
