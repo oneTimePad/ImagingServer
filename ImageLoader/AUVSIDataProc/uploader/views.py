@@ -12,11 +12,18 @@ class Upload(View):
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
 		#get request
-		request = request.POST
+		req_post = request.POST
 		#get data
-		text = request['text']
+
+
+		
+		text = request.POST['text']
+
+		print(request.FILES)
+		pic = request.FILES['image']
+		
 		#create picture
-		Picture.objects.create(picture=text)
+		Picture.objects.create(picture=text,photo=pic)
 		#return success
 		return HttpResponse("success")	
 
