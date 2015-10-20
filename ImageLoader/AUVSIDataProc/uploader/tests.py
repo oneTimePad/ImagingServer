@@ -8,6 +8,10 @@ from django.test.client import RequestFactory, Client
 import json as simplejson
 from .views import *
 
+IMAGE_PATH = '/home/lie/Desktop/'
+IMAGE_FOLDER = 'picss/'
+IMAGE_NAME = 'capt0001.jpg'
+STORAGE='PHOTOS/'
 
 #Acts as a client posting
 class ClientRequest(unittest.TestCase):
@@ -17,28 +21,20 @@ class ClientRequest(unittest.TestCase):
 		self.client = Client()
 
 	
-	def test_post(self):
-
-		image = open('/home/lie/Desktop/picss/capt0001.jpg')
-		
-		#create http request object
-		data = {'text':'hello','image':image}
-		
-		response =self.client.post('/upload',data)
-		
-		#test response
-		self.assertEqual(response.content,"success")
 	def test_get(self):
 
-		image = open('/home/lie/Desktop/picss/capt0001.jpg')
+
+		image = open(IMAGE_PATH+IMAGE_FOLDER+IMAGE_NAME)
 		
 		#create http request object
 		data = {'text':'hello','image':image}
 		
 		response =self.client.post('/upload',data)
+
+		self.assertEqual(response.content,"success")
 
 		
 		response = self.client.post('/viewpic',{'pk':1,},HTTP_X_REQUESTED_WITH='XMLHttpRequest')
 
 		#test response
-		self.assertEqual(response.content,simplejson.dumps({'picture':'hello',}))
+		self.assertEqual(response.content,simplejson.dumps({'picture':IMAGE_PATH+STORAGE+IMAGE_NAME}))

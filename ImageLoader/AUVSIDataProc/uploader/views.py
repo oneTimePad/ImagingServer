@@ -16,14 +16,14 @@ class Upload(View):
 		#get data
 
 
-		
+		#get image text
 		text = request.POST['text']
 
-		print(request.FILES)
+		#get actual image
 		pic = request.FILES['image']
 		
 		#create picture
-		Picture.objects.create(picture=text,photo=pic)
+		Picture.objects.create(text=text,photo=pic)
 		#return success
 		return HttpResponse("success")	
 
@@ -31,23 +31,29 @@ class ViewPictures(View):
 
 	def post(self,request):
 		
+		#look for ajax request
 		if request.is_ajax():
 			
 			req_post = request.POST
 					
+			#the pk of the picture the client is looking for
 			num_pic = req_post["pk"]
 
 			
 
-			
+			#get the picture from SQL
 			picture = Picture.objects.get(pk=num_pic)
 
+			#get the local path of the pic
+			path = picture.photo.file
 
-			response_data = simplejson.dumps({'picture':picture.picture})
+			#Serialize pathname
+			response_data = simplejson.dumps({'picture':str(path)})
 
-
+			#response with path name JSON
 			return HttpResponse(response_data,content_type="application/json")
 		else:
+			#else forbidden request
 			return HttpResponseForbidden()
 
 
