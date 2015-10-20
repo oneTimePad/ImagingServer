@@ -31,3 +31,5 @@ Fetching pics with AJAX:
 http://stackoverflow.com/questions/5835126/javascript-infinite-loop
 
 
+File Uploads:
+https://docs.djangoproject.com/en/1.8/topics/http/file-uploads/
