@@ -9,6 +9,12 @@ Work and Documentation(Algorithms):
 		where this was found: http://stackoverflow.com/questions/7497138/serializing-an-imagefield-in-django
 		getting image location:http://stackoverflow.com/questions/15764587/django-get-imagefield-url-in-view
 
+	-Ajax picture retreval: update pic num upon success and call fct again
+
+Ajax pic retreval:
+http://stackoverflow.com/questions/18882841/ajax-success-wont-run-function
+
+
 UnitTesting:
 https://docs.djangoproject.com/en/1.8/topics/testing/tools/#django.test.Client.post
 UnitTesting-testing ajax requests:
