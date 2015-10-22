@@ -8,6 +8,10 @@ from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.list import MultipleObjectMixin, MultipleObjectTemplateResponseMixin
 
 from .models import *
+#import pdb; pdb.set_trace()
+
+
+prev_pic = 0
 
 class Upload(View):
 
@@ -31,8 +35,9 @@ class Upload(View):
 
 class ViewPictures(View):
 
-	def post(self,request):
-		
+	def post(self,request,func=None):
+		print("hello")
+	
 		#look for ajax request
 		if request.is_ajax():
 			
@@ -40,26 +45,31 @@ class ViewPictures(View):
 					
 			#the pk of the picture the client is looking for
 			num_pic = req_post["pk"]
+			
 
 			
+
 			#get the picture from SQL
 			try:
 				
 				picture = Picture.objects.get(pk=num_pic)
 
+
 			except Picture.DoesNotExist:
-				data = simplejson.dumps({'picture':"none"})
-				print(data)
+				data = simplejson.dumps({'picture':0})
+				
 				return HttpResponse(data,content_type="application/json")
 
 
 			#get the local path of the pic
+			print(picture.photo.file)
 			path = picture.photo.file
-
+			print(path)
 			#Serialize pathname
 			response_data = simplejson.dumps({'picture':str(path)})
 
 			#response with path name JSON
+			print(response_data)
 			return HttpResponse(response_data,content_type="application/json")
 		else:
 			#else forbidden request

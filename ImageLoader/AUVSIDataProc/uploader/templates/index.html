@@ -47,9 +47,9 @@ function get_pic(pic_num){
         success: function(response){
             
             //if pic not none
-            if(response.picture!="none"){
-                alert("wow");
-                $("#image_show").prepend('<img id="image" src'+response.picture+'" />');
+            if(response.picture!=0){
+                var image = '<img id="image" src='+response.picture+ ' height="42" width="42" />'; 
+                $(".image_show").prepend(image);
                 pic_num++;
             }
             get_pic(pic_num);
@@ -64,11 +64,11 @@ function get_pic(pic_num){
 
 
 };
-$(document).ready(get_pic(0));
+$(document).ready(get_pic(14));
 </script>
 <head>
 	<title>IMAGE VIEWER</title>
-    <div id ="image_show">
+    <div class ="image_show">
     </div>
 
 </head>

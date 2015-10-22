@@ -3,7 +3,7 @@ from django.db import models
 from django.core.files.storage import FileSystemStorage
 # Create your models here.
 
-STORAGE = '/home/lie/Desktop/PHOTOS'
+STORAGE = '/var/www/html/PHOTOS'
 
 #uses django storage, change path to fit yours
 fs = FileSystemStorage(location=STORAGE)
