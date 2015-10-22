@@ -35,31 +35,40 @@ $.ajaxSetup({
 
 //ajax look for getting pics
 <script>
-	//call get_pic when window loads
-	window.onload=function loop_get_pics(){
-		get_pic();
-	}
 
-	//generate html for pic, increments pic_number by 1
-	function place_pic_in_window(var pic_number){
-		//yet to be implemented
-		pic_number++;
-	}
-	//get pic forever every 3 seconds
-	function get_pic(){
-		var pic_number = 1;
+function get_pic(pic_num){
 
-		windows.setInterval(
-			function(){
-				$.post("{%url 'uploader'%}",{"pk":pic_number},place_pic_in_window())			
-			}
-		,3000);
+    //ajax request for pic   
+    $.ajax({
+        url:'{% url "viewpics"%}',
+        method: 'POST',
+        async: true,
+        data: {'pk':pic_num},   
+        success: function(response){
+            
+            //if pic not none
+            if(response.picture!="none"){
+                alert("wow");
+                $("#image_show").prepend('<img id="image" src'+response.picture+'" />');
+                pic_num++;
+            }
+            get_pic(pic_num);
+            
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert(errorThrown);
+        }
 
-	}
+
+    });
 
 
+};
+$(document).ready(get_pic(0));
 </script>
 <head>
 	<title>IMAGE VIEWER</title>
+    <div id ="image_show">
+    </div>
 
 </head>

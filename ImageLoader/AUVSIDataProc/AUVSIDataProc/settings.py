@@ -56,7 +56,7 @@ ROOT_URLCONF = 'AUVSIDataProc.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['/home/lie/Desktop/AUVSI/DataProc/ImageLoader/AUVSIDataProc/uploader/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

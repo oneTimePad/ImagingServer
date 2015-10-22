@@ -4,7 +4,7 @@ from django.http import HttpResponse,HttpResponseRedirect,HttpResponseForbidden
 import json as simplejson
 # Create your views here.
 
-from django.views.generic.base import View
+from django.views.generic.base import View, TemplateResponseMixin
 from django.views.generic.list import MultipleObjectMixin, MultipleObjectTemplateResponseMixin
 
 from .models import *
@@ -42,9 +42,16 @@ class ViewPictures(View):
 			num_pic = req_post["pk"]
 
 			
-
 			#get the picture from SQL
-			picture = Picture.objects.get(pk=num_pic)
+			try:
+				
+				picture = Picture.objects.get(pk=num_pic)
+
+			except Picture.DoesNotExist:
+				data = simplejson.dumps({'picture':"none"})
+				print(data)
+				return HttpResponse(data,content_type="application/json")
+
 
 			#get the local path of the pic
 			path = picture.photo.file
@@ -59,9 +66,17 @@ class ViewPictures(View):
 			return HttpResponseForbidden()
 
 
-			
-		
+class Index(View,TemplateResponseMixin):
+	template_name = 'index.html'
+
+	content_type='text/html'
 
 
+	def get_context(self):
+		#nothing to do for now
+		pass
 
+
+	def get(self,request):
+		return self.render_to_response(self.get_context())
 
