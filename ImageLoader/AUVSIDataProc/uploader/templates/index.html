@@ -1,74 +1,38 @@
-
+<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
 <script>
-// using jQuery deals with CSRF token
-function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie != '') {
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var cookie = jQuery.trim(cookies[i]);
-            // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-};
-var csrftoken = getCookie('csrftoken');
 
-function csrfSafeMethod(method) {
-    // these HTTP methods do not require CSRF protection
-    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-};
 
-$.ajaxSetup({
-    beforeSend: function(xhr, settings) {
-        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-        }
-    }
+
+
+$(document).ready(function(){
+    //create websocket
+    var web_socket = WS4Redis({
+        uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
+        //triggered when msg from server is sent
+        receive_message: getPic,
+        heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+    
+     });
+    function getPic(msg){
+        //add picture
+       var pic = "<img src= "+msg+" />"
+        $(".images").prepend(pic);
+
+        
+    };
+
+
+   
+
+
 });
+
+
 </script>
 
-//ajax look for getting pics
-<script>
 
-function get_pic(pic_num){
-
-    //ajax request for pic   
-    $.ajax({
-        url:'{% url "viewpics"%}',
-        method: 'POST',
-        async: true,
-        data: {'pk':pic_num},   
-        success: function(response){
-            
-            //if pic not none
-            if(response.picture!=0){
-                var image = '<img id="image" src='+response.picture+ ' height="42" width="42" />'; 
-                $(".image_show").prepend(image);
-                pic_num++;
-            }
-            get_pic(pic_num);
-            
-        },
-        error: function(jqXHR, textStatus, errorThrown){
-            alert(errorThrown);
-        }
-
-
-    });
-
-
-};
-$(document).ready(get_pic(14));
-</script>
-<head>
-	<title>IMAGE VIEWER</title>
-    <div class ="image_show">
-    </div>
-
-</head>
+<title>Picture Viewer</title>
+<div class = "images">
+</div>

@@ -10,8 +10,35 @@ from django.views.generic.list import MultipleObjectMixin, MultipleObjectTemplat
 from .models import *
 #import pdb; pdb.set_trace()
 
+from django.db.models.signals import *
+from django.dispatch import *
 
-prev_pic = 0
+from ws4redis.publisher import RedisPublisher
+from ws4redis.redis_store import RedisMessage
+
+
+
+
+#prev_pic = 0
+
+
+image_done = Signal(providing_args=["num_pic"])
+
+#make so that RedisPublish doesn't get initilized
+def initialize(func):
+	
+	def wrapper(*args,**kwargs):
+		#used for broadcast msg to websocket
+		audience = {'broadcast': True}
+		redis_publisher = RedisPublisher(facility='viewer',**audience)
+		print(args)
+		return func(redis_publisher,*args,**kwargs)
+
+	return wrapper
+
+
+
+
 
 class Upload(View):
 
@@ -29,12 +56,54 @@ class Upload(View):
 		pic = request.FILES['image']
 		
 		#create picture
-		Picture.objects.create(text=text,photo=pic)
+		picture = Picture.objects.create(text=text,photo=pic)
+		
+		#trigger signal
+		image_done.send(sender=self.__class__,num_pic=picture.pk)
 		#return success
-		return HttpResponse("success")	
+		return HttpResponse("success")
 
+
+#triggered when image object created
+@initialize
+def send_pic(pub,num_pic,**kwargs):
+	#create pic
+	picture = Picture.objects.get(pk=num_pic)
+
+
+	#get the local path of the pic
+	
+	path = picture.photo
+
+	#Serialize pathname
+	response_data = simplejson.dumps("http://localhost/PHOTOS"+str(path)[1:])
+	
+	#send to url to websocket
+	pub.publish_message(RedisMessage(response_data))
+	
+
+image_done.connect(send_pic)
+
+#server webpage
+class Index(View,TemplateResponseMixin):
+	template_name = 'index.html'
+
+	content_type='text/html'
+
+
+	def get_context(self):
+		#nothing to do for now
+		pass
+
+
+	def get(self,request):
+		return self.render_to_response(self.get_context())
+
+
+
+'''
 class ViewPictures(View):
-
+	
 	def post(self,request,func=None):
 		print("hello")
 	
@@ -62,9 +131,9 @@ class ViewPictures(View):
 
 
 			#get the local path of the pic
-			print(picture.photo.file)
+			
 			path = picture.photo.file
-			print(path)
+		
 			#Serialize pathname
 			response_data = simplejson.dumps({'picture':str(path)})
 
@@ -75,18 +144,6 @@ class ViewPictures(View):
 			#else forbidden request
 			return HttpResponseForbidden()
 
+'''
 
-class Index(View,TemplateResponseMixin):
-	template_name = 'index.html'
-
-	content_type='text/html'
-
-
-	def get_context(self):
-		#nothing to do for now
-		pass
-
-
-	def get(self,request):
-		return self.render_to_response(self.get_context())
 
