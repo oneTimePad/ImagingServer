@@ -14,22 +14,20 @@ td,
 th {
   padding: 5px;
 }
-
-.left-panel
+#left-panel
 {        
     background-color:transparent;
-    width:40%;
-    height:500px;
-    float:left;            
-}
-.right-panel
-{        
-    background-color:transparent;
-    width:60%;
-    height:500px;
+    width:50%;
     float:left;
+    overflow-y: scroll;
 }
-
+#right-panel
+{        
+    background-color:transparent;
+    width:50%;
+    float:left;
+    overflow-y: scroll;
+}
 img {
   vertical-align: middle;
 }
