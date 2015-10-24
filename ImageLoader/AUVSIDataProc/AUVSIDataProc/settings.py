@@ -15,7 +15,7 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
+WS4REDIS_HEARTBEAT = '--heartbeat--'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
 
@@ -28,6 +28,14 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+WEBSOCKET_URL = '/ws/'
+WS4REDIS_EXPIRE = 7200
+WS4REDIS_PREFIX = 'ws'
+
+
+SESSION_ENGINE = 'redis_sessions.session'
+SESSION_REDIS_PREFIX = 'session'
+
 # Application definition
 
 INSTALLED_APPS = (
@@ -38,6 +46,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'uploader',
+    'ws4redis',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -64,12 +73,15 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.core.context_processors.static',
+                'ws4redis.context_processors.default',
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'AUVSIDataProc.wsgi.application'
+WSGI_APPLICATION = 'ws4redis.django_runserver.application'
+#WSGI_APPLICATION = 'AUVSIDataProc.wsgi.application'
 
 
 # Database
