@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Viewer</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script>
+        //imgs is the array of images, which would be filled in websocket methods
+        //we should be storing the target data separately, since an image can have multiple targets
+        var imgs = new Array();
+        imgs[0]=new Image();
+        imgs[0].src="./images/img1.png";
+        imgs[1]=new Image();
+        imgs[1].src="./images/img2.png";
+        imgs[2]=new Image();
+        imgs[2].src="./images/img3.png";
+        imgs[3]=new Image();
+        imgs[3].src="./images/img4.png";
+        imgs[4]=new Image();
+        imgs[4].src="./images/img5.png";
+        //when a new image is sent, add it to the array and have the following code to append it to the grid
+        //current grid assumes that all images are the same size, which won't be the case if we crop them before sending them
+        //if the images are different sizes, the grid would stay aligned but have lots of white space
+        window.onload = function displaying(){
+            var numcols=3;
+            for(c=0; c<imgs.length; c++) {
+                var grid = document.getElementById('imagegrid');
+                if (c%numcols==0) {
+                    grid.appendChild(document.createElement("tr"));
+                }
+                var rows = document.getElementsByTagName("tr");
+                var row = rows[rows.length-1];
+                var col = document.createElement("td");
+                var img = document.createElement("img");
+                img.src=imgs[c].src;
+                img.height=100;//scale the images so that they all have the same height
+                img.addEventListener("click", function() {
+                    document.focusedImage.src=this.src;
+                    return false;
+                });
+                col.appendChild(img);
+                row.appendChild(col);
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div class="left-panel">
+        <table id="imagegrid">
+        </table>
+    </div>
+    <div class="right-panel">
+        <img src="./images/img1.png" name="focusedImage" alt="">
+        <p>This is where target data could be displayed</p>
+    </div>
+
+</body>
+</html>
