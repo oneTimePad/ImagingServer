@@ -21,6 +21,8 @@ from ws4redis.redis_store import RedisMessage
 
 #prev_pic = 0
 
+IMAGE_STORAGE = "http://localhost/PHOTOS"
+
 
 image_done = Signal(providing_args=["num_pic"])
 
@@ -76,7 +78,7 @@ def send_pic(pub,num_pic,**kwargs):
 	path = picture.photo
 
 	#Serialize pathname
-	response_data = simplejson.dumps("http://localhost/PHOTOS"+str(path)[1:])
+	response_data = simplejson.dumps(IMAGE_STORAGE+str(path)[1:])
 
 	#send to url to websocket
 	pub.publish_message(RedisMessage(response_data))
