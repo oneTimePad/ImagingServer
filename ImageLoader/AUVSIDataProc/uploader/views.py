@@ -26,7 +26,7 @@ image_done = Signal(providing_args=["num_pic"])
 
 #make so that RedisPublish doesn't get initilized
 def initialize(func):
-	
+
 	def wrapper(*args,**kwargs):
 		#used for broadcast msg to websocket
 		audience = {'broadcast': True}
@@ -54,10 +54,10 @@ class Upload(View):
 
 		#get actual image
 		pic = request.FILES['image']
-		
+
 		#create picture
 		picture = Picture.objects.create(text=text,photo=pic)
-		
+
 		#trigger signal
 		image_done.send(sender=self.__class__,num_pic=picture.pk)
 		#return success
@@ -72,21 +72,21 @@ def send_pic(pub,num_pic,**kwargs):
 
 
 	#get the local path of the pic
-	
+
 	path = picture.photo
 
 	#Serialize pathname
 	response_data = simplejson.dumps("http://localhost/PHOTOS"+str(path)[1:])
-	
+
 	#send to url to websocket
 	pub.publish_message(RedisMessage(response_data))
-	
+
 
 image_done.connect(send_pic)
 
 #server webpage
 class Index(View,TemplateResponseMixin):
-	template_name = 'index.html'
+	template_name = 'indexWS.html'
 
 	content_type='text/html'
 
@@ -103,37 +103,37 @@ class Index(View,TemplateResponseMixin):
 
 '''
 class ViewPictures(View):
-	
+
 	def post(self,request,func=None):
 		print("hello")
-	
+
 		#look for ajax request
 		if request.is_ajax():
-			
+
 			req_post = request.POST
-					
+
 			#the pk of the picture the client is looking for
 			num_pic = req_post["pk"]
-			
 
-			
+
+
 
 			#get the picture from SQL
 			try:
-				
+
 				picture = Picture.objects.get(pk=num_pic)
 
 
 			except Picture.DoesNotExist:
 				data = simplejson.dumps({'picture':0})
-				
+
 				return HttpResponse(data,content_type="application/json")
 
 
 			#get the local path of the pic
-			
+
 			path = picture.photo.file
-		
+
 			#Serialize pathname
 			response_data = simplejson.dumps({'picture':str(path)})
 
@@ -145,5 +145,3 @@ class ViewPictures(View):
 			return HttpResponseForbidden()
 
 '''
-
-
