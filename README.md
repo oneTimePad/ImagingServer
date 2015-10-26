@@ -1,22 +1,15 @@
 # DataProcessing
 
 Please review. This has been edited.
-
 Current Assignments:
 	
-	1) ImageViewer: I will be working with you on this: due: Monday 26th
-	   #client1 should be able to post pictures (via ajax is no required)
-	   #client2 should be able to view images via webpage (AJAX required!)
-	   	. super nice web page is not required right away
-	   Research:
-		Postgresql/Django storing images
-		Javascript Ajax with JSON sending images via BASE64 encoding
-		Django accepting Base64 encoded images
-		UNIT TESTING IN DJANGO
-
-		highly suggested(stupid me not commented): view my simple twitter app code
+	1) ImageView:
+		Completed with:
+			drone posting
+			view past images through gal.
+			crop images and notify changes to server
+			view image attributes	
 		
-		PUSH CONSTANTLY!!
 	
 	***After Friday's meeting is the new due Date***
 	Submission:
