@@ -1,0 +1,143 @@
+<html>
+	<head>
+		<script>
+			var img_data = [];
+			function addPicsToDocument(src_list) {
+				for (var i = 0; i<src_list.length; i++) {
+					img_data.push("Placeholder");
+					addPicToDocument(src_list[i], i+1);
+				}
+			};
+			function addPicToDocument(src, id) {
+				var image = document.createElement("img");
+				image.src = src;
+				image.onload = function() {
+					var width = this.naturalWidth;
+					var height = this.naturalHeight;
+					img_data[id-1] = [[0, 0, width, height], [0,0], [width, height], image];
+					var container = document.createElement("div");
+					container.id = id;
+					document.body.appendChild(container);
+					var canvas = document.createElement("canvas");
+					canvas.width = width;
+					canvas.height = height;
+					canvas.style.border = "1px solid #d3d3d3";
+					canvas.addEventListener("mousedown", setPoint1, true);
+					canvas.addEventListener("mouseup", setPoint2, true);
+					container.appendChild(canvas);
+					var ctx = canvas.getContext("2d");
+					ctx.drawImage(image, 0, 0);
+					var crop_button = document.createElement("button");
+					crop_button.innerHTML = "Crop";
+					crop_button.onclick = function() {
+						crop(id);
+					};
+					container.appendChild(crop_button);
+					var revert_to_original_button = document.createElement("button");
+					revert_to_original_button.innerHTML = "Revert to Original Image";
+					revert_to_original_button.onclick = function() {
+						revertToOriginalImage(id);
+					};
+					container.appendChild(revert_to_original_button);
+					var save_button = document.createElement("button");
+					save_button.innerHTML = "Save";
+					save_button.onclick = function() {
+						saveImage(id);
+					};
+					container.appendChild(save_button);
+				};
+			};
+			function getPosition(element) {
+				var xPosition = 0;
+				var yPosition = 0;
+      
+				while (element) {
+					xPosition += (element.offsetLeft - element.scrollLeft + element.clientLeft);
+					yPosition += (element.offsetTop - element.scrollTop + element.clientTop);
+					element = element.offsetParent;
+				}
+				return [xPosition, yPosition];
+			};
+			function setPoint1(mouse_down_event) {
+				var element = mouse_down_event.currentTarget;
+				var id = element.parentNode.id;
+				var picPosition = getPosition(element);
+				var picClickPositionX = mouse_down_event.clientX - picPosition[0];
+				var picClickPositionY = mouse_down_event.clientY - picPosition[1];
+				img_data[id-1][1] = [picClickPositionX, picClickPositionY];
+			};
+			function setPoint2(mouse_up_event) {
+				var element = mouse_up_event.currentTarget;
+				var id = element.parentNode.id;
+				var picPosition = getPosition(element);
+				var picClickPositionX = mouse_up_event.clientX - picPosition[0];
+				var picClickPositionY = mouse_up_event.clientY - picPosition[1];
+				img_data[id-1][2] = [picClickPositionX, picClickPositionY];
+				drawCropArea(id);
+			};
+			function drawCropArea(id) {
+				var img_datum = img_data[id-1];
+				previous_crop = img_datum[0];
+				var x1 = img_datum[1][0];
+				var x2 = img_datum[2][0];
+				var y1 = img_datum[1][1];
+				var y2 = img_datum[2][1];
+				var bound_left = Math.min(x1, x2);
+				var bound_top = Math.min(y1, y2);
+				var cropped_width = Math.abs(x1 - x2);
+				var cropped_height = Math.abs(y1 - y2);
+				var ctx = document.getElementById(id).getElementsByTagName("canvas")[0].getContext("2d");
+				ctx.drawImage(img_datum[3], previous_crop[0], previous_crop[1], previous_crop[2], previous_crop[3], previous_crop[0], previous_crop[1], previous_crop[2], previous_crop[3]);
+				ctx.lineWidth = "5";
+				ctx.strokeStyle = "white";
+				ctx.setLineDash([15]);
+				ctx.strokeRect(bound_left, bound_top, cropped_width, cropped_height);
+			};
+			function crop(id) {
+				var img_datum = img_data[id-1];
+				var x1 = img_datum[1][0];
+				var x2 = img_datum[2][0];
+				var y1 = img_datum[1][1];
+				var y2 = img_datum[2][1];
+				var bound_left = Math.min(x1, x2);
+				var bound_top = Math.min(y1, y2);
+				var cropped_width = Math.abs(x1 - x2);
+				var cropped_height = Math.abs(y1 - y2);
+				img_data[id-1][0] = [bound_left, bound_top, cropped_width, cropped_height];
+				var canvas = document.getElementById(id).getElementsByTagName("canvas")[0];
+				var ctx = canvas.getContext("2d");
+				ctx.fillStyle = "white";
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+				ctx.drawImage(img_datum[3], bound_left, bound_top, cropped_width, cropped_height, bound_left, bound_top, cropped_width, cropped_height);
+			};	
+			function revertToOriginalImage(id) {
+				var canvas = document.getElementById(id).getElementsByTagName("canvas")[0];
+				img_data[id-1][1] = [0,0];
+				img_data[id-1][2] = [canvas.width, canvas.height];
+				crop(id);
+			};
+			function saveImage(id) {
+				alert("functionality not added.  check console for generated python code");
+				var img_datum = img_data[id-1];
+				var full_file_path = img_datum[3].src;
+				var index_of_last_slash = full_file_path.lastIndexOf("/");
+				var file_path = full_file_path.substring(index_of_last_slash+1);
+				var current_crop = img_datum[0];
+				var bound_left = current_crop[0];
+				var bound_top = current_crop[1];
+				var bound_width = current_crop[2];
+				var bound_height = current_crop[3];
+				var python_code = "";
+				python_code += "\nimport cv2";
+				python_code += "\noriginal_image = cv2.imread(\"" + file_path + "\")";
+				python_code += "\ncropped_image = original_image[" + bound_top + ": " + (bound_top+bound_height) + ", " + bound_left + ": " + (bound_left+bound_width) + "]";
+				python_code += "\ncv2.imwrite(\"" + file_path +"\", cropped_image)";
+				console.log(python_code);
+			}
+		</script>
+	</head>
+	<body>
+		<script>
+			addPicsToDocument(["sample_pic.jpeg"]);
+		</script>
+	</body>
