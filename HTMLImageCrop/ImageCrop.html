@@ -55,6 +55,9 @@ window.onload = function init() {
             p1=[event.clientX-xOff, event.clientY-yOff];
             cropinit=true;
         });
+        canvas.addEventListener("mouseleave", function() {
+            cropinit=false;
+        });
         canvas.addEventListener("mousemove", function drawBox(event) {
             if (cropinit) {
                 p2=[event.clientX-xOff, event.clientY-yOff];
