@@ -19,7 +19,7 @@ window.onload = function init() {
     var boxH;
     var xOff;
     var yOff;
-    var img=new Image();
+    var img=document.focusedImage;
     img.onload = function displaying() {
         function setBox() {
             boxW=p1[0]-p2[0];
@@ -86,7 +86,7 @@ window.onload = function init() {
 <body>
 <!--We should only have to deal with cropping one image at once since it is part of the form-->
 <!--We don't need a cropper, we need a selector to choose the image coordinates to send with the form-->
-<div id="container" style="position: relative;">
+<div id="container" style="position: relative; cursor:crosshair;">
     <canvas id="selector" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
     <img name="focusedImage" src="capture.png" alt="" style="position: absolute; top: 0; left: 0; z-index: 0;">
 </div>
