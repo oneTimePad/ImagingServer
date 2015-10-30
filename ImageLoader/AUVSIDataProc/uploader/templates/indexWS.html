@@ -8,7 +8,7 @@
 
 <style>
 html{
-  font-family: 'Helvetica", sans-serif;
+  font-family: "Helvetica", sans-serif;
   -ms-text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
 }
@@ -40,37 +40,6 @@ th {
 img {
   vertical-align: middle;
 }
-.thumbnail > img, .thumbnail a > img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-.thumbnail {
-  display: block;
-  padding: 4px;
-  margin-bottom: 20px;
-  line-height: 1.42857143;
-  background-color: #ffffff;
-  border: 1px solid #dddddd;
-  border-radius: 4px;
-  -webkit-transition: border 0.2s ease-in-out;
-  -o-transition: border 0.2s ease-in-out;
-  transition: border 0.2s ease-in-out;
-}
-.thumbnail > img,
-.thumbnail a > img {
-  margin-left: auto;
-  margin-right: auto;
-}
-a.thumbnail:hover,
-a.thumbnail:focus,
-a.thumbnail.active {
-  border-color: #337ab7;
-}
-.thumbnail .caption {
-  padding: 9px;
-  color: #333333;
-}
 </style>
 
 
@@ -86,7 +55,7 @@ a.thumbnail.active {
         document.getElementById("left-panel").style.maxHeight=height+'px';
         document.getElementById("right-panel").style.maxHeight=height+'px';
         //calculating the number of columns in the grid based on the sizes of panels and thumbnails
-        var width = document.getElementById("left-panel").clientWidth;
+        var width = document.getElementById("right-panel").clientWidth;
         imgwidth = 200;
         var colwidth=imgwidth+2*5//image width + padding on both sides (hardcoded)
         numcols=Math.trunc(width/colwidth);
@@ -136,12 +105,12 @@ a.thumbnail.active {
 
 <body>
     <div id="left-panel">
-        <table id="imagegrid">
-        </table>
-    </div>
-    <div id="right-panel">
         <img src="" name="focusedImage" alt="">
         <p>This is where image and target data could be displayed</p>
+    </div>
+    <div id="right-panel">
+        <table id="imagegrid">
+        </table>
     </div>
 </body>
 
