@@ -44,7 +44,7 @@ window.onload = function init() {
         var canvas=document.getElementById("selector");
         canvas.width=img.width;
         canvas.height=img.height;
-        var rect = canvas.getBoundingClientRect();
+        var rect = canvas.getBoundingClientRect();//allows you to find the height and width by imagining a rectangle around it
         xOff=rect.top;
         yOff=rect.left;
         ctx=canvas.getContext("2d");
@@ -55,6 +55,7 @@ window.onload = function init() {
             p1=[event.clientX-xOff, event.clientY-yOff];
             cropinit=true;
         });
+        //so that if the user releases the mouse after it leaves the canvas, the crop completes
         canvas.addEventListener("mouseleave", function() {
             cropinit=false;
         });
@@ -64,7 +65,7 @@ window.onload = function init() {
                 setBox();
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 ctx.fillRect(corner[0],corner[1],boxW,boxH);
-                console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+                //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
             }
         });
         canvas.addEventListener("mouseup", function finishBox(event) {
@@ -73,7 +74,7 @@ window.onload = function init() {
             ctx.clearRect(0,0,canvas.width,canvas.height);
             ctx.fillRect(corner[0],corner[1],boxW,boxH);
             cropinit=false;
-                console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+            //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
 
         });
     }

@@ -47,6 +47,7 @@ img {
     var numcols=0;//set when the window loads
     var imgwidth=200;
     var counter=0;//counts the number of images added so far
+    var image=document.focusedImage;
     window.onload = function displaying(){
         //making the grid and viewer panels the height of the window
         //if the window height changes, the page has to be reloaded
@@ -100,12 +101,82 @@ img {
             row.appendChild(col);
         };
     });
+    
+    image.onload = function cropper() {
+        var p1;
+        var p2;
+        var cropinit;
+        var corner=new Array();
+        var boxW;
+        var boxH;
+        var xOff;
+        var yOff;
+
+        function setBox() {
+            boxW=p1[0]-p2[0];
+            boxH=p1[1]-p2[1];
+            //finding the top left corner
+            if (boxW<0) {
+                corner[0]=p1[0];
+                boxW=-boxW;
+            }
+            else {
+                corner[0]=p2[0];
+            }
+            if (boxH<0) {
+                corner[1]=p1[1];
+                boxH=-boxH;
+            }
+            else {
+                corner[1]=p2[1];
+            }
+        }
+
+        var canvas=document.getElementById("selector");
+        canvas.width=image.width;
+        canvas.height=image.height;
+        var rect = canvas.getBoundingClientRect();//allows you to find the height and width by imagining a rectangle around it
+        xOff=rect.top;
+        yOff=rect.left;
+        ctx=canvas.getContext("2d");
+        ctx.fillStyle="rgba(210,220,255,0.6)";
+        cropinit=false;
+        //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+        canvas.addEventListener("mousedown", function setP1(event) {
+            p1=[event.clientX-xOff, event.clientY-yOff];
+            cropinit=true;
+        });
+        //so that if the user releases the mouse after it leaves the canvas, the crop completes
+        canvas.addEventListener("mouseleave", function() {
+            cropinit=false;
+        });
+        canvas.addEventListener("mousemove", function drawBox(event) {
+            if (cropinit) {
+                p2=[event.clientX-xOff, event.clientY-yOff];
+                setBox();
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.fillRect(corner[0],corner[1],boxW,boxH);
+                //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+            }
+        });
+        canvas.addEventListener("mouseup", function finishBox(event) {
+            p2=[event.clientX-xOff, event.clientY-yOff];
+            setBox();
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.fillRect(corner[0],corner[1],boxW,boxH);
+            cropinit=false;
+            //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+
+    }
 </script>
 </head>
 
 <body>
     <div id="left-panel">
-        <img src="" name="focusedImage" alt="">
+        <div id="container" style="position: relative; cursor: crosshair;">
+            <canvas id="selector" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
+            <img src="" name="focusedImage" alt="" style="position: absolute; top: 0; left: 0; z-index: 0;">        
+        </div>
         <p>This is where image and target data could be displayed</p>
     </div>
     <div id="right-panel">

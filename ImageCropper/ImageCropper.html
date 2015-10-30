@@ -1,7 +1,7 @@
 <html>
 	<head>
 		<script>
-		
+
 		/*How to use front-end of this file: open in it chrome. As it is now, one picture and 3 buttons will be loaded onto the screen.  If you want to crop the
 		image, click on the image and drag the mouse to another spot on the image, then let go of the mouse clicker. After you let go, a dotted white box will
 		appear, previewing your crop. To actually crop the image, click the crop button.  Note that the crop button will not do anything if you don't have a dotted
@@ -10,21 +10,21 @@
 		cropped image.  If you go to a python command line, cd into the directory containing the image, then copy paste that string into the python command line,
 		then python will edit the actual image file on your computer such that it is cropped exactly as you saw it on the html document.
 		*/
-		
+
 		/*If you want to load more images onto the document: go to the 3rd to last line of this file, and edit that line. It currently reads the following:
 		addPicsToDocument(["sample_pic.jpeg"]);      If you want to add more images, add the file paths for those images into the array.  Note that this
 		also works with urls, although the python code logged to the console by the save button will not work for urls.
 		*/
-		
-		/* Explaining the back-end of this file: All important image data is saved in a window variable called img_data. img_data is an array and looks 
+
+		/* Explaining the back-end of this file: All important image data is saved in a window variable called img_data. img_data is an array and looks
 		something like this: [img1_data, img2_data, img3_data,...]. img1_data, img2_data, img3_data, ... are also arrays themselves.  Here is a closer look
 		at img1_data: [img1_current_crop, img1_point1, img2_point2, img1_object].  img1_current_crop is also an array.  It looks like this:
 		[bound_left, bound_top, bound_width, bound_height]. Those 4 values define a rectangle that defines the current crop.  For example,
 		an img1_current_crop value of [10, 20, 100, 200] means that the cropped image is 100 pixels wide and 200 pixels tall, and the top left corner of the
 		cropped image is 10 pixels to the right of and 20 pixels below the top left corner of the original image.  When images get rendered onto this page, they
-		originally start off with current_crop values of [0, 0, width_of_original_image, height_of_original_image].  The only way to change an image's current_crop 
+		originally start off with current_crop values of [0, 0, width_of_original_image, height_of_original_image].  The only way to change an image's current_crop
 		value is to click on the Crop button for that image.  When you click the crop button, javascript looks at what point1 and point2 are set to, and sets
-		current_crop based on those values.  Any image's point1 value originally starts off as [0,0], but it changes whenever you click down on an image, 
+		current_crop based on those values.  Any image's point1 value originally starts off as [0,0], but it changes whenever you click down on an image,
 		and point2 originally starts off as (width_of_original_image, height_of_original_image), but it changes whenever you release the mouse clicker.  So
 		clicking down on an image sets point1, and releasing the click sets point2, and those two points define a crop rectangle, and in fact after you release the click,
 		javascript will draw a dottted white box over the image, signifying your bounding rectangle.  Then when you click the crop button, javascript sets current_crop
@@ -35,9 +35,9 @@
 		img1_data looks like this: [[0, 0, 1000, 1200], [0,0], [1000, 1200], img1_ojbect].  After interacting with the front-end interface for a bit though,
 		img1_data may look like this: [[50, 100, 400, 500], [50, 40], [450, 600], img1_object].
 		*/
-		
-		
-		
+
+
+
 			var img_data = [];													//initialize img_data window variable
 			function addPicsToDocument(src_list) {
 				var number_of_imgs_already_on_page = img_data.length;			//exactly one entry in img_data for one image, so number of images already on page = img_data.length
@@ -87,12 +87,12 @@
 					container.appendChild(save_button);											//add the Save button to the div container
 				};
 			};
-			
+
 			//given an html element, will return the absolute position of its upper left corner on the html document
-			function getPosition(element) {													
+			function getPosition(element) {
 				var xPosition = 0;
 				var yPosition = 0;
-      
+
 				while (element) {
 					xPosition += (element.offsetLeft - element.scrollLeft + element.clientLeft);
 					yPosition += (element.offsetTop - element.scrollTop + element.clientTop);
@@ -100,7 +100,7 @@
 				}
 				return [xPosition, yPosition];
 			};
-			
+
 			//this function gets called when you click down on an image.  The function figures out where you clicked, relative to the upper left corner of the image, and sets point1 for that image equal to where you clicked
 			function setPoint1(mouse_down_event) {
 				var element = mouse_down_event.currentTarget;							//element you clicked down on
@@ -124,7 +124,7 @@
 				img_data[id-1][2] = [pic_release_positionX, pic_release_positionY];		//set point2
 				drawCropArea(id);														//after setting point2, draw the dotted white bounding box based on point1 and point2
 			};
-			
+
 			//This function only ever gets called internally by the setPoint2 function.  It draws the white dotted bounding box based on point1 and point2
 			function drawCropArea(id) {
 				var img_datum = img_data[id-1];											//img_data just for the image that you are working with
@@ -144,7 +144,7 @@
 				ctx.setLineDash([15]);																//make sure the box is dotted (aka dashed)
 				ctx.strokeRect(bound_left, bound_top, cropped_width, cropped_height);				//draw the dotted white bounding box
 			};
-			
+
 			//This next function gets called whenever you click the Crop button.  It looks at point1 and point2 to set current_crop and turns off the display for any parts of the image outside the bounding box defined by point1 and point2
 			function crop(id) {
 				var img_datum = img_data[id-1];
@@ -159,11 +159,11 @@
 				img_data[id-1][0] = [bound_left, bound_top, cropped_width, cropped_height];			//set current_crop
 				var canvas = document.getElementById(id).getElementsByTagName("canvas")[0];
 				var ctx = canvas.getContext("2d");
-				ctx.fillStyle = "white";					
+				ctx.fillStyle = "white";
 				ctx.fillRect(0, 0, canvas.width, canvas.height);									//first, make the entire canvas white
 				ctx.drawImage(img_datum[3], bound_left, bound_top, cropped_width, cropped_height, bound_left, bound_top, cropped_width, cropped_height);	//redraw the portion of the image inside the bounding box
-			};	
-			
+			};
+
 			//This function gets called whenever you click the Revert to Original Image button.  It uncrops the image, so that you can see the whole thing
 			function revertToOriginalImage(id) {
 				var canvas = document.getElementById(id).getElementsByTagName("canvas")[0];
@@ -171,7 +171,7 @@
 				img_data[id-1][2] = [canvas.width, canvas.height];		//reset point2 to (width_of_original_image, height_of_original_image)
 				crop(id);												//crop the image based on the reset values of point1 and point2, has the effect of redisplaying the entire image
 			};
-			
+
 			//This function gets called whenever you click the Save button.  It doesn't do anything except give you an alert box and log a message to the console.  That message logged to the console can be copy pasted into a python command line to actually edit an image file (after cd-ing into the directory containing the image file)
 			function saveImage(id) {
 				alert("functionality not added.  check console for generated python code");
