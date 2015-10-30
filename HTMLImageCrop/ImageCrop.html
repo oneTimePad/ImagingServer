@@ -64,9 +64,6 @@ window.onload = function init() {
                 console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
             }
         });
-        canvas.addEventListener("mouseleave", function() {
-            cropinit=false;
-        });
         canvas.addEventListener("mouseup", function finishBox(event) {
             p2=[event.clientX-xOff, event.clientY-yOff];
             setBox();
