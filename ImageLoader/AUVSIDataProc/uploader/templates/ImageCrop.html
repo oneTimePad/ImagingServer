@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Image Cropper</title>
+<style>
+body {
+  margin: 10px;
+}
+</style>
+
+<script>
+window.onload = function init() {
+    var p1;
+    var p2;
+    var cropinit;
+    var corner=new Array();
+    var boxW;
+    var boxH;
+    var xOff;
+    var yOff;
+    var img=document.focusedImage;
+    img.onload = function displaying() {
+        function setBox() {
+            boxW=p1[0]-p2[0];
+            boxH=p1[1]-p2[1];
+            //finding the top left corner
+            if (boxW<0) {
+                corner[0]=p1[0];
+                boxW=-boxW;
+            }
+            else {
+                corner[0]=p2[0];
+            }
+            if (boxH<0) {
+                corner[1]=p1[1];
+                boxH=-boxH;
+            }
+            else {
+                corner[1]=p2[1];
+            }
+        }
+
+        var canvas=document.getElementById("selector");
+        canvas.width=img.width;
+        canvas.height=img.height;
+        var rect = canvas.getBoundingClientRect();
+        xOff=rect.top;
+        yOff=rect.left;
+        ctx=canvas.getContext("2d");
+        ctx.fillStyle="rgba(210,220,255,0.6)";
+        cropinit=false;
+        //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+        canvas.addEventListener("mousedown", function setP1(event) {
+            p1=[event.clientX-xOff, event.clientY-yOff];
+            cropinit=true;
+        });
+        canvas.addEventListener("mouseleave", function() {
+            cropinit=false;
+        });
+        canvas.addEventListener("mousemove", function drawBox(event) {
+            if (cropinit) {
+                p2=[event.clientX-xOff, event.clientY-yOff];
+                setBox();
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.fillRect(corner[0],corner[1],boxW,boxH);
+                console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+            }
+        });
+        canvas.addEventListener("mouseup", function finishBox(event) {
+            p2=[event.clientX-xOff, event.clientY-yOff];
+            setBox();
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.fillRect(corner[0],corner[1],boxW,boxH);
+            cropinit=false;
+                console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+
+        });
+    }
+    img.src="capture.png";
+}
+</script>
+
+</head>
+
+<body>
+<!--We should only have to deal with cropping one image at once since it is part of the form-->
+<!--We don't need a cropper, we need a selector to choose the image coordinates to send with the form-->
+<div id="container" style="position: relative; cursor:crosshair;">
+    <canvas id="selector" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
+    <img name="focusedImage" src="capture.png" alt="" style="position: absolute; top: 0; left: 0; z-index: 0;">
+</div>
+</body>
+
+</html>

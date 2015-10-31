@@ -1,9 +1,12 @@
+
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <title>Picture Viewer</title>
 <script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
 <!--<link rel="stylesheet" type="text/css" href="./style.css">-->
 
 <style>
@@ -28,7 +31,6 @@ th {
     background-color:transparent;
     width:50%;
     float:left;
-    overflow-y: scroll;
 }
 #right-panel
 {        
@@ -40,6 +42,19 @@ th {
 img {
   vertical-align: middle;
 }
+
+#attr_form
+{
+    position: fixed;
+
+    margin-left: auto;
+    top:400px;
+    height:70px;
+    width: 300px;
+    border: 3px solid #8AC007;
+
+
+}
 </style>
 
 
@@ -47,8 +62,41 @@ img {
     var numcols=0;//set when the window loads
     var imgwidth=200;
     var counter=0;//counts the number of images added so far
-    var image=document.focusedImage;
+    var image;
     window.onload = function displaying(){
+
+
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie != '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        };
+        var csrftoken = getCookie('csrftoken');
+
+        function csrfSafeMethod(method) {
+            // these HTTP methods do not require CSRF protection
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        };
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+
+
         //making the grid and viewer panels the height of the window
         //if the window height changes, the page has to be reloaded
         //when the window cannot fit the grid vertically, we can scroll through them
@@ -61,123 +109,198 @@ img {
         var colwidth=imgwidth+2*5//image width + padding on both sides (hardcoded)
         numcols=Math.trunc(width/colwidth);
         if (numcols==0) numcols++;
-    }
+        image=document.focusedImage;
+        console.log(document.focusedImage);
 
-    $(document).ready(function(){
-        //create websocket
-        var web_socket = WS4Redis({
-            uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
-            //triggered when msg from server is sent
-            receive_message: getPic,
-            heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+        var crop = {}
 
-         });
-        function getPic(msg){
-            
-            //msg is the image source
-            var grid = document.getElementById('imagegrid');
-           
-            if (counter%numcols==0) {
-                grid.appendChild(document.createElement("tr"));//adding a row
+        document.focusedImage.onload = function cropper() {
+            var p1;
+            var p2;
+            var cropinit;
+            var corner=new Array();
+            var boxW;
+            var boxH;
+            var xOff;
+            var yOff;
+
+            function setBox() {
+                boxW=p1[0]-p2[0];
+                boxH=p1[1]-p2[1];
+                //finding the top left corner
+                if (boxW<0) {
+                    corner[0]=p1[0];
+                    boxW=-boxW;
+                }
+                else {
+                    corner[0]=p2[0];
+                }
+                if (boxH<0) {
+                    corner[1]=p1[1];
+                    boxH=-boxH;
+                }
+                else {
+                    corner[1]=p2[1];
+                }
+
+                crop.corner = corner
+                crop.width = boxW
+                crop.height = boxH
             }
-            counter++;
-            //finding the last row in the grid
-            var rows = document.getElementsByTagName("tr");
-            var row = rows[rows.length-1];
-            //adding a column and the thumbnail
-            var col = document.createElement("td");
-            var img = document.createElement("img");
 
-            var url = msg.substring(1,msg.length-1);
-
-            img.src=url;
-            img.width=imgwidth;//scale the images so that they all have the same width
-            //selecting the image shown in the viewer
-            img.addEventListener("click", function() {
-                document.focusedImage.src=this.src;
-                return false;
-            });
-            col.appendChild(img);
-            row.appendChild(col);
-        };
-    });
-    
-    image.onload = function cropper() {
-        var p1;
-        var p2;
-        var cropinit;
-        var corner=new Array();
-        var boxW;
-        var boxH;
-        var xOff;
-        var yOff;
-
-        function setBox() {
-            boxW=p1[0]-p2[0];
-            boxH=p1[1]-p2[1];
-            //finding the top left corner
-            if (boxW<0) {
-                corner[0]=p1[0];
-                boxW=-boxW;
-            }
-            else {
-                corner[0]=p2[0];
-            }
-            if (boxH<0) {
-                corner[1]=p1[1];
-                boxH=-boxH;
-            }
-            else {
-                corner[1]=p2[1];
-            }
-        }
-
-        var canvas=document.getElementById("selector");
-        canvas.width=image.width;
-        canvas.height=image.height;
-        var rect = canvas.getBoundingClientRect();//allows you to find the height and width by imagining a rectangle around it
-        xOff=rect.top;
-        yOff=rect.left;
-        ctx=canvas.getContext("2d");
-        ctx.fillStyle="rgba(210,220,255,0.6)";
-        cropinit=false;
-        //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
-        canvas.addEventListener("mousedown", function setP1(event) {
-            p1=[event.clientX-xOff, event.clientY-yOff];
-            cropinit=true;
-        });
-        //so that if the user releases the mouse after it leaves the canvas, the crop completes
-        canvas.addEventListener("mouseleave", function() {
+            var canvas=document.getElementById("selector");
+            canvas.width=image.width;
+            canvas.height=image.height;
+            var rect = canvas.getBoundingClientRect();//allows you to find the height and width by imagining a rectangle around it
+            xOff=rect.top;
+            yOff=rect.left;
+            ctx=canvas.getContext("2d");
+            ctx.fillStyle="rgba(210,220,255,0.6)";
             cropinit=false;
-        });
-        canvas.addEventListener("mousemove", function drawBox(event) {
-            if (cropinit) {
+            //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+            canvas.addEventListener("mousedown", function setP1(event) {
+                p1=[event.clientX-xOff, event.clientY-yOff];
+                cropinit=true;
+            });
+            //so that if the user releases the mouse after it leaves the canvas, the crop completes
+            canvas.addEventListener("mouseleave", function() {
+                cropinit=false;
+            });
+            canvas.addEventListener("mousemove", function drawBox(event) {
+                if (cropinit) {
+                    p2=[event.clientX-xOff, event.clientY-yOff];
+                    setBox();
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    ctx.fillRect(corner[0],corner[1],boxW,boxH);
+                    //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+                }
+            });
+            canvas.addEventListener("mouseup", function finishBox(event) {
                 p2=[event.clientX-xOff, event.clientY-yOff];
                 setBox();
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 ctx.fillRect(corner[0],corner[1],boxW,boxH);
+                cropinit=false;
                 //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
-            }
+
         });
-        canvas.addEventListener("mouseup", function finishBox(event) {
-            p2=[event.clientX-xOff, event.clientY-yOff];
-            setBox();
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.fillRect(corner[0],corner[1],boxW,boxH);
-            cropinit=false;
-            //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
 
     }
+
+    var curr_pic = 0;
+
+
+    //create websocket
+    var web_socket = WS4Redis({
+        uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
+        //triggered when msg from server is sent
+        receive_message: getPic,
+        heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+
+     });
+
+    function getPic(response){
+        
+       var json_response = JSON.parse(response);
+
+       var msg = json_response.image;
+
+       cur_pic = json_response.pk;
+
+
+        //msg is the image source
+        var grid = document.getElementById('imagegrid');
+       
+        if (counter%numcols==0) {
+            grid.appendChild(document.createElement("tr"));//adding a row
+        }
+        counter++;
+        //finding the last row in the grid
+        var rows = document.getElementsByTagName("tr");
+        var row = rows[rows.length-1];
+        //adding a column and the thumbnail
+        var col = document.createElement("td");
+        var img = document.createElement("img");
+
+        
+
+        img.src=msg;
+        img.id=json_response.pk;
+        img.width=imgwidth;//scale the images so that they all have the same width
+        //selecting the image shown in the viewer
+        img.addEventListener("click", function() {
+            document.focusedImage.src=this.src;
+            return false;
+        });
+        col.appendChild(img);
+        row.appendChild(col);
+    }
+
+
+    $(document).ready($('#attr_form').on('submit',
+        function(event){
+            
+            event.preventDefault()
+
+           var inputs = $('#attr_form').find(':input')
+
+           var input_array = {}
+
+           inputs.each(function(){
+                input_array[this.name]=$(this).val()
+
+           })
+           
+
+
+            if(input_array){
+              $.ajax({
+                    url: "{% url 'attrform'%}",
+                    type: "POST",
+                    data: {"pk":curr_pic,"attr":input_array,'crop':crop},
+
+                }
+              )
+
+            }
+            
+        }
+    )
+    );
+}
+    
+
+
+
+
+
+
 </script>
+
+
 </head>
 
 <body>
     <div id="left-panel">
-        <div id="container" style="position: relative; cursor: crosshair;">
+        <p style="position: static">This is where image and target data could be displayed</p>
+          {%csrf_token%}
+            <form id="attr_form">
+               
+                {{form}}
+                <input type="submit" value="Submit"/>
+            </form>
+         
+        <div id="container" style="cursor: crosshair;">
+
+          
+
             <canvas id="selector" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
             <img src="" name="focusedImage" alt="" style="position: absolute; top: 0; left: 0; z-index: 0;">        
         </div>
-        <p>This is where image and target data could be displayed</p>
+       
+        
+    
+       
     </div>
     <div id="right-panel">
         <table id="imagegrid">
