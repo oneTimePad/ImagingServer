@@ -4,8 +4,11 @@ from django.http import HttpResponse,HttpResponseRedirect,HttpResponseForbidden
 import json as simplejson
 # Create your views here.
 
-from django.views.generic.base import View, TemplateResponseMixin
+from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
 from django.views.generic.list import MultipleObjectMixin, MultipleObjectTemplateResponseMixin
+from django.views.generic.edit import FormMixin
+
+
 
 from .models import *
 #import pdb; pdb.set_trace()
@@ -16,12 +19,14 @@ from django.dispatch import *
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
 
+from .forms import AttributeForm
+import pdb; 
 
 
 
 #prev_pic = 0
 
-IMAGE_STORAGE = "http://localhost/PHOTOS"
+IMAGE_STORAGE = "http://localhost:80/PHOTOS"
 
 
 image_done = Signal(providing_args=["num_pic"])
@@ -33,7 +38,7 @@ def initialize(func):
 		#used for broadcast msg to websocket
 		audience = {'broadcast': True}
 		redis_publisher = RedisPublisher(facility='viewer',**audience)
-		print(args)
+		
 		return func(redis_publisher,*args,**kwargs)
 
 	return wrapper
@@ -78,7 +83,7 @@ def send_pic(pub,num_pic,**kwargs):
 	path = picture.photo
 
 	#Serialize pathname
-	response_data = simplejson.dumps(IMAGE_STORAGE+str(path)[1:])
+	response_data = simplejson.dumps({'image':IMAGE_STORAGE+str(path)[1:],'pk':picture.pk})
 
 	#send to url to websocket
 	pub.publish_message(RedisMessage(response_data))
@@ -87,63 +92,52 @@ def send_pic(pub,num_pic,**kwargs):
 image_done.connect(send_pic)
 
 #server webpage
-class Index(View,TemplateResponseMixin):
+class Index(View,TemplateResponseMixin,ContextMixin):
 	template_name = 'indexWS.html'
 
 	content_type='text/html'
 
 
-	def get_context(self):
-		#nothing to do for now
-		pass
+
+
+	def get_context_data(self,**kwargs):
+
+		context = super(Index,self).get_context_data(**kwargs)
+		context['form'] = AttributeForm
+
+		return context
+		
 
 
 	def get(self,request):
-		return self.render_to_response(self.get_context())
+
+		return self.render_to_response(self.get_context_data())
 
 
 
-'''
-class ViewPictures(View):
 
-	def post(self,request,func=None):
-		print("hello")
 
-		#look for ajax request
+
+class AttributeFormCheck(View):
+
+	
+
+	def post(self,request):
+		
 		if request.is_ajax():
+			
+			post_vars= self.request.POST
 
-			req_post = request.POST
+			post_vars=dict(post_vars)
+			parent_image = post_vars['pk']
 
-			#the pk of the picture the client is looking for
-			num_pic = req_post["pk"]
+			
+			color = post_vars['attr[color]']
+			
 
-
-
-
-			#get the picture from SQL
-			try:
-
-				picture = Picture.objects.get(pk=num_pic)
+			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
 
 
-			except Picture.DoesNotExist:
-				data = simplejson.dumps({'picture':0})
-
-				return HttpResponse(data,content_type="application/json")
-
-
-			#get the local path of the pic
-
-			path = picture.photo.file
-
-			#Serialize pathname
-			response_data = simplejson.dumps({'picture':str(path)})
-
-			#response with path name JSON
-			print(response_data)
-			return HttpResponse(response_data,content_type="application/json")
-		else:
-			#else forbidden request
-			return HttpResponseForbidden()
-
-'''
+			
+			Target.crop(picture_pk=parent_image,color = color,size_data=size_data)
+			return HttpResponse("success")
