@@ -1,7 +1,0 @@
-import
-
-public class ImagePoster {
-
-  
-
-}
