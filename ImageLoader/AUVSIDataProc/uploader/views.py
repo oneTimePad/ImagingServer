@@ -26,7 +26,7 @@ import pdb;
 
 #prev_pic = 0
 
-IMAGE_STORAGE = "http://192.168.205.118:90/PHOTOS"
+IMAGE_STORAGE = "http://localhost:80/PHOTOS"
 
 
 image_done = Signal(providing_args=["num_pic"])
@@ -132,13 +132,12 @@ class AttributeFormCheck(View):
 			parent_image = post_vars['pk']
 
 			
-
 			color = post_vars['attr[color]']
 			
 
 			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
 
 
-			pdb.set_trace()
+			
 			Target.crop(picture_pk=parent_image,color = color,size_data=size_data)
 			return HttpResponse("success")
