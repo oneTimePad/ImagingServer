@@ -125,18 +125,18 @@ img {
         }
     )
 
-
+    //sets up form submission
     $(function form_submit_setup(){
 
-
+        //on user submit
         $('#attr_form').on('submit',
             function(event){
-                
+                //allow for ajax
                event.preventDefault()
 
                 //get all form attributes
                var inputs = $('#attr_form').find(':input')
-
+               //array of user inputs
                var input_array = {}
 
                //put each one in an array
@@ -145,8 +145,7 @@ img {
 
                })
                
-                console.log(crop.width)
-                console.log(crop.height)
+                
                 //if there attributes, send them
                 if(input_array){
                   $.ajax({
@@ -223,10 +222,12 @@ img {
 
                 
                 
-
-
+                //!!might be repetitive!!
+                //set canvas to image size parameters
                 $('#selector')[0].width=document.focusedImage.width
                 $('#selector')[0].height=document.focusedImage.height
+
+                //don't think this is repetitive
                 $('#selector').css('top',$(document.focusedImage).css('top'))
                 $('#selector').css('bottom',$(document.focusedImage).css('bottom'))
                
@@ -307,14 +308,12 @@ img {
             }
 
            
-
+            //set canvas to image params
             var canvas = $('#selector')[0]
             canvas.width=image.width
             canvas.height=image.height
 
 
-            //$(canvas).outerWidth($(image).outerWidth())
-            //$(canvas).outerHeight($(image).outerHeight())
             
 
 

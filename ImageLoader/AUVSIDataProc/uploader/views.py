@@ -24,8 +24,8 @@ import pdb;
 
 
 
-#prev_pic = 0
 
+#hard coded
 IMAGE_STORAGE = "http://localhost:80/PHOTOS"
 
 
@@ -105,7 +105,7 @@ class Index(View,TemplateResponseMixin,ContextMixin):
 
 
 	def get_context_data(self,**kwargs):
-
+		#put attrbribute form  in template context
 		context = super(Index,self).get_context_data(**kwargs)
 		context['form'] = AttributeForm
 
@@ -121,7 +121,7 @@ class Index(View,TemplateResponseMixin,ContextMixin):
 
 
 
-
+#manual attribute form
 class AttributeFormCheck(View):
 
 	
@@ -129,19 +129,22 @@ class AttributeFormCheck(View):
 	def post(self,request):
 		
 		if request.is_ajax():
-			
+			#post data
 			post_vars= self.request.POST
-
+			#convert to dict
 			post_vars=dict(post_vars)
+
+			#get parent image pk
 			parent_image = post_vars['pk']
 
-			
+			#get client color
 			color = post_vars['attr[color]']
 			
-
+			#package crop data to tuple
 			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
 
 
-			
+			#crop target
 			Target.crop(picture_pk=parent_image,color = color,size_data=size_data)
+
 			return HttpResponse("success")
