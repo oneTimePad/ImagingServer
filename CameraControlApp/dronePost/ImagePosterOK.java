@@ -14,10 +14,20 @@ public class ImagePosterOK {
 	public static void main(String[] args) throws IOException {
 		File file = new File("Gatsbae.png");
 
+		FormEncoding input = new FormEncoding.Builder()
+		.add("text","test")
+		.add("image",file)
+		.build();
+
 		Request request = new Request.Builder()
 			.url("192.168.205.118:90")
-			.post(RequestBody.create(MEDIA_TYPE_IMAGE, file))
+			.post(input)
 			.build();
+
+		//Request request = new Request.Builder()
+		//	.url("192.168.205.118:90")
+		//	.post(RequestBody.create(MEDIA_TYPE_IMAGE, file))
+		//	.build();
 
 		Response response = client.newCall(request).execute();
 		if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
