@@ -66,169 +66,119 @@ img {
     var imgwidth=200;
     var counter=0;//counts the number of images added so far
     var image;
+    var curr_pic
 
-    var viewer_max_width=
-
-    window.onload = function displaying(){
+    //var viewer_max_width=
 
 
-        function getCookie(name) {
-            var cookieValue = null;
-            if (document.cookie && document.cookie != '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = jQuery.trim(cookies[i]);
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
+    $(function connect_websocket(){
+
+            //create websocket
+        var web_socket = WS4Redis({
+            uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
+            //triggered when msg from server is sent
+            receive_message: getPic,
+            heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+
+         });
+        }
+    )
+
+
+    //cookie setup for posts
+    $(function ajax_setup(){
+
+
+            //get cookie for form posting
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie != '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = jQuery.trim(cookies[i]);
+                        // Does this cookie string begin with the name we want?
+                        if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
                     }
                 }
-            }
-            return cookieValue;
-        };
-        var csrftoken = getCookie('csrftoken');
-
-        function csrfSafeMethod(method) {
-            // these HTTP methods do not require CSRF protection
-            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-        };
-
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                }
-            }
-        });
-
-
-        //making the grid and viewer panels the height of the window
-        //if the window height changes, the page has to be reloaded
-        //when the window cannot fit the grid vertically, we can scroll through them
-        var height = window.innerHeight;
-        document.getElementById("left-panel").style.maxHeight=height+'px';
-        document.getElementById("right-panel").style.maxHeight=height+'px';
-        //calculating the number of columns in the grid based on the sizes of panels and thumbnails
-        var width = document.getElementById("right-panel").clientWidth;
-        imgwidth = 200;
-        var colwidth=imgwidth+2*5//image width + padding on both sides (hardcoded)
-        numcols=Math.trunc(width/colwidth);
-        if (numcols==0) numcols++;
-        image=document.focusedImage;
-
-        var crop = {}
-
-        document.focusedImage.onload = function cropper() {
-            var p1;
-            var p2;
-
-            var cropinit;
-            var corner=new Array();
-            var boxW;
-            var boxH;
-            var xOff;
-            var yOff;
-
-            function setBox() {
-                boxW=p1[0]-p2[0];
-                boxH=p1[1]-p2[1];
-                //finding the top left corner
-
-                if (boxW<0) {
-                    corner[0]=p1[0];
-                    boxW=-boxW;
-                }
-                else {
-                    corner[0]=p2[0];
-                }
-                if (boxH<0) {
-                    corner[1]=p1[1];
-                    boxH=-boxH;
-                }
-                else {
-                    corner[1]=p2[1];
-                }
-
-                crop.corner = corner
-                crop.width = boxW
-                crop.height = boxH
-
-                console.log(corner)
-                console.log(boxW)
-                console.log(boxH)
+                return cookieValue;
             }
 
-            var canvas=document.getElementById("selector");
-            canvas.width=image.width;
-            canvas.height=image.height;
-            $(canvas).css('left','30px')
-           
-            ctx=canvas.getContext("2d");
-            ctx.fillStyle="rgba(210,220,255,0.6)";
-            cropinit=false;
+            var csrftoken = getCookie('csrftoken');
 
-            
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
 
 
-            //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
-            canvas.addEventListener("mousedown", function setP1(event) {
-                //allows you to find the height and width by imagining a rectangle around it
-
-                //get bounding selector parameters
-                var selector_position = $('#selector').position()
-                xOff=selector_position.left
-                yOff=selector_position.top
-
-                p1=[event.clientX-xOff, event.clientY-yOff];
-                cropinit=true;
-            });
-            //so that if the user releases the mouse after it leaves the canvas, the crop completes
-            canvas.addEventListener("mouseleave", function() {
-                cropinit=false;
-            });
-            canvas.addEventListener("mousemove", function drawBox(event) {
-                if (cropinit) {
-                    p2=[event.clientX-xOff, event.clientY-yOff];
-                    setBox();
-                    ctx.clearRect(0,0,canvas.width,canvas.height);
-                    ctx.fillRect(corner[0],corner[1],boxW,boxH);
-                    //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
                 }
-            });
-            canvas.addEventListener("mouseup", function finishBox(event) {
-                p2=[event.clientX-xOff, event.clientY-yOff];
-                setBox();
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                ctx.fillRect(corner[0],corner[1],boxW,boxH);
+            })
+        }
+    )
 
+
+    $(function form_submit_setup(){
+
+
+        $('#attr_form').on('submit',
+            function(event){
                 
-                cropinit=false;
+               event.preventDefault()
+
+                //get all form attributes
+               var inputs = $('#attr_form').find(':input')
+
+               var input_array = {}
+
+               //put each one in an array
+               inputs.each(function(){
+                    input_array[this.name]=$(this).val()
+
+               })
                
+           
+                //if there attributes, send them
+                if(input_array){
+                  $.ajax({
+                        url: "{% url 'attrform'%}",
+                        type: "POST",
+                        data: {"pk":curr_pic,"attr":input_array,'crop':crop},
 
-        });
+                        }
+                    )
 
-    }
+                }
+                
+            }
+        )
 
-    var curr_pic = 0;
+    })
 
 
-    //create websocket
-    var web_socket = WS4Redis({
-        uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
-        //triggered when msg from server is sent
-        receive_message: getPic,
-        heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
-
-     });
-
+    //handles picture recieved from websocket
     function getPic(response){
-        
+
+
+        //parse json server response
        var json_response = JSON.parse(response);
 
+       //crab the image url
        var msg = json_response.image;
 
+       //pic of image
        curr_pic = json_response.pk;
+
+       console.log("pic"+curr_pic+" recieved")
+
+      
   
 
         //msg is the image source
@@ -287,43 +237,137 @@ img {
 
         col.appendChild(img);
         row.appendChild(col);
-    
-}
+    }
 
-    //submit ajax form
-    $(document).ready($('#attr_form').on('submit',
-        function(event){
-            
-           event.preventDefault()
 
-            //get all form attributes
-           var inputs = $('#attr_form').find(':input')
 
-           var input_array = {}
 
-           //put each one in an array
-           inputs.each(function(){
-                input_array[this.name]=$(this).val()
 
-           })
-           
-       
-            //if there attributes, send them
-            if(input_array){
-              $.ajax({
-                    url: "{% url 'attrform'%}",
-                    type: "POST",
-                    data: {"pk":curr_pic,"attr":input_array,'crop':crop},
 
+
+
+
+
+    window.onload = function displaying(){
+
+        //making the grid and viewer panels the height of the window
+        //if the window height changes, the page has to be reloaded
+        //when the window cannot fit the grid vertically, we can scroll through them
+        var height = window.innerHeight;
+        document.getElementById("left-panel").style.maxHeight=height+'px';
+        document.getElementById("right-panel").style.maxHeight=height+'px';
+        //calculating the number of columns in the grid based on the sizes of panels and thumbnails
+        var width = document.getElementById("right-panel").clientWidth;
+        imgwidth = 200;
+        var colwidth=imgwidth+2*5//image width + padding on both sides (hardcoded)
+        numcols=Math.trunc(width/colwidth);
+        if (numcols==0) numcols++;
+        image=document.focusedImage;
+
+        var crop = {}
+
+        document.focusedImage.onload = function cropper() {
+            var p1;
+            var p2;
+
+            var cropinit;
+            var corner=new Array();
+            var boxW;
+            var boxH;
+            var xOff;
+            var yOff;
+
+            function setBox() {
+                boxW=p1[0]-p2[0];
+                boxH=p1[1]-p2[1];
+                //finding the top left corner
+
+                if (boxW<0) {
+                    corner[0]=p1[0];
+                    boxW=-boxW;
                 }
-              )
+                else {
+                    corner[0]=p2[0];
+                }
+                if (boxH<0) {
+                    corner[1]=p1[1];
+                    boxH=-boxH;
+                }
+                else {
+                    corner[1]=p2[1];
+                }
 
+                crop.corner = corner
+                crop.width = boxW
+                crop.height = boxH
+
+                
             }
+
+           
+
+             var canvas = $('#selector')[0]
+            canvas.width=image.width
+            canvas.height=image.height
             
-        }
-    )
-    );
-}
+
+
+
+            
+
+            $('#selector').css('left','30px')
+           
+            var ctx = $('#selector')[0].getContext("2d");
+            ctx.fillStyle="rgba(210,220,255,0.6)";
+            
+            var cropinit=false;
+
+            
+           
+
+             //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+            canvas.addEventListener("mousedown", function setP1(event) {
+                //allows you to find the height and width by imagining a rectangle around it
+                //get bounding selector parameters
+                var selector_position = $('#selector').position()
+                xOff=selector_position.left
+                yOff=selector_position.top
+                console.log(xOff)
+                console.log(yOff)
+                
+                p1=[event.clientX-xOff, event.clientY-yOff];
+                ctx.fillRect(80,54,40,40)
+                console.log(p1)
+                cropinit=true;
+            });
+            //so that if the user releases the mouse after it leaves the canvas, the crop completes
+            canvas.addEventListener("mouseleave", function() {
+                cropinit=false;
+            });
+            canvas.addEventListener("mousemove", function drawBox(event) {
+                if (cropinit) {
+                    p2=[event.clientX-xOff, event.clientY-yOff]
+                    setBox();
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    ctx.fillRect(corner[0],corner[1],boxW,boxH);
+
+                    //console.log(p2)
+                    //console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
+                }
+            });
+            canvas.addEventListener("mouseup", function finishBox(event) {
+                p2=[event.clientX-xOff, event.clientY-yOff];
+                setBox();
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.fillRect(corner[0],corner[1],boxW,boxH);
+                
+                cropinit=false;
+               
+            });
+
+        }  
+    
+    }
     
 
 
