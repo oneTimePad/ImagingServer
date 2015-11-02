@@ -52,6 +52,8 @@ class Upload(View):
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
 		#get request
+
+		pdb.set_trace()
 		req_post = request.POST
 		#get data
 
@@ -62,6 +64,8 @@ class Upload(View):
 		#get actual image
 		pic = request.FILES['image']
 
+
+
 		#create picture
 		picture = Picture.objects.create(text=text,photo=pic)
 
@@ -71,7 +75,7 @@ class Upload(View):
 		return HttpResponse("success")
 
 
-#triggered when image object created
+#triggered when image object created	`
 @initialize
 def send_pic(pub,num_pic,**kwargs):
 	#create pic
