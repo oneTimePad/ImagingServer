@@ -52,9 +52,9 @@ class Target(models.Model):
 		x = int(x)
 		y= int(y)
 
-		x-=30
-		y-=21
-		cropped_image = original_image[x:(x+int(width[0])),y:(y+int(height[0]))]
+		#x-=30
+		#y-=21
+		cropped_image = original_image[y:(y+int(height[0])),x:(x+int(width[0])),]
 		#cv2.imwrite(STORAGE+"/targets"+"/"+"")
 
 		target = Target.objects.create(target_pic=cropped_image,color=color)

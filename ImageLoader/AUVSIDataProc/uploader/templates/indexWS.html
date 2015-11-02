@@ -67,6 +67,7 @@ img {
     var counter=0;//counts the number of images added so far
     var image;
     var curr_pic
+    var crop = {}
 
     //var viewer_max_width=
 
@@ -144,7 +145,8 @@ img {
 
                })
                
-           
+                console.log(crop.width)
+                console.log(crop.height)
                 //if there attributes, send them
                 if(input_array){
                   $.ajax({
@@ -223,8 +225,8 @@ img {
                 
 
 
-                $('#selector').width($(document.focusedImage).width())
-                $('#selector').height($(document.focusedImage).height())
+                $('#selector')[0].width=document.focusedImage.width
+                $('#selector')[0].height=document.focusedImage.height
                 $('#selector').css('top',$(document.focusedImage).css('top'))
                 $('#selector').css('bottom',$(document.focusedImage).css('bottom'))
                
@@ -264,7 +266,7 @@ img {
         if (numcols==0) numcols++;
         image=document.focusedImage;
 
-        var crop = {}
+       
 
         document.focusedImage.onload = function cropper() {
             var p1;
@@ -306,9 +308,13 @@ img {
 
            
 
-             var canvas = $('#selector')[0]
+            var canvas = $('#selector')[0]
             canvas.width=image.width
             canvas.height=image.height
+
+
+            //$(canvas).outerWidth($(image).outerWidth())
+            //$(canvas).outerHeight($(image).outerHeight())
             
 
 
