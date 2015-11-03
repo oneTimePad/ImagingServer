@@ -36,6 +36,14 @@ WS4REDIS_PREFIX = 'ws'
 SESSION_ENGINE = 'redis_sessions.session'
 SESSION_REDIS_PREFIX = 'session'
 
+CACHES = {
+    'default':{
+        'BACKEND': 'redis_cahce.RedisCache',
+        'LOCATION': '/var/run/redis/redis.sock',
+    }
+}
+
+
 # Application definition
 
 INSTALLED_APPS = (
@@ -50,6 +58,8 @@ INSTALLED_APPS = (
 )
 
 MIDDLEWARE_CLASSES = (
+    'django.middleware.cache.UpdateCacheMiddleware',
+    'django.middleware.cache.FetchFromCacheMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

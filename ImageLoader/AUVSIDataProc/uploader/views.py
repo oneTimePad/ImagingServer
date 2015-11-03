@@ -53,7 +53,7 @@ class Upload(View):
 	def post(self,request,*args,**kwargs):
 		#get request
 
-		pdb.set_trace()
+		
 		req_post = request.POST
 		#get data
 
@@ -134,17 +134,26 @@ class AttributeFormCheck(View):
 			#convert to dict
 			post_vars=dict(post_vars)
 
-			#get parent image pk
-			parent_image = post_vars['pk']
-
 			#get client color
 			color = post_vars['attr[color]']
+
+			#create target object
+			target = Target.objects.create(color=int(color[0]))
 			
 			#package crop data to tuple
 			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
 
 
+			#get parent image pk
+			parent_image = post_vars['pk']
+			#get parent pic from db
+			parent_pic = Picture.objects.get(pk=parent_image[0])
+
+			#add parent to target relation
+			target.pictures.add(parent_pic)
+
+
 			#crop target
-			Target.crop(picture_pk=parent_image,color = color,size_data=size_data)
+			target.crop(size_data=size_data,parent_pic=parent_pic)
 
 			return HttpResponse("success")
