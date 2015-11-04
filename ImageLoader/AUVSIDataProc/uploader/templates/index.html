@@ -233,7 +233,7 @@
             switch (key.keyCode) {
                 case leftarrow:
                     //need to find the index of the current focused image, based on the id curr_pic
-                    var gallery = document.getElementsByTagName("img");
+                    var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
                     var currimage = document.getElementById(curr_pic);
                     var index = $.inArray(currimage, gallery);
                     index--;
@@ -243,7 +243,7 @@
                     break;
                 case rightarrow:
                     //need to find the index of the current focused image, based on the id curr_pic
-                    var gallery = document.getElementsByTagName("img");
+                    var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
                     var currimage = document.getElementById(curr_pic);
                     var index = $.inArray(currimage, gallery);
                     index++;
