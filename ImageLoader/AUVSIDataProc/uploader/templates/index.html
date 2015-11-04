@@ -225,16 +225,13 @@
         if (numcols==0) numcols++;
 
         //event listener for entire window (for keys)
-        window.addEventListener("keyup", function(event){
+        document.addEventListener("keyup", function(key){
             var space=32;
             var leftarrow = 37;
             var rightarrow = 39;
             //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
-            if (event.defaultPrevented) {
-                return; // Should do nothing if the key event was already consumed.
-            }
-            switch (event.key) {
-                case "ArrowLeft":
+            switch (key.keyCode) {
+                case leftarrow:
                     //need to find the index of the current focused image, based on the id curr_pic
                     var gallery = document.getElementsByTagName("img");
                     var currimage = document.getElementById(curr_pic);
@@ -244,7 +241,7 @@
                     currimage = gallery[index];//the new image
                     setFocusedImage(currimage);
                     break;
-                case "ArrayRight":
+                case rightarrow:
                     //need to find the index of the current focused image, based on the id curr_pic
                     var gallery = document.getElementsByTagName("img");
                     var currimage = document.getElementById(curr_pic);
@@ -256,8 +253,7 @@
                     break;
                 default: return;
             }
-            event.preventDefault();//consume the event
-        }, true);        
+        });        
         //document.focusedImage.onload = canvasinit();    
     }
 
