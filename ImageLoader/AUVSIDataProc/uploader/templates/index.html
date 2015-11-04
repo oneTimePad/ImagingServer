@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Picture Viewer</title>
+<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+<style type="text/css">
+    html{
+      font-family: "Helvetica", sans-serif;
+      -ms-text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      margin: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+    td, th {
+      padding: 5px;
+    }
+    #left-panel
+    {        
+        background-color:transparent;
+        width:50%;
+        float:left;
+    }
+    #right-panel
+    {        
+        background-color:transparent;
+        width:50%;
+        float:left;
+        overflow-y: scroll;
+    }
+    img {
+      vertical-align: middle;
+    }
+    #attr_form
+    {
+        height:70px;
+        width: 300px;
+        border: 3px solid #8AC007;
+    }
+</style>
+
+<script>
+    var numcols=0;//set when the window loads
+    var imgwidth=200;
+    var counter=0;//counts the number of images added so far
+    var curr_pic;//the id of the image in focus
+    var crop = {}
+
+    $(function connect_websocket(){
+
+            //create websocket
+            var web_socket = WS4Redis({
+            uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
+            //triggered when msg from server is sent
+            receive_message: getPic,
+            heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+
+         });
+        }
+    )
+
+    //cookie setup for posts
+    $(function ajax_setup(){
+            //get cookie for form posting
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie != '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = jQuery.trim(cookies[i]);
+                        // Does this cookie string begin with the name we want?
+                        if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            var csrftoken = getCookie('csrftoken');
+
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+
+
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            })
+        }
+    )
+
+    //sets up form submission
+    $(function form_submit_setup(){
+
+        //on user submit
+        $('#attr_form').on('submit',
+            function(event){
+                //allow for ajax
+               event.preventDefault()
+
+                //get all form attributes
+               var inputs = $('#attr_form').find(':input')
+               //array of user inputs
+               var input_array = {}
+
+               //put each one in an array
+               inputs.each(function(){
+                    input_array[this.name]=$(this).val()
+
+               })
+                 
+                //if there attributes, send them
+                if(input_array){
+                  $.ajax({
+                        url: "{% url 'attrform'%}",
+                        type: "POST",
+                        data: {"pk":curr_pic,"attr":input_array,'crop':crop},
+
+                        }
+                    )
+
+                }
+                
+            }
+        )
+
+    })
+
+    //handles picture received from websocket
+    function getPic(response){
+        //parse json server response
+       var json_response = JSON.parse(response);
+
+        console.log("pic"+json_response.pk+" recieved")
+      
+        var grid = document.getElementById('imagegrid');
+       
+        if (counter%numcols==0) {
+            grid.appendChild(document.createElement("tr"));//adding a row
+        }
+        counter++;
+        //finding the last row in the grid
+        var rows = document.getElementsByTagName("tr");
+        var row = rows[rows.length-1];
+        //adding a column and the thumbnail
+        var col = document.createElement("td");
+        var img = document.createElement("img");
+
+        //crab the image url
+        img.src=json_response.image;
+        img.id=json_response.pk;
+        img.width=imgwidth;//scale the images so that they all have the same width
+        img.addEventListener("click", function() {
+            setFocusedImage(this);
+            return false;
+        });
+        //selecting the image shown in the viewer
+        //add keyboard space to move pic into view
+        //This should bring the newest image into view
+      /*  (function(){
+            //create closure for space ? shouldn't need a closure
+            var space = 32;
+            //on key click
+            window.onkeyup = function(key) {
+                //did the use hit space?
+                if(key.keyCode!=space)
+                    return
+                
+                //move image into view
+                document.focusedImage.src=img.src
+
+                //move pic below top description
+                //$(document.focusedImage).css('top',$('#descr').css('position'))
+                
+
+
+                
+                
+                //!!might be repetitive!!
+                //set canvas to image size parameters
+                $('#selector')[0].width=document.focusedImage.width
+                $('#selector')[0].height=document.focusedImage.height
+
+                //don't think this is repetitive
+                //$('#selector').css('top',$(document.focusedImage).css('top'))
+                //$('#selector').css('bottom',$(document.focusedImage).css('bottom'))
+               
+                
+                //move form just under picture
+                //$('#attr_form').css('top',$(document.focusedImage).position().top+$(document.focusedImage).height()+10);
+                return false;
+            }
+        })()
+        */
+        col.appendChild(img);
+        row.appendChild(col);
+    }
+
+    window.onload = function(){
+        //making the grid and viewer panels the height of the window
+        //if the window height changes, the page has to be reloaded
+        //when the window cannot fit the grid vertically, we can scroll through them
+        var height = window.innerHeight;
+        document.getElementById("left-panel").style.maxHeight=height+'px';
+        document.getElementById("right-panel").style.maxHeight=height+'px';
+        //calculating the number of columns in the grid based on the sizes of panels and thumbnails
+        var width = document.getElementById("right-panel").clientWidth;
+        imgwidth = 200;
+        var colwidth=imgwidth+2*5//image width + padding on both sides (hardcoded)
+        numcols=Math.trunc(width/colwidth);
+        if (numcols==0) numcols++;
+
+        //event listener for entire window (for keys)
+        window.addEventListener("keyup", function(event){
+            var space=32;
+            var leftarrow = 37;
+            var rightarrow = 39;
+            //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
+            if (event.defaultPrevented) {
+                return; // Should do nothing if the key event was already consumed.
+            }
+            switch (event.key) {
+                case "ArrowLeft":
+                    //need to find the index of the current focused image, based on the id curr_pic
+                    var gallery = document.getElementsByTagName("img");
+                    var currimage = document.getElementById(curr_pic);
+                    var index = $.inArray(currimage, gallery);
+                    index--;
+                    if (index<0) break;//do nothing if there are no images before
+                    currimage = gallery[index];//the new image
+                    setFocusedImage(currimage);
+                    break;
+                case "ArrayRight":
+                    //need to find the index of the current focused image, based on the id curr_pic
+                    var gallery = document.getElementsByTagName("img");
+                    var currimage = document.getElementById(curr_pic);
+                    var index = $.inArray(currimage, gallery);
+                    index++;
+                    if (index>=gallery.length) break;//do nothing if there are no images after
+                    currimage = gallery[index];//the new image
+                    setFocusedImage(currimage);
+                    break;
+                default: return;
+            }
+            event.preventDefault();//consume the event
+        }, true);        
+        //document.focusedImage.onload = canvasinit();    
+    }
+
+    //set the focusedImage to the given image, also changing the curr_pic, and initializes the canvas
+    function setFocusedImage(image) {
+        document.focusedImage.src=image.src;
+        curr_pic=image.id;
+        canvasinit();//to resize the canvas and start a new crop
+    }
+
+    //sets the canvas width and height and allows it to listen for cropping
+    function canvasinit() {
+        var p1;
+        var p2;
+
+        var cropinit;
+        var corner=new Array();
+        var boxW;
+        var boxH;
+        var xOff;
+        var yOff;
+        
+        //finding the coordinates of the top left corner of the image, which must be subtracted from the coordinates of the mouse events to find the coordinates within the image
+        var image_position = document.focusedImage.getBoundingClientRect();
+        xOff=image_position.top;
+        yOff=image_position.left;
+        
+        //set canvas to image params
+        var canvas = $('#selector')[0];
+        canvas.top=xOff;
+        canvas.left=yOff;
+        canvas.width=document.focusedImage.width;
+        canvas.height=document.focusedImage.height;
+
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle="rgba(210,220,255,0.6)";
+
+        //whether the cropping is taking place
+        var cropinit=false;
+
+        function setBox() {
+            boxW=p1[0]-p2[0];
+            boxH=p1[1]-p2[1];
+            //finding the top left corner
+
+            if (boxW<0) {
+                corner[0]=p1[0];
+                boxW=-boxW;
+            }
+            else {
+                corner[0]=p2[0];
+            }
+            if (boxH<0) {
+                corner[1]=p1[1];
+                boxH=-boxH;
+            }
+            else {
+                corner[1]=p2[1];
+            }
+
+            crop.corner = corner;
+            crop.width = boxW;
+            crop.height = boxH;
+        }
+
+        //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+        canvas.addEventListener("mousedown", function setP1(event) {
+            //allows you to find the height and width by imagining a rectangle around it
+            //get bounding selector parameters
+            p1=[event.clientX-xOff, event.clientY-yOff];
+            cropinit=true;
+        });
+        //so that if the user releases the mouse after it leaves the canvas, the crop completes
+        canvas.addEventListener("mouseleave", function() {
+            cropinit=false;
+        });
+        canvas.addEventListener("mousemove", function drawBox(event) {
+            if (cropinit) {
+                p2=[event.clientX-xOff, event.clientY-yOff]
+                setBox();
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.fillRect(corner[0],corner[1],boxW,boxH);
+            }
+        });
+        canvas.addEventListener("mouseup", function finishBox(event) {
+            p2=[event.clientX-xOff, event.clientY-yOff];
+            setBox();
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.fillRect(corner[0],corner[1],boxW,boxH);
+            cropinit=false;
+        });
+    }
+
+</script>
+</head>
+
+<body>
+    <div id="left-panel">         
+        <div id="container" style="cursor: crosshair;">
+            <canvas id="selector" style="position: absolute; z-index: 1;"></canvas>
+            <img src="" name="focusedImage" alt="" style="position: relative; z-index: 0;">        
+        </div>
+        <p id="descr">This is where image and target data could be displayed</p>
+        {%csrf_token%}
+        <form id="attr_form">
+            {{form}}
+            <input type="submit" value="Submit"/>
+        </form>
+    </div>
+    <div id="right-panel">
+        <table id="imagegrid">
+        </table>
+        <!--Change this from a table to a list of images w/ automatic wrapping so that images can be easily deleted-->
+    </div>
+</body>
+
+</html>
