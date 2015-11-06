@@ -36,12 +36,13 @@ WS4REDIS_PREFIX = 'ws'
 SESSION_ENGINE = 'redis_sessions.session'
 SESSION_REDIS_PREFIX = 'session'
 
-CACHES = {
-    'default':{
-        'BACKEND': 'redis_cahce.RedisCache',
-        'LOCATION': '/var/run/redis/redis.sock',
-    }
-}
+
+#CACHES = {
+ #   'default':{
+  #      'BACKEND': 'redis_cache.RedisCache',
+  #      'LOCATION': '/var/run/redis/redis.sock',
+   # }
+#}
 
 
 # Application definition

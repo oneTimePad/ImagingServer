@@ -62,8 +62,9 @@ class Upload(View):
 		text = request.POST['text']
 
 		#get actual image
-		pic = request.FILES['image']
+		pic = request.POST['image']
 
+		pdb.set_trace()
 
 
 		#create picture
@@ -97,7 +98,7 @@ image_done.connect(send_pic)
 
 #server webpage
 class Index(View,TemplateResponseMixin,ContextMixin):
-	template_name = 'indexWS.html'
+	template_name = 'index.html'
 
 	content_type='text/html'
 

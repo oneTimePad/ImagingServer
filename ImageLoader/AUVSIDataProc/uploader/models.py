@@ -11,6 +11,9 @@ import cv2
 import numpy as np
 
 
+#from colorful.fields import RGBColorField
+
+
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from django.core.files.storage import FileSystemStorage
