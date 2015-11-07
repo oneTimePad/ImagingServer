@@ -6,45 +6,11 @@
 <script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 
-<style type="text/css">
-    html{
-      font-family: "Helvetica", sans-serif;
-      -ms-text-size-adjust: 100%;
-      -webkit-text-size-adjust: 100%;
-    }
-    body {
-      margin: 20px;
-    }
-    table {
-      border-collapse: collapse;
-      border-spacing: 0;
-    }
-    td, th {
-      padding: 5px;
-    }
-    #left-panel
-    {        
-        background-color:transparent;
-        width:50%;
-        float:left;
-    }
-    #right-panel
-    {        
-        background-color:transparent;
-        width:50%;
-        float:left;
-        overflow-y: scroll;
-    }
-    img {
-      vertical-align: middle;
-    }
-    #attr_form
-    {
-        height:70px;
-        width: 300px;
-        border: 3px solid #8AC007;
-    }
-</style>
+
+
+<script src='{{STATIC_URL}}js/spectrum.js'></script>
+<link rel='stylesheet' href='{{STATIC_URL}}css/spectrum.css' />
+<link rel='stylesheet' href='{{STATIC_URL}}css/loader.css' />
 
 <script>
     var numcols=0;//set when the window loads
@@ -107,22 +73,30 @@
     $(function form_submit_setup(){
 
         //on user submit
-        $('#attr_form').on('submit',
+        $('#submit').on('click',
             function(event){
-                //allow for ajax
+
+                  //allow for ajax
                event.preventDefault()
+              
 
                 //get all form attributes
                var inputs = $('#attr_form').find(':input')
+
+               
                //array of user inputs
                var input_array = {}
 
                //put each one in an array
                inputs.each(function(){
+                    console.log(this.name)
+                    console.log($(this).val())
+
                     input_array[this.name]=$(this).val()
 
                })
-                 
+
+               console.log(input_array)
                 //if there attributes, send them
                 if(input_array){
                   $.ajax({
@@ -139,6 +113,9 @@
         )
 
     })
+
+
+
 
     //handles picture received from websocket
     function getPic(response){
@@ -332,13 +309,17 @@
             <img src="" name="focusedImage" alt="" style="position: relative; z-index: 0;">        
         </div>
         <p id="descr">This is where image and target data could be displayed</p>
+        
         {%csrf_token%}
         <form id="attr_form">
-            {{form}}
-            <input type="submit" value="Submit"/>
+            <input name="color" type='text' id="flat"/>
+            <button type="button" id="submit"/>Submit</button>
         </form>
+
+
     </div>
     <div id="right-panel">
+        
         <table id="imagegrid">
         </table>
         <!--Change this from a table to a list of images w/ automatic wrapping so that images can be easily deleted-->
@@ -346,3 +327,23 @@
 </body>
 
 </html>
+
+<script>
+
+$(document).ready(function(){
+
+    $("#flat").spectrum({
+        flat:true,
+        showInput:true,
+        allowEmpty:true
+    });
+
+    var flat = document.getElementById('flat')
+    
+
+
+
+});
+
+</script>
+

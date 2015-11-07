@@ -20,7 +20,8 @@ from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
 
 from .forms import AttributeForm
-import pdb; 
+import pdb
+
 
 
 
@@ -57,8 +58,7 @@ class Upload(View):
 		req_post = request.POST
 		#get data
 
-		pdb.set_trace()
-		#get image text
+		
 		text = request.POST['text']
 
 		#get actual image
@@ -147,6 +147,10 @@ class AttributeFormCheck(View):
 	def post(self,request):
 		
 		if request.is_ajax():
+
+
+			pdb.set_trace()
+
 			#post data
 			post_vars= self.request.POST
 			#convert to dict

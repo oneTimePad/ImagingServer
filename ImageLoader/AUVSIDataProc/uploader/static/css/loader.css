@@ -1,0 +1,43 @@
+ html{
+      font-family: "Helvetica", sans-serif;
+      -ms-text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      margin: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+    td, th {
+      padding: 5px;
+    }
+    #left-panel
+    {        
+        background-color:transparent;
+        width:50%;
+        float:left;
+    }
+    #right-panel
+    {        
+        background-color:transparent;
+        width:50%;
+        float:left;
+        overflow-y: scroll;
+    }
+    img {
+      vertical-align: middle;
+    }
+    #attr_form
+    {
+        height:70px;
+        width: 30px;
+    }
+    #flat{
+      
+        position:relative;
+    }
+    #submit{
+      position: relative;
+    }

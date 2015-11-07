@@ -56,6 +56,8 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'uploader',
     'ws4redis',
+    'colorful',
+    
 )
 
 MIDDLEWARE_CLASSES = (
@@ -76,7 +78,8 @@ ROOT_URLCONF = 'AUVSIDataProc.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['/home/lie/Desktop/AUVSI/DataProc/ImageLoader/AUVSIDataProc/uploader/templates'],
+        'DIRS': ['/home/lie/Desktop/AUVSI/DataProc/ImageLoader/AUVSIDataProc/uploader/templates',
+                '/home/lie/Desktop/AUVSI/DataProc/ImageLoader/AUVSIDataProc/colorful/static/colorful'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

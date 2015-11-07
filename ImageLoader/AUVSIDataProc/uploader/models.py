@@ -11,7 +11,10 @@ import cv2
 import numpy as np
 
 
-#from colorful.fields import RGBColorField
+
+
+
+from colorful.fields import RGBColorField
 
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -42,7 +45,7 @@ class Target(models.Model):
 	#targets relate to pictures
 	pictures = models.ManyToManyField(Picture)
 	target_pic = models.ImageField(storage=fs_targets)
-	color = models.IntegerField()
+	color = models.CharField(max_length=100)
 	
 	#crop target from image 
 	def crop(self,size_data,parent_pic):
