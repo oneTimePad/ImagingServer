@@ -5,10 +5,10 @@ import json as simplejson
 # Create your views here.
 
 from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
-from django.views.generic.list import MultipleObjectMixin, MultipleObjectTemplateResponseMixin
+
 from django.views.generic.edit import FormMixin
 
-
+import os
 
 from .models import *
 #import pdb; pdb.set_trace()
@@ -52,19 +52,19 @@ class Upload(View):
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
 		#get request
-
+		#pdb.set_trace()
 		
 		req_post = request.POST
 		#get data
 
-
+		pdb.set_trace()
 		#get image text
 		text = request.POST['text']
 
 		#get actual image
-		pic = request.POST['image']
+		pic = request.FILES['image']
 
-		pdb.set_trace()
+		
 
 
 		#create picture
@@ -119,6 +119,23 @@ class Index(View,TemplateResponseMixin,ContextMixin):
 		return self.render_to_response(self.get_context_data())
 
 
+class DeletePicture(View):
+
+	def post(self,request):
+
+		if request.is_ajax():
+
+			pdb.set_trace()
+			pic_id = request.POST['pk']
+
+			picture = Picture.objects.get(pk=pic_id)
+
+			photo_path = picture.photo.path
+			os.remove(photo_path)
+
+			picture.delete()
+
+			return HttpResponse("success")
 
 
 

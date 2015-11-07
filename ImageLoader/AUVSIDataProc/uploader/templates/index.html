@@ -168,44 +168,7 @@
             setFocusedImage(this);
             return false;
         });
-        //selecting the image shown in the viewer
-        //add keyboard space to move pic into view
-        //This should bring the newest image into view
-      /*  (function(){
-            //create closure for space ? shouldn't need a closure
-            var space = 32;
-            //on key click
-            window.onkeyup = function(key) {
-                //did the use hit space?
-                if(key.keyCode!=space)
-                    return
-                
-                //move image into view
-                document.focusedImage.src=img.src
-
-                //move pic below top description
-                //$(document.focusedImage).css('top',$('#descr').css('position'))
-                
-
-
-                
-                
-                //!!might be repetitive!!
-                //set canvas to image size parameters
-                $('#selector')[0].width=document.focusedImage.width
-                $('#selector')[0].height=document.focusedImage.height
-
-                //don't think this is repetitive
-                //$('#selector').css('top',$(document.focusedImage).css('top'))
-                //$('#selector').css('bottom',$(document.focusedImage).css('bottom'))
-               
-                
-                //move form just under picture
-                //$('#attr_form').css('top',$(document.focusedImage).position().top+$(document.focusedImage).height()+10);
-                return false;
-            }
-        })()
-        */
+       
         col.appendChild(img);
         row.appendChild(col);
     }
@@ -229,6 +192,7 @@
             var space=32;
             var leftarrow = 37;
             var rightarrow = 39;
+            var deletearrow = 46
             //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
             switch (key.keyCode) {
                 case leftarrow:
@@ -251,7 +215,20 @@
                     currimage = gallery[index];//the new image
                     setFocusedImage(currimage);
                     break;
-                default: return;
+                //deletes imagesz
+                case deletearrow:
+                    //ajax request to server to delete image with 
+                    //curr_pic as the picture object pk
+                    $.ajax({
+                        url:"{% url 'deletepic'%}",
+                        type:"POST",
+                        data: {"pk":curr_pic},
+
+                    })
+                    break
+
+                default: 
+                    return;
             }
         });        
         //document.focusedImage.onload = canvasinit();    
