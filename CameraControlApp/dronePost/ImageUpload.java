@@ -31,7 +31,7 @@ public class ImageUpload {
 		 */
 		
 		//url that will take the post request
-		final String url_string = "http://127.0.0.1:8000/upload/";
+		final String url_string = "http://0.0.0.0:70/upload";
 		//file path for the image that you want to upload
 		final String file_path_string = "sample_pic_from_arrow.jpg";
 		//map containing keys and values of any other post data that you want to send
@@ -40,8 +40,8 @@ public class ImageUpload {
 		//add them yourself
 		final HashMap<String, String> additional_post_keys_and_values = new HashMap<String, String>();
 		//If you want to add key-value pairs to the map: follow the format of this next commented line.
-		//additional_post_keys_and_values.put("sample_key", "sample_value");
-		
+		additional_post_keys_and_values.put("text", "test");
+	
 		
 		
 		URL url = new URL(url_string);
