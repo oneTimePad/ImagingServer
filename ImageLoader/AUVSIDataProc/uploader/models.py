@@ -11,9 +11,6 @@ import cv2
 import numpy as np
 
 
-
-
-
 from colorful.fields import RGBColorField
 
 
@@ -53,6 +50,11 @@ class Target(models.Model):
 	pictures = models.ManyToManyField(Picture)
 	target_pic = models.ImageField(storage=fs_targets)
 	color = models.CharField(max_length=100)
+	orientation = models.CharField(max_length=100)
+	shape = models.CharField(max_length=100)
+	letter = models.CharField(max_length=100)
+	lettercol = models.CharField(max_length=100)
+	backcol = models.CharField(max_length=100)
 	#latitude and longitude for top left corner of target cropped image
 	lat = models.DecimalField(max_digits=9, decimal_places=6)
 	lon = models.DecimalField(max_digits=9, decimal_places=6)

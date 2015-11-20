@@ -312,14 +312,13 @@
         
         {%csrf_token%}
         <form id="attr_form">
-            <input name="color" type='text' id="flat"/>
+            <input name="color" type='text' id="palette"/>
             <button type="button" id="submit"/>Submit</button>
         </form>
 
 
     </div>
     <div id="right-panel">
-        
         <table id="imagegrid">
         </table>
         <!--Change this from a table to a list of images w/ automatic wrapping so that images can be easily deleted-->
@@ -331,7 +330,17 @@
 <script>
 
 $(document).ready(function(){
-
+//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
+    $("#palette").spectrum({
+        showPaletteOnly: true,
+        showPalette:true,
+        color: 'black',
+        palette: [
+            ['black', 'white', 'gray', 'red', 'blue'],
+            ['green', 'yellow', 'purple', 'brown', 'orange']
+        ]
+    });
+/*
     $("#flat").spectrum({
         flat:true,
         showInput:true,
@@ -339,10 +348,7 @@ $(document).ready(function(){
     });
 
     var flat = document.getElementById('flat')
-    
-
-
-
+*/    
 });
 
 </script>
