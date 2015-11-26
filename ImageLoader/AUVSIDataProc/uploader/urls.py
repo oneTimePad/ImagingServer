@@ -12,5 +12,5 @@ urlpatterns = [
     url(r'^viewer$',Index.as_view(),name='index'),
     url(r'^attrform$',AttributeFormCheck.as_view(),name='attrform'),
     url(r'^deletepic$',DeletePicture.as_view(),name='deletepic'),
+    url(r'^gettargets$',GetTargets.as_view(),name='gettargets'),
 ]
-

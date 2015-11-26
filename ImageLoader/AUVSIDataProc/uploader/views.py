@@ -1,6 +1,6 @@
 from django.shortcuts import render
 
-from django.http import HttpResponse,HttpResponseRedirect,HttpResponseForbidden
+from django.http import HttpResponse,HttpResponseRedirect,HttpResponseForbidden,JsonResponse
 import json as simplejson
 # Create your views here.
 
@@ -31,6 +31,7 @@ IMAGE_STORAGE = "http://localhost:80/PHOTOS"
 
 
 image_done = Signal(providing_args=["num_pic"])
+#Have a signal for creating a new target?
 
 #make so that RedisPublish doesn't get initilized
 def initialize(func):
@@ -39,7 +40,7 @@ def initialize(func):
 		#used for broadcast msg to websocket
 		audience = {'broadcast': True}
 		redis_publisher = RedisPublisher(facility='viewer',**audience)
-		
+
 		return func(redis_publisher,*args,**kwargs)
 
 	return wrapper
@@ -54,17 +55,17 @@ class Upload(View):
 	def post(self,request,*args,**kwargs):
 		#get request
 		#pdb.set_trace()
-		
+
 		req_post = request.POST
 		#get data
 
-		
+
 		text = request.POST['text']
 
 		#get actual image
 		pic = request.FILES['image']
 
-		
+
 
 
 		#create picture
@@ -88,13 +89,22 @@ def send_pic(pub,num_pic,**kwargs):
 	path = picture.photo
 
 	#Serialize pathname
-	response_data = simplejson.dumps({'image':IMAGE_STORAGE+str(path)[1:],'pk':picture.pk})
+	response_data = simplejson.dumps({'type':'picture','image':IMAGE_STORAGE+str(path)[1:],'pk':picture.pk})
 
 	#send to url to websocket
 	pub.publish_message(RedisMessage(response_data))
 
 
 image_done.connect(send_pic)
+
+#would this work so that the redis publisher is made only once?
+# @initialize
+# def send_target(pub,num_target,**kwargs):
+# 	target = Target.objects.get(pk=num_target)
+# 	path = target.target_pic
+# 	response_data = simplejson.dumps({'type','target','image':IMAGE_STORAGE+str(path)[1:],'pk':target.pk})
+# 	pub.publish_message(RedisMessage(response_data))
+#actually I could just have it sent when the user focuses on a new image...
 
 #server webpage
 class Index(View,TemplateResponseMixin,ContextMixin):
@@ -111,7 +121,7 @@ class Index(View,TemplateResponseMixin,ContextMixin):
 		context['form'] = AttributeForm
 
 		return context
-		
+
 
 
 	def get(self,request):
@@ -137,15 +147,30 @@ class DeletePicture(View):
 
 			return HttpResponse("success")
 
+class GetTargets(View):
 
+	def get(self,request):
+		if request.is_ajax():
+			pdb.set_trace()
+			pic_id = request.GET['pk']
+			picture = Picture.objects.get(pk=pic_id)
+			#should get all the related targets using a related manager
+			targets = picture.target_set
+			dict={}
+			tdata=[]
+			for t in targets:
+				tdata.append({"pk":t.pk,"image":t.target_pic})
+			dict["targets"]=tdata
+			response_data = simplejson.dumps(dict)
+			return JsonResponse(response_data)
 
 #manual attribute form
 class AttributeFormCheck(View):
 
-	
+
 
 	def post(self,request):
-		
+
 		if request.is_ajax():
 
 
@@ -161,7 +186,7 @@ class AttributeFormCheck(View):
 
 			#create target object
 			target = Target.objects.create(color=int(color[0]))
-			
+
 			#package crop data to tuple
 			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
 
@@ -172,8 +197,8 @@ class AttributeFormCheck(View):
 			parent_pic = Picture.objects.get(pk=parent_image[0])
 
 			#add parent to target relation
-			target.pictures.add(parent_pic)
-
+			#target.pictures.add(parent_pic)
+			target.picture=parent_pic
 
 			#crop target
 			target.crop(size_data=size_data,parent_pic=parent_pic)

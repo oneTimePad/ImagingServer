@@ -78,12 +78,12 @@
 
                   //allow for ajax
                event.preventDefault()
-              
+
 
                 //get all form attributes
                var inputs = $('#attr_form').find(':input')
 
-               
+
                //array of user inputs
                var input_array = {}
 
@@ -108,7 +108,7 @@
                     )
 
                 }
-                
+
             }
         )
 
@@ -123,9 +123,9 @@
        var json_response = JSON.parse(response);
 
         console.log("pic"+json_response.pk+" recieved")
-      
+
         var grid = document.getElementById('imagegrid');
-       
+
         if (counter%numcols==0) {
             grid.appendChild(document.createElement("tr"));//adding a row
         }
@@ -145,7 +145,7 @@
             setFocusedImage(this);
             return false;
         });
-       
+
         col.appendChild(img);
         row.appendChild(col);
     }
@@ -194,7 +194,7 @@
                     break;
                 //deletes imagesz
                 case deletearrow:
-                    //ajax request to server to delete image with 
+                    //ajax request to server to delete image with
                     //curr_pic as the picture object pk
                     $.ajax({
                         url:"{% url 'deletepic'%}",
@@ -204,11 +204,11 @@
                     })
                     break
 
-                default: 
+                default:
                     return;
             }
-        });        
-        //document.focusedImage.onload = canvasinit();    
+        });
+        //document.focusedImage.onload = canvasinit();
     }
 
     //set the focusedImage to the given image, also changing the curr_pic, and initializes the canvas
@@ -216,6 +216,28 @@
         document.focusedImage.src=image.src;
         curr_pic=image.id;
         canvasinit();//to resize the canvas and start a new crop
+        //getting targets using the pk of the current image
+        //Also need to get picture metadata and display it--also useful for creating the compass rose
+        $.ajax({
+          url: "{% url 'gettargets'%}",
+          type: "GET",
+          dataType: "json",
+          data: {"pk": image.id},
+          success: function (json){
+            json_response=JSON.parse(json);
+            arr=json_response.targets;
+            //should get a json with target pks mapped to their urls
+            td = $.("#target-data");
+            td.empty();
+            for (i in arr) {
+              image=document.createElement("img");
+              image.src=i.image;
+              image.id=i.pk;//this won't work if django repeats pk ids for different models...
+              image.width=imgwidth;//so all the targets are shown as thumbnails
+              td.append(image);
+            }
+          }
+        })
     }
 
     //sets the canvas width and height and allows it to listen for cropping
@@ -229,12 +251,12 @@
         var boxH;
         var xOff;
         var yOff;
-        
+
         //finding the coordinates of the top left corner of the image, which must be subtracted from the coordinates of the mouse events to find the coordinates within the image
         var image_position = document.focusedImage.getBoundingClientRect();
         xOff=image_position.top;
         yOff=image_position.left;
-        
+
         //set canvas to image params
         var canvas = $('#selector')[0];
         canvas.width=document.focusedImage.width;
@@ -303,13 +325,13 @@
 </head>
 
 <body>
-    <div id="left-panel">         
+    <div id="left-panel">
         <div id="container" style="cursor: crosshair;">
             <canvas id="selector" style="position: absolute; z-index: 1;"></canvas>
-            <img src="" name="focusedImage" alt="" style="position: relative; z-index: 0;">        
+            <img src="" name="focusedImage" alt="" style="position: relative; z-index: 0;">
         </div>
         <p id="descr">This is where image and target data could be displayed</p>
-        
+        <div id="target-data"></div>
         {%csrf_token%}
         <form id="attr_form">
             <input name="color" type='text' id="palette"/>
@@ -348,8 +370,7 @@ $(document).ready(function(){
     });
 
     var flat = document.getElementById('flat')
-*/    
+*/
 });
 
 </script>
-
