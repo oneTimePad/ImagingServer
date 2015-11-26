@@ -159,7 +159,7 @@ class GetTargets(View):
 			dict={}
 			tdata=[]
 			for t in targets:
-				tdata.append({"pk":t.pk,"image":t.target_pic})
+				tdata.append({"pk":t.pk,"image":IMAGE_STORAGE+t.target_pic})
 			dict["targets"]=tdata
 			response_data = simplejson.dumps(dict)
 			return JsonResponse(response_data)
