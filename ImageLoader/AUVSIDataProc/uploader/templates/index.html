@@ -234,7 +234,7 @@
               image.src=i.image;
               image.id=i.pk;//this won't work if django repeats pk ids for different models...
               image.width=imgwidth;//so all the targets are shown as thumbnails
-              td.append(image);
+              td.appendChild(image);
             }
           }
         })
