@@ -200,7 +200,6 @@
                         url:"{% url 'deletepic'%}",
                         type:"POST",
                         data: {"pk":curr_pic},
-
                     })
                     break
 
@@ -219,25 +218,66 @@
         //getting targets using the pk of the current image
         //Also need to get picture metadata and display it--also useful for creating the compass rose
         $.ajax({
+          url: "{% url 'getpicturedata'%}",
+          type: "GET",
+          dataType: "json",
+          data: {"pk": image.id},
+          success: function(json) {
+            json_response=JSON.parse(json);
+            td=$.("#picture-data");
+            td.empty();
+            td.append("<p>Latitude: "+json_response.latitude+"</p>")
+            td.append("<p>Longitude: "+json_response.longitude+"</p>")
+            td.append("<p>Orientation: "+json_response.orientation+"</p>")
+            //add compass rose
+          }
+        })
+        $.ajax({
           url: "{% url 'gettargets'%}",
           type: "GET",
           dataType: "json",
           data: {"pk": image.id},
-          success: function (json){
+          success: function(json) {
             json_response=JSON.parse(json);
             arr=json_response.targets;
             //should get a json with target pks mapped to their urls
-            td = $.("#target-data");
+            td = $.("#targets");
             td.empty();
             for (i in arr) {
               image=document.createElement("img");
               image.src=i.image;
-              image.id=i.pk;//this won't work if django repeats pk ids for different models...
+              image.id=i.pk;//this won't work if django repeats pks for different models...
               image.width=imgwidth;//so all the targets are shown as thumbnails
+              image.addEventListener("click", function() {
+                showTargetData(this);
+                return false;
+              })
               td.appendChild(image);
             }
           }
         })
+    }
+
+    function showTargetData(image) {
+      pk = image.id;
+      $.ajax({
+        url: "{% url 'gettargetdata'%}",
+        type: "GET",
+        dataType: "json",
+        data: {"pk": pk},
+        success: function(json) {
+          json_response=JSON.parse(json);
+          //how to set default values in the django attribute form with javascript?
+          //currently just displaying target data
+          td = $.("#current-target");
+          td.empty();
+          td.append("<p>Color: "+json_response.color+"</p>")
+          td.append("<p>Letter Color: "+json_response.lcolor+"</p>")
+          td.append("<p>Orientation: "+json_response.orientation+"</p>")
+          td.append("<p>Shape: "+json_response.shape+"</p>")
+          td.append("<p>Letter: "+json_response.letter+"</p>")
+        }
+      })
     }
 
     //sets the canvas width and height and allows it to listen for cropping
@@ -331,7 +371,9 @@
             <img src="" name="focusedImage" alt="" style="position: relative; z-index: 0;">
         </div>
         <p id="descr">This is where image and target data could be displayed</p>
-        <div id="target-data"></div>
+        <div id="picture-data"></div>
+        <div id="targets"></div>
+        <div id="current-target"></div>
         {%csrf_token%}
         <form id="attr_form">
             <input name="color" type='text' id="palette"/>

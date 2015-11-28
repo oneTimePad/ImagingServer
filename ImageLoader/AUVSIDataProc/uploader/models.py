@@ -36,6 +36,7 @@ class Picture(models.Model):
 	photo = models.ImageField(storage=fs,default=0)
 
 	#latitude and longitude of camera position
+	orientation = models.CharField(max_length=20)
 	lat = models.DecimalField(max_digits=9, decimal_places=6)
 	lon = models.DecimalField(max_digits=9, decimal_places=6)
 	#pixel coordinates of camera location

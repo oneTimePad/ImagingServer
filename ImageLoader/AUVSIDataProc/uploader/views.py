@@ -147,6 +147,19 @@ class DeletePicture(View):
 
 			return HttpResponse("success")
 
+class GetPictureData(View):
+
+	def get(self,request):
+		if request.is_ajax():
+			pdb.set_trace()
+			pic_id = request.GET['pk']
+			picture = Picture.objects.get(pk=pic_id)
+			dict={}
+			dict["latitude"]=picture.lat
+			dict["longitude"]=picture.long
+			dict["orientation"]=picture.orientation
+			return JsonResponse(simplejson.dumps(dict))
+
 class GetTargets(View):
 
 	def get(self,request):
@@ -164,10 +177,23 @@ class GetTargets(View):
 			response_data = simplejson.dumps(dict)
 			return JsonResponse(response_data)
 
+class GetTargetData(View):
+
+	def get(self,request):
+		if request.is_ajax():
+			pdb.set_trace()
+			target_id = request.GET['pk']
+			target = Target.objects.get(pk=target_id)
+			dict={}
+			dict["color"]=target.color
+			dict["lcolor"]=target.lcolor
+			dict["orientation"]=target.orientation
+			dict["shape"]=target.shape
+			dict["letter"]=target.letter
+			return JsonResponse(simplejson.dumps(dict))
+
 #manual attribute form
 class AttributeFormCheck(View):
-
-
 
 	def post(self,request):
 
