@@ -6,8 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-
-import android.hardware.camera2.CameraDevice;
+import com.o3dr.hellodrone.R;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -16,7 +15,7 @@ import android.hardware.Camera.PictureCallback;
 import android.media.AudioManager;
 import android.media.Image;
 import android.net.Uri;
-import android.os.AsyncTask;
+
 import android.os.Environment;
 import android.os.HandlerThread;
 import android.os.PowerManager;
@@ -25,18 +24,17 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.TextureView;
+
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.Spinner;
+
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
-import android.hardware.camera2.*;
+import com.o3dr.hellodrone.SensorTracker.*;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.interfaces.DroneListener;
@@ -64,8 +62,11 @@ import java.util.HashMap;
 
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.locks.LockSupport;
 
 public class MainActivity extends ActionBarActivity implements DroneListener,TowerListener {
+
+    private SensorTracker mSensor;
 
     //for drone communication
     private Drone drone;
@@ -93,6 +94,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private CameraUpload uThread = null;
     private CameraTakerThread tThread = null;
     private ConnectThread cThread = null;
+    private LocationThread lThread = null;
 
 
     FileWriter wrt =null;
@@ -182,7 +184,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         }
 
-        this.controlTower = new ControlTower(getApplicationContext());
+        controlTower = new ControlTower(getApplicationContext());
+        mSensor = new SensorTracker(ctx);
 
 
     }
@@ -316,11 +319,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     public void onBtnConnectTap(View view) {
         cThread = new ConnectThread();
+
         cThread.connect();
 
     }
 
     public void onBtnTakePic(View view){
+        lThread = new LocationThread(new Handler());
         tThread = new CameraTakerThread();
         tThread.capture();
 
@@ -447,15 +452,32 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
 
             //get geo data
-            LatLongAlt gps = geoTag();
+
+            Data dataHolder= null;
+
+            synchronized (lThread) {
+                dataHolder=lThread.getLocation();
+                try {
+
+                    lThread.join();
+                }
+                catch(InterruptedException e){
+
+                }
+
+
+            }
+
+
 
 
             //create log file
             try {
 
                 String logData;
-                if(gps!=null) {
-                    logData = "took " + picNum + " " + gps.toString();
+                if(dataHolder!=null) {
+                    logData = "took " + picNum + " " + dataHolder.getLatLonAlt().toString() +" FF"+dataHolder.getFourcCorners().TopRight.toString();
+
                 }
                 else{
                     logData = "took " + picNum+" "+"GPS NOT CONNECTED";
@@ -471,7 +493,35 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             }
             //send geo data to upload thread
             synchronized (uThread) {
-                uThread.setGpsForPic(gps);
+                if(dataHolder!=null) {
+                    uThread.setDataForPic(dataHolder);
+                    final String tl = dataHolder.getFourcCorners().TopLeft.toString();
+                    final String tr = dataHolder.getFourcCorners().TopRight.toString();
+                    final String bl = dataHolder.getFourcCorners().BottomLeft.toString();
+                    final String br = dataHolder.getFourcCorners().BottomRight.toString();
+
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+
+
+                            TextView tle = (TextView) findViewById(R.id.tle);
+                            TextView tre = (TextView) findViewById(R.id.tre);
+                            TextView ble = (TextView) findViewById(R.id.ble);
+                            TextView bre = (TextView) findViewById(R.id.bre);
+
+                            tle.setText(tl);
+                            tre.setText(tr);
+                            ble.setText(bl);
+                            bre.setText(br);
+
+
+                        }
+                    });
+                }
+
             }
 
 
@@ -618,11 +668,115 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     }
 
 
+    private class FourCorners{
+        public LatLong TopLeft, TopRight, BottomLeft, BottomRight;
+
+
+        FourCorners(LatLong tl,LatLong tr,LatLong bl,LatLong br){
+            TopLeft=tl;
+            TopRight=tr;
+            BottomLeft=bl;
+            BottomRight=br;
+
+        }
+    }
+
+
+
+    private class Data{
+        private float azimuth;
+        private float pitch;
+        private float roll;
+        private LatLongAlt gps;
+        private FourCorners fourC;
+
+
+        Data(LatLongAlt gps, float azimuth, float pitch, float roll){
+            this.azimuth =azimuth;
+            this.pitch = pitch;
+            this.roll = roll;
+
+            this.gps = gps;
+
+        }
+
+        float getAzimuth(){
+            return azimuth;
+        }
+        float getPitch(){
+            return pitch;
+        }
+        float getRoll(){
+            return roll;
+        }
+
+        LatLongAlt getLatLonAlt(){
+            return gps;
+        }
+
+        void setFourceCorners(FourCorners fc){
+            this.fourC = fc;
+        }
+
+        FourCorners getFourcCorners(){
+            return fourC;
+        }
+    }
+
+    // ---------------------- DATA GATHERING
+    /**
+     * Helper class used to run tasks in the background
+     * Will continuously gather gps data and smartphone orientation data until user clicks cancel
+     */
+    class LocationThread extends Thread implements Runnable {
+        private final Handler mHandler;
+        private Data dataHolder;
+        LocationThread(Handler handler) {
+            mHandler = handler;
+        }
+
+        void setDataHolder(){
+            LatLongAlt lla = geoTag();
+            if(lla==null){
+                return;
+            }
+
+            dataHolder=new Data(lla,mSensor.getAzimuth(),-1*mSensor.getPitch(),mSensor.getRoll());
+            GeotagActivity gT = new GeotagActivity(dataHolder.getLatLonAlt(),dataHolder.getAzimuth(),dataHolder.getPitch(),dataHolder.getRoll());
+            FourCorners fc = new FourCorners(gT.getTopLeft(), gT.getTopRight(),gT.getBottomLeft(),gT.getBottomRight());
+            dataHolder.setFourceCorners(fc);
+
+        }
+
+
+        Data getLocation(){
+            run();
+            return dataHolder;
+        }
+
+        @Override
+        public void run() {
+                try {
+                    Log.d("Thread sleep", "Pause for 100ms");
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        setDataHolder();
+                    }
+                });;
+        }
+    }
+
+
     private class CameraUpload extends HandlerThread{
 
         Handler mHandler = null;
 
-        LatLongAlt gpsForPic;
+        Data dataForPic;
 
 
         CameraUpload(){
@@ -639,8 +793,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             sendBroadcast(mediaScanIntent);
         }
 
-        void setGpsForPic(LatLongAlt coord){
-            gpsForPic = coord;
+        void setDataForPic(Data coord){
+            dataForPic = coord;
         }
 
 
@@ -674,8 +828,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 refreshGallery(outFile);
 
 
-                HashMap<String, String> map = new HashMap<String, String>();
-                map.put("file_path_string", fileName);
+                //HashMap<String, String> map = new HashMap<String, String>();
+                //map.put("file_path_string", fileName);
 
 
                 /*
