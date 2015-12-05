@@ -73,7 +73,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //for drone communication
     private Drone drone;
 
+    //thread handler
     private final Handler handler = new Handler();
+    //for 3dr tower
     private ControlTower controlTower;
     //for storage of pictures
     private File StoragePic;
@@ -94,29 +96,26 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private CameraHandlerThread mThread = null;
     //upload thread
     private CameraUpload uThread = null;
+    //camera trigger thread
     private CameraTakerThread tThread = null;
+    //3dr pixhawk connect thread
     private ConnectThread cThread = null;
+    //photomography thread
     private LocationThread lThread = null;
 
-
+    //for writing to log files
     FileWriter wrt =null;
     BufferedWriter logOut = null;
 
     //for previewing the pic
-    //this sucks!
     Preview preview;
     //this activity
     Activity act;
     //current context
     Context ctx;
 
-    //no reason for these
-    private static String LOG_TAG = "Error";
-    private static final String TAG = "CamTestActivity";
 
-
-
-    //baud rate, but we are moving over to bluetooth
+    //baud rate
     private final int DEFAULT_USB_BAUD_RATE = 57600;
 
 
@@ -147,9 +146,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //create uploader
         uploader = new ImageUpload("http://1upl92.168.201.51:70/upload", picDir.toString());
 
-        //is directory in existance?
+       //create pic storage directory
         try {
-
+            //if directory doesn't exist, make it
             if (!picDir.exists()) {
                 picDir.mkdirs();
             }
@@ -162,9 +161,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             System.exit(1);
 
         }
-        //used for setting current time pic taken
+        //used for setting current time log file was made
         Calendar cal = Calendar.getInstance(TimeZone.getDefault());
-        SimpleDateFormat sdf = new SimpleDateFormat("HH-mm-ss a", Locale.getDefault());
         String dateTime = cal.getTime().toLocaleString();
 
         //create the pic logs directrory
@@ -185,8 +183,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             System.exit(1);
 
         }
-
+        //3dr control tower
         controlTower = new ControlTower(getApplicationContext());
+        //photomography object
         mSensor = new SensorTracker(ctx);
 
 
@@ -196,23 +195,26 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     public void onStart() {
 
         super.onStart();
+        //connect to tower
         this.controlTower.connect(this);
+        //for maeking interval input keyboard dissapear
         EditText time = (EditText)findViewById(R.id.time);
         final EditText time_f = time;
         //make keyboard disappear at enter
         time.setOnKeyListener(new View.OnKeyListener() {
             @Override
             public boolean onKey(View view, int i, KeyEvent keyEvent) {
+                //on enter
                 if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
                     InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-
+                    //hide the keyboard
                     mgr.hideSoftInputFromWindow(time_f.getWindowToken(), 0);
                     return true;
                 }
                 return false;
             }
         });
-
+        //for writing to the log file
         try {
             wrt = new FileWriter(logFile);
         }
@@ -228,9 +230,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     @Override
     protected void onResume() {
         super.onResume();
-
+        //open camera
         newOpenCamera();
+        //create the uploader thread
         newUploaderThread();
+        //create lThread
+        newPhotoMogThread();
+        //create the camera preview
         preview = new Preview(this, (SurfaceView) findViewById(R.id.surfaceView));
 
         preview.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -254,7 +260,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
             return;
         }
-        on=false;
+        //tell thread to stop taking pics
+
+        on = false;
+
         if(mCamera != null) {   
             preview.stopPreviewAndFreeCamera();
 
@@ -272,29 +281,32 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         catch(IOException e){
 
         }
+        //stop drone connection
         this.controlTower.disconnect();
         if (this.drone.isConnected()) {
             this.drone.disconnect();
             updateConnectedButton(false);
         }
+        //tell it to stop taking pics
         on=false;
+        /*
         if(mCamera!=null) {
             //preview.stopPreviewAndFreeCamera();
             //mCamera.release();
-        }
+        }*/
 
 
         //finish();
     }
 
-
+    //3dr tower connection
     @Override
     public void onTowerConnected() {
         alertUser("3DR Services Connected");
         this.controlTower.registerDrone(this.drone, this.handler);
         this.drone.registerDroneListener(this);
     }
-
+    //disconnection for 3dr tower
     @Override
     public void onTowerDisconnected() {
         alertUser("3DR Service Interrupted");
@@ -302,7 +314,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
 
-    //error handling
+    //drone connection error handling
     @Override
     public void onDroneConnectionFailed(ConnectionResult result) {
         alertUser("Connection Failed:" + result.getErrorMessage());
@@ -315,36 +327,37 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
-
+    //update connect button upon drone connection
     protected void updateConnectedButton(Boolean isConnected) {
 
         Button connectButton = (Button)findViewById(R.id.btnConnect);
 
-        connectButton.setText(isConnected ? "Disconnect":"Connect");
+        connectButton.setText(isConnected ? "Disconnect" : "Connect");
 
     }
 
-
+    //connect to drone
     public void onBtnConnectTap(View view) {
         cThread = new ConnectThread();
-
+        //call on connection thread
         cThread.connect();
 
     }
-
+    //start taking pics
     public void onBtnTakePic(View view){
-        lThread = new LocationThread(new Handler());
+        //create pic taker thread
         tThread = new CameraTakerThread();
+        //start taking pics
         tThread.capture();
 
     }
-
+    //tell pic thread to stop taking pics
     public void onBtnStopPic(View view){
         on=false;
     }
 
 
-
+    //create thread that will run camera callbacks
     private void newOpenCamera(){
         if(mThread == null){
             mThread = new CameraHandlerThread();
@@ -354,40 +367,48 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mThread.openCamera();
         }
     }
-
+    //create upload thread
     private void newUploaderThread(){
         if(uThread == null){
             uThread = new CameraUpload();
         }
 
     }
+    //create lThread the photomogr thread
+    private void newPhotoMogThread(){
+        if(lThread==null){
+            //create photomography thread
+            lThread = new LocationThread(new Handler());
+        }
+    }
 
-
+    //open the back camera
     private void oldOpenCamera(){
         try{
             alertUser("Attempt to open camera");
+            //open camera
             mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
             Camera.Parameters params = mCamera.getParameters();
             params.setRotation(90);
         }catch(RuntimeException e){
-            Log.e(LOG_TAG, "failed to open back camera");
+            alertUser("Failed to open camera");
+            Log.e("Camera Failed", "failed to open back camera");
         }
 
 
     }
 
-
-    private LatLongAlt geoTag() {
+    //get lat/lon/alt of image
+    private LatLongAlt getLatLonAlt() {
         //get altitude
-
         Altitude droneAltitude = drone.getAttribute(AttributeType.ALTITUDE);
         if(droneAltitude==null){
-            alertUser("ALT");
+            alertUser("No altitude");
             return null;
         }
-
+        //get the altitude
         final double vehicleAltitude = droneAltitude.getAltitude();
-
+        //update viewer with altitude
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -403,7 +424,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             alertUser("GPS not connected drone");
             return null;
         }
-
+        //get lon and lat
         LatLong vehiclePosition = droneGps.getPosition();
         if(vehiclePosition==null){
             alertUser("GPS not connected vehicle");
@@ -414,7 +435,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         final double latNum =vehiclePosition.getLatitude();
         final double lonNum = vehiclePosition.getLongitude();
 
-
+        //update viewer with lat/lon
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -427,20 +448,19 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         });
 
 
-
         return new LatLongAlt(vehicleAltitude, latNum, lonNum);
     }
 
 
 
-
+    //callback for saved jpeg
     PictureCallback onPicTake=new PictureCallback() {
         @Override
         public void onPictureTaken ( byte[] bytes, Camera camera){
             Log.d("data size", "" + bytes.length);
             Log.d("taken", "taken");
             synchronized (uThread) {
-
+                //send image to ground
                 uThread.sendPic(bytes,StoragePic, uploader,picNum++);
             }
 
@@ -450,7 +470,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         }
     };
-
+    //shutter callback
     Camera.ShutterCallback onShutter=new Camera.ShutterCallback()
 
     {
@@ -460,21 +480,19 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             AudioManager mgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
 
-            //get geo data
 
+            //for holding image data
             Data dataHolder= null;
-
+            //perform photomography and lat/lon/alt collection
             synchronized (lThread) {
-                dataHolder=lThread.getLocation();
+                dataHolder=lThread.getDataHolder();
                 try {
-
+                    //wait for it to finish
                     lThread.join();
                 }
                 catch(InterruptedException e){
 
                 }
-
-
             }
 
 
@@ -482,7 +500,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
             //create log file
             try {
-
                 String logData;
                 if(dataHolder!=null) {
                     logData = "took " + picNum + " " + dataHolder.getLatLonAlt().toString();
@@ -503,11 +520,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             //send geo data to upload thread
             synchronized (uThread) {
                 if(dataHolder!=null) {
+
                     uThread.setDataForPic(dataHolder);
-                    final String tl = dataHolder.getFourcCorners().TopLeft.toString();
-                    final String tr = dataHolder.getFourcCorners().TopRight.toString();
-                    final String bl = dataHolder.getFourcCorners().BottomLeft.toString();
-                    final String br = dataHolder.getFourcCorners().BottomRight.toString();
+                    final String tl = dataHolder.getFourCorners().TopLeft.toString();
+                    final String tr = dataHolder.getFourCorners().TopRight.toString();
+                    final String bl = dataHolder.getFourCorners().BottomLeft.toString();
+                    final String br = dataHolder.getFourCorners().BottomRight.toString();
                     final double pitch = dataHolder.getPitch();
                     final double roll  = dataHolder.getRoll();
 
@@ -517,7 +535,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         public void run() {
 
 
-
+                            //update viewer with values
                             TextView tle = (TextView) findViewById(R.id.tle);
                             TextView tre = (TextView) findViewById(R.id.tre);
                             TextView ble = (TextView) findViewById(R.id.ble);
@@ -545,7 +563,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     };
 
 
-
+    //for connection to drone
     private class ConnectThread extends HandlerThread{
 
         Handler mHandler = null;
@@ -559,7 +577,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler.post(new Runnable(){
                 public void run(){
 
-
+                    //connect to drone
                     if(drone.isConnected()) {
 
                         drone.disconnect();
@@ -573,13 +591,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
                     }
-
+                    /*
                     try {
                         Thread.sleep(8000);
                     }
                     catch(InterruptedException e){
 
-                    }
+                    }*/
+                    //update connect button
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -594,7 +613,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     }
 
 
-
+    //Thread for triggering camera
     private class CameraTakerThread extends HandlerThread{
         Handler mHandler = null;
         CameraTakerThread(){
@@ -613,7 +632,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                     Double timeNum;
                     try {
-                        //parse to int
+                        //parse to double
                         timeNum =Double.parseDouble(time.getText().toString());
                         if(timeNum<.65){
                             alertUser("Invalid Time Interval");
@@ -626,6 +645,16 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     //continue taking pics
                     on = true;
                     while (on) {
+                        //restart viewer
+
+                        while(-1*mSensor.getPitch()>30){
+                            try {
+                                Thread.sleep(1000);
+                            }
+                            catch(InterruptedException e){
+
+                            }
+                        }
 
                         mCamera.startPreview();
                         if (mCamera != null) {
@@ -634,6 +663,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
                         }
+                        //wait given time interval
                         try {
                             Thread.sleep((long)(timeNum * 1000));
                         } catch (InterruptedException e) {
@@ -646,7 +676,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     }
 
 
-
+    //thread for opening camera and running callbacks
     private class CameraHandlerThread extends HandlerThread {
         Handler mHandler =  null;
 
@@ -657,7 +687,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler = new Handler(getLooper());
 
         }
-
+        //notfy when camera has been opened
         synchronized void notifyCameraReady(){
             notify();
         }
@@ -667,6 +697,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    //open camera
                     oldOpenCamera();
                     notifyCameraReady();
 
@@ -674,12 +705,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                 }
             });
-
+            //wait for camera to be opened
             try{
                wait();
             }
             catch(InterruptedException e){
-                Log.w(LOG_TAG,"wait was interuppted");
+                Log.w("Wait Failed","wait was interuppted");
 
             }
 
@@ -687,7 +718,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
-
+    //class for holder image four corners geo locations
     private class FourCorners{
         public LatLong TopLeft, TopRight, BottomLeft, BottomRight;
 
@@ -702,21 +733,21 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     }
 
 
-
+    //for holding image data
     private class Data{
         private float azimuth;
         private float pitch;
         private float roll;
-        private LatLongAlt gps;
+        private LatLongAlt gpsData;
         private FourCorners fourC;
 
 
-        Data(LatLongAlt gps, float azimuth, float pitch, float roll){
+        Data(LatLongAlt gpsData, float azimuth, float pitch, float roll){
             this.azimuth =azimuth;
             this.pitch = pitch;
             this.roll = roll;
 
-            this.gps = gps;
+            this.gpsData = gpsData;
 
         }
 
@@ -731,23 +762,19 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
 
         LatLongAlt getLatLonAlt(){
-            return gps;
+            return gpsData;
         }
 
-        void setFourceCorners(FourCorners fc){
+        void setFourCorners(FourCorners fc){
             this.fourC = fc;
         }
 
-        FourCorners getFourcCorners(){
+        FourCorners getFourCorners(){
             return fourC;
         }
     }
 
-    // ---------------------- DATA GATHERING
-    /**
-     * Helper class used to run tasks in the background
-     * Will continuously gather gps data and smartphone orientation data until user clicks cancel
-     */
+   //Thread for performing Photomography operations
     class LocationThread extends Thread implements Runnable {
         private final Handler mHandler;
         private Data dataHolder;
@@ -756,32 +783,30 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
 
         void setDataHolder(){
-            LatLongAlt lla = geoTag();
+            //get gps data
+            LatLongAlt lla = getLatLonAlt();
             if(lla==null){
                 return;
             }
-
+            //create image data holder
             dataHolder=new Data(lla,mSensor.getAzimuth(),-1*mSensor.getPitch(),mSensor.getRoll());
+            //get four corner geo locations
             GeotagActivity gT = new GeotagActivity(dataHolder.getLatLonAlt(),dataHolder.getAzimuth(),dataHolder.getPitch(),dataHolder.getRoll());
+            //create four corners holder
             FourCorners fc = new FourCorners(gT.getTopLeft(), gT.getTopRight(),gT.getBottomLeft(),gT.getBottomRight());
-            dataHolder.setFourceCorners(fc);
+            //set four corners
+            dataHolder.setFourCorners(fc);
 
         }
 
-
-        Data getLocation(){
+        //return the create image data holder
+        Data getDataHolder(){
             run();
             return dataHolder;
         }
 
         @Override
         public void run() {
-                try {
-                    Log.d("Thread sleep", "Pause for 100ms");
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
@@ -791,18 +816,16 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
     }
 
-
+    //for uploading camera datato ground station
     private class CameraUpload extends HandlerThread{
 
         Handler mHandler = null;
-
+        //image data
         Data dataForPic;
 
 
         CameraUpload(){
             super("CameraUpload");
-
-
             start();
             mHandler = new Handler(getLooper());
         }
@@ -812,12 +835,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mediaScanIntent.setData(Uri.fromFile(file));
             sendBroadcast(mediaScanIntent);
         }
-
-        void setDataForPic(Data coord){
-            dataForPic = coord;
+        //give thread image data
+        void setDataForPic(Data imageData){
+            dataForPic = imageData;
         }
 
-
+        //post to gcs
         synchronized void post(byte[]data, File dir, ImageUpload uploader, int picNum) {
 
             FileOutputStream outStream = null;
@@ -825,25 +848,19 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             // Write to SD Card
             try {
 
-
+                //time image was saved
                 Calendar cal = Calendar.getInstance(TimeZone.getDefault());
-                SimpleDateFormat sdf = new SimpleDateFormat("HH-mm-ss a", Locale.getDefault());
-
                 String dateTime = cal.getTime().toLocaleString();
 
-
+                //image name
                 String fileName = String.format(dateTime+"%04d.jpg", picNum);
 
+                //write image to disk
                 File outFile = new File(dir, fileName);
-
-
                 outStream = new FileOutputStream(outFile);
-                Log.d("image", data.toString());
                 outStream.write(data);
-
                 outStream.close();
 
-                Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length + " to " + outFile.getAbsolutePath());
 
                 refreshGallery(outFile);
 
@@ -875,7 +892,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         synchronized void notifyOnSuccess   (){
             notify();
         }
-
+        //call to tell thread to send pic
         void sendPic(final byte[]data_f,final File dir_f, final ImageUpload uploader_f,final int pic_num){
 
             mHandler.post(new Runnable(){
@@ -890,9 +907,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
-    // Helper methods
-    // ==========================================================
-
+    //used for aleting user of messages
     protected void alertUser(String message) {
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
