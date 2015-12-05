@@ -218,10 +218,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         }
         logOut = new BufferedWriter(wrt);
-        preview = new Preview(this, (SurfaceView) findViewById(R.id.surfaceView));
-        preview.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-        ((FrameLayout) findViewById(R.id.layout)).addView(preview);
-        preview.setKeepScreenOn(true);
+
+
 
     }
 
@@ -231,7 +229,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         newOpenCamera();
         newUploaderThread();
+        preview = new Preview(this, (SurfaceView) findViewById(R.id.surfaceView));
+
+        preview.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        ((FrameLayout) findViewById(R.id.layout)).addView(preview);
+        preview.setKeepScreenOn(true);
         preview.setCamera(mCamera);
+
+
         alertUser("Camera set");
 
 
@@ -250,6 +255,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         on=false;
         if(mCamera != null) {   
             preview.stopPreviewAndFreeCamera();
+
 
         }
 
@@ -357,6 +363,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     private void oldOpenCamera(){
         try{
+            alertUser("Attempt to open camera");
             mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
             Camera.Parameters params = mCamera.getParameters();
             params.setRotation(90);
@@ -595,10 +602,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     EditText time = (EditText) findViewById(R.id.time);
 
 
-                    int timeNum;
+                    Double timeNum;
                     try {
                         //parse to int
-                        timeNum = Integer.parseInt(time.getText().toString());
+                        timeNum =Double.parseDouble(time.getText().toString());
+                        if(timeNum<.65){
+                            alertUser("Invalid Time Interval");
+                            return;
+                        }
                     } catch (NumberFormatException e) {
                         alertUser("Invalid Time Interval");
                         return;
@@ -615,7 +626,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                         }
                         try {
-                            Thread.sleep(timeNum * 1000);
+                            Thread.sleep((long)(timeNum * 1000));
                         } catch (InterruptedException e) {
 
                         }
