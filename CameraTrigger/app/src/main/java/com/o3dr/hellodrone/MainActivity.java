@@ -55,6 +55,8 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.ViewGroup.LayoutParams;
 
+import org.w3c.dom.Text;
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -483,7 +485,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                 String logData;
                 if(dataHolder!=null) {
-                    logData = "took " + picNum + " " + dataHolder.getLatLonAlt().toString() +" FF"+dataHolder.getFourcCorners().TopRight.toString();
+                    logData = "took " + picNum + " " + dataHolder.getLatLonAlt().toString();
 
                 }
                 else{
@@ -506,6 +508,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     final String tr = dataHolder.getFourcCorners().TopRight.toString();
                     final String bl = dataHolder.getFourcCorners().BottomLeft.toString();
                     final String br = dataHolder.getFourcCorners().BottomRight.toString();
+                    final double pitch = dataHolder.getPitch();
+                    final double roll  = dataHolder.getRoll();
 
 
                     runOnUiThread(new Runnable() {
@@ -518,11 +522,16 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             TextView tre = (TextView) findViewById(R.id.tre);
                             TextView ble = (TextView) findViewById(R.id.ble);
                             TextView bre = (TextView) findViewById(R.id.bre);
+                            TextView pitche = (TextView) findViewById(R.id.pitche);
+                            TextView rolle = (TextView) findViewById(R.id.rolle);
 
                             tle.setText(tl);
                             tre.setText(tr);
                             ble.setText(bl);
                             bre.setText(br);
+
+                            pitche.setText(""+pitch);
+                            rolle.setText(""+roll);
 
 
                         }

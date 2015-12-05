@@ -202,4 +202,40 @@
         android:layout_below="@+id/ble"
         android:layout_alignStart="@+id/ble" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Pitch"
+        android:id="@+id/pitch"
+        android:layout_below="@+id/br"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Roll"
+        android:id="@+id/roll"
+        android:layout_below="@+id/pitch"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="0deg"
+        android:id="@+id/pitche"
+        android:layout_above="@+id/roll"
+        android:layout_alignStart="@+id/bre" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="0deg"
+        android:id="@+id/rolle"
+        android:layout_below="@+id/pitche"
+        android:layout_alignStart="@+id/pitche" />
+
 </RelativeLayout>
