@@ -43,3 +43,15 @@ img {
 
 
 }
+
+#trigger_on_form
+{
+  position: fixed;
+}
+#smart_trigger
+{
+  position: fixed;
+  top:500px;
+  width: 500px;
+
+}

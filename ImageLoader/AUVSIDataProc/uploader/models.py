@@ -31,7 +31,6 @@ import pdb
 class Picture(models.Model):
 	#picture object
 	#use a related manager to get the list of targets for a specific picture
-	text = models.CharField(max_length=100)
 
 	photo = models.ImageField(storage=fs,default=0)
 
@@ -47,38 +46,38 @@ class Picture(models.Model):
 
 class Target(models.Model):
 	ORIENTATION_CHOICES = (
-		('N','N')
-		('NE','NE')
-		('E','E')
-		('SE','SE')
-		('S','S')
-		('SW','SW')
-		('W','W')
-		('NW','NW')
+		('N','N'),
+		('NE','NE'),
+		('E','E'),
+		('SE','SE'),
+		('S','S'),
+		('SW','SW'),
+		('W','W'),
+		('NW','NW'),
 	)
 
 	SHAPE_CHOICES = (
-		('CIR','Circle')
-		('SCI','Semicircle')
-		('QCI','Quarter Circle')
-		('TRI','Triangle')
-		('SQU','Square')
-		('REC','Rectangle')
-		('TRA','Trapezoid')
-		('PEN','Pentagon')
-		('HEX','Hexagon')
-		('HEP','Heptagon')
-		('OCT','Octagon')
-		('STA','Star')
-		('CRO','Cross')
+		('CIR','Circle'),
+		('SCI','Semicircle'),
+		('QCI','Quarter Circle'),
+		('TRI','Triangle'),
+		('SQU','Square'),
+		('REC','Rectangle'),
+		('TRA','Trapezoid'),
+		('PEN','Pentagon'),
+		('HEX','Hexagon'),
+		('HEP','Heptagon'),
+		('OCT','Octagon'),
+		('STA','Star'),
+		('CRO','Cross'),
 	)
 	#targets relate to pictures
 	picture = models.ForeignKey('Picture')
 	target_pic = models.ImageField(storage=fs_targets)
 	color = models.CharField(max_length=10)
 	lcolor = models.CharField(max_length=10)
-	orientation = models.ChoiceField(max_length=2,choices=ORIENTATION_CHOICES)
-	shape = models.ChoiceField(max_length=3,choices=SHAPE_CHOICES)
+	orientation = models.CharField(max_length=2,choices=ORIENTATION_CHOICES)
+	shape = models.CharField(max_length=3,choices=SHAPE_CHOICES)
 	letter = models.CharField(max_length=1)
 	#latitude and longitude for top left corner of target cropped image
 	lat = models.DecimalField(max_digits=9, decimal_places=6)

@@ -60,8 +60,6 @@ class Upload(View):
 		#get data
 
 
-		text = request.POST['text']
-
 		#get actual image
 		pic = request.FILES['image']
 
@@ -135,7 +133,7 @@ class DeletePicture(View):
 
 		if request.is_ajax():
 
-			pdb.set_trace()
+			
 			pic_id = request.POST['pk']
 
 			picture = Picture.objects.get(pk=pic_id)
@@ -151,7 +149,7 @@ class GetPictureData(View):
 
 	def get(self,request):
 		if request.is_ajax():
-			pdb.set_trace()
+			
 			pic_id = request.GET['pk']
 			picture = Picture.objects.get(pk=pic_id)
 			dict={}
@@ -164,7 +162,7 @@ class GetTargets(View):
 
 	def get(self,request):
 		if request.is_ajax():
-			pdb.set_trace()
+		
 			pic_id = request.GET['pk']
 			picture = Picture.objects.get(pk=pic_id)
 			#should get all the related targets using a related manager
@@ -181,7 +179,7 @@ class GetTargetData(View):
 
 	def get(self,request):
 		if request.is_ajax():
-			pdb.set_trace()
+			
 			target_id = request.GET['pk']
 			target = Target.objects.get(pk=target_id)
 			dict={}
@@ -230,3 +228,52 @@ class AttributeFormCheck(View):
 			target.crop(size_data=size_data,parent_pic=parent_pic)
 
 			return HttpResponse("success")
+
+
+connection_allowed = 0
+connect = Signal(providing_args=["on"])
+@receiver(connect)
+def accept_connect_msg(sender,**kwargs):
+	if kwargs["on"]:
+		connection_allowed=1
+	elif not kwargs["on"]:
+		connection_allowed=0
+class DroneConnectGCS(View):
+
+	def post(self,request):
+		if request.is_ajax():
+			connect.send(sender=self.__class__,on=request.POST["connect"])
+			return HttpResponse("Success")
+
+class DroneConnectDroid(View):
+
+	def post(self, request):
+		if not connection_allowed:
+			return HttpResponse("NO")
+		elif connection_allowed:
+			return HttpResponse("YES")
+
+time=0
+smart_trigger=0
+trigger_allowed=0
+trigger = Signal(providing_args=["on","time","smart_trigger"])
+def accept_trigger_msg(sender,**kwargs):
+	if kwargs["on"]:
+		trigger_allowed=1
+		time=kwargs["time"]
+		smart_trigger=kwargs["smart_trigger"]
+	elif not kwargs["on"]:
+		trigger_allowed=0
+class TriggerDroid(View):
+
+	def post(self,request):
+		if not trigger_allowed:
+			return HttpResponse("NO")
+		elif trigger_allowed:
+			return HttpResponse(simplejson.dump({"time":time,"smart_trigger":smart-trigger}),'application/json')
+
+class TriggerGCS(View):
+	def post(self,request):
+		if request.is_ajax():
+			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart-trigger"])
+			return HttpResponse("Success")

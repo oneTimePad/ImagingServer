@@ -9,8 +9,11 @@
 
 
 <script src='{{STATIC_URL}}js/spectrum.js'></script>
+<script src='{{STATIC_URL}}js/ajaxsetup.js'></script>
+
 <link rel='stylesheet' href='{{STATIC_URL}}css/spectrum.css' />
 <link rel='stylesheet' href='{{STATIC_URL}}css/loader.css' />
+
 
 <script>
     var numcols=0;//set when the window loads
@@ -32,42 +35,6 @@
         }
     )
 
-    //cookie setup for posts
-    $(function ajax_setup(){
-            //get cookie for form posting
-            function getCookie(name) {
-                var cookieValue = null;
-                if (document.cookie && document.cookie != '') {
-                    var cookies = document.cookie.split(';');
-                    for (var i = 0; i < cookies.length; i++) {
-                        var cookie = jQuery.trim(cookies[i]);
-                        // Does this cookie string begin with the name we want?
-                        if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
-            }
-
-            var csrftoken = getCookie('csrftoken');
-
-            function csrfSafeMethod(method) {
-                // these HTTP methods do not require CSRF protection
-                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-            }
-
-
-            $.ajaxSetup({
-                beforeSend: function(xhr, settings) {
-                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    }
-                }
-            })
-        }
-    )
 
     //sets up form submission
     $(function form_submit_setup(){
@@ -224,7 +191,7 @@
           data: {"pk": image.id},
           success: function(json) {
             json_response=JSON.parse(json);
-            td=$.("#picture-data");
+            td=$("#picture-data");
             td.empty();
             td.append("<p>Latitude: "+json_response.latitude+"</p>")
             td.append("<p>Longitude: "+json_response.longitude+"</p>")
@@ -241,7 +208,7 @@
             json_response=JSON.parse(json);
             arr=json_response.targets;
             //should get a json with target pks mapped to their urls
-            td = $.("#targets");
+            td = $("#targets");
             td.empty();
             for (i in arr) {
               image=document.createElement("img");
@@ -269,7 +236,7 @@
           json_response=JSON.parse(json);
           //how to set default values in the django attribute form with javascript?
           //currently just displaying target data
-          td = $.("#current-target");
+          td = $("#current-target");
           td.empty();
           td.append("<p>Color: "+json_response.color+"</p>")
           td.append("<p>Letter Color: "+json_response.lcolor+"</p>")
@@ -377,8 +344,18 @@
         {%csrf_token%}
         <form id="attr_form">
             <input name="color" type='text' id="palette"/>
+            {{form.as_p}}
             <button type="button" id="submit"/>Submit</button>
         </form>
+
+
+        <form id="trigger_on_form">
+            <input name="time_interval" type="text" value="0"/>
+            <button onclick ="trigger();" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+        <form/>
+        <button onclick="set_smart_trigger();" name="smart_trigger" type="button" id="smart_trigger" value="1">Smart Trigger on</button>
+
+
 
 
     </div>
@@ -414,5 +391,54 @@ $(document).ready(function(){
     var flat = document.getElementById('flat')
 */
 });
+
+
+
+function set_smart_trigger(){
+   
+    
+    var smart_trigger= document.getElementById("smart_trigger")
+   
+    $("#smart_trigger").val(Math.abs(smart_trigger.value-1))
+    
+    if(smart_trigger.value==true){
+        $("#smart_trigger").html("Smart Triggering On")
+    }
+    else {
+         $("#smart_trigger").html("Smart Triggering Off")
+    }
+
+}
+
+
+function trigger(){
+
+    $.ajax({
+
+        url:"{%url 'gcstrigger' %}",
+        type:'POST',
+        dataType:'JSON',
+        data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+        success: function(json){
+            var time_int = document.getElementById("time_inteval")
+            time_int.value=0
+            var trigger_on = document.getElementById("trigger_on")
+
+            $("trigger_on").val(Math.abs(trigger_on.value-1))
+            if(trigger_on.value){
+                trigger_on.innerHtml="Stop Triggering"
+            }
+            else{
+                trigger_on.innerHtml="Start Triggering"
+            }
+
+        }
+
+    })
+
+
+
+
+}
 
 </script>

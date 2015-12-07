@@ -34,7 +34,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
-import com.o3dr.hellodrone.SensorTracker.*;
+import com.o3dr.hellodrone.SensorTracker;
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.interfaces.DroneListener;
@@ -186,7 +186,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //3dr control tower
         controlTower = new ControlTower(getApplicationContext());
         //photomography object
-        mSensor = new SensorTracker(ctx);
+        mSensor = new SensorTracker(getApplicationContext());
+        mSensor.startSensors();
 
 
     }
@@ -247,6 +248,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         alertUser("Camera set");
 
+        if(mSensor!=null){
+            alertUser(mSensor.getAccelerometerIsAvailable()? "Acceleromter set": "Acceleromoter failed");
+            alertUser(mSensor.getGyroscopeIsAvailable()? "Gyro set":"Gyro failed");
+            alertUser(mSensor.getMagneticFieldIsAvailable()? "Magnetic set":"Magnetic failed");
+        }
+
 
     }
 
@@ -289,6 +296,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
         //tell it to stop taking pics
         on=false;
+        if(mSensor!=null){
+            mSensor.stopSensors();
+        }
         /*
         if(mCamera!=null) {
             //preview.stopPreviewAndFreeCamera();
@@ -502,7 +512,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             try {
                 String logData;
                 if(dataHolder!=null) {
-                    logData = "took " + picNum + " " + dataHolder.getLatLonAlt().toString();
+                    logData = "took " + picNum + " " + dataHolder.getLatLonAlt().toString()+" "+dataHolder.getPitch()+" "+dataHolder.getRoll();
 
                 }
                 else{
@@ -530,6 +540,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     final double roll  = dataHolder.getRoll();
 
 
+
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -548,8 +559,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             ble.setText(bl);
                             bre.setText(br);
 
-                            pitche.setText(""+pitch);
-                            rolle.setText(""+roll);
+                            pitche.setText("" + pitch);
+                            rolle.setText("" + roll);
 
 
                         }
@@ -646,8 +657,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     on = true;
                     while (on) {
                         //restart viewer
-
-                        while(-1*mSensor.getPitch()>30){
+                        Log.d("roll",""+mSensor.getRoll());
+                        Log.d("pitch",""+-1*mSensor.getPitch());
+                        while(Math.abs(mSensor.getPitch())>30 || Math.abs(mSensor.getRoll())>30){
                             try {
                                 Thread.sleep(1000);
                             }

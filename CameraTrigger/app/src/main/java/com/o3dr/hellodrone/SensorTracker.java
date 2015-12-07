@@ -141,7 +141,7 @@ public class SensorTracker extends Activity implements SensorEventListener {
         boolean success = mSensorManager.getRotationMatrix(inR, inclineMatrix, accelValues, compassValues);
         if (success) {
             // Got a good rotation matrix
-            Log.d("Rotation matrix", "Success");
+            //Log.d("Rotation matrix", "Success");
             mSensorManager.getOrientation(inR, prefValues); // Loads the matrix into prefValues
             doUpdate();
             mInclination = mSensorManager.getInclination(inclineMatrix);
