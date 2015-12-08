@@ -33,8 +33,12 @@ public class ImageUpload {
 
 
 
-    public ImageUpload(String url_string, String directory_containing_images_string) {
-        this.url_string = url_string;
+    public ImageUpload(String url_string, String directory_containing_images_string) throws IllegalAccessException {
+        if(url_string==null){
+            throw new IllegalAccessError("No URL") ;
+        }
+
+        this.url_string = url_string+"/upload";
         this.directory_containing_images_string = directory_containing_images_string;
     }
 
@@ -100,6 +104,8 @@ public class ImageUpload {
         OutputStream out = con.getOutputStream();
 
 
+        //For Ethan
+        //HERE !!! -> use JSONOBJECT(hashmap)
         //following paragraph writes any additional key-value post data pairs (as defined at the top of the main method) to the body
         for (Entry<String, String> key_value_pair: form_inputs_map.entrySet()) {
             String key = key_value_pair.getKey();
@@ -107,6 +113,7 @@ public class ImageUpload {
             out.write( ("--" + boundary_for_multipart_post + "\r\n").getBytes() );
             out.write( ("Content-Disposition: form-data; name=\"" + key + "\"\r\n").getBytes() );
             out.write( ("\r\n").getBytes() );
+            //might want to JSONify
             out.write( (value).getBytes() );
             out.flush();
         }

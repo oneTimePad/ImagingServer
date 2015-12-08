@@ -230,21 +230,24 @@ class AttributeFormCheck(View):
 			return HttpResponse("success")
 
 
+
 connection_allowed = -1
 connect = Signal(providing_args=["on"])
+#signal connect
 @receiver(connect)
 def accept_connect_msg(sender,**kwargs):
 	if kwargs["on"]:
 		connection_allowed=1
 	elif not kwargs["on"]:
 		connection_allowed=0
+#tell phone to connect
 class DroneConnectGCS(View):
 
 	def post(self,request):
 		if request.is_ajax():
 			connect.send(sender=self.__class__,on=request.POST["connect"])
 			return HttpResponse("Success")
-
+#ask should phone connect
 class DroneConnectDroid(View):
 
 	def post(self, request):
@@ -260,6 +263,7 @@ time=0
 smart_trigger=0
 trigger_allowed=-1
 trigger = Signal(providing_args=["on","time","smart_trigger"])
+#signal trigger
 def accept_trigger_msg(sender,**kwargs):
 	if kwargs["on"]:
 		trigger_allowed=1
@@ -267,9 +271,10 @@ def accept_trigger_msg(sender,**kwargs):
 		smart_trigger=kwargs["smart_trigger"]
 	elif not kwargs["on"]:
 		trigger_allowed=0
+#ask should start taking pic
 class TriggerDroid(View):
-
 	def post(self,request):
+		pdb.set_trace()
 		if trigger_allowed is 0:
 			return HttpResponse("NO")
 		elif trigger_allowed is 1:
@@ -277,9 +282,9 @@ class TriggerDroid(View):
 		elif trigger_allowed is -1:
 			return HttpResponse("NO INFO")
 		trigger_allowed=-1
+#tell phone to start taking pics
 class TriggerGCS(View):
 	def post(self,request):
 		if request.is_ajax():
-			pdb.set_trace()
 			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
 			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')

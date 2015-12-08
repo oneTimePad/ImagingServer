@@ -18,59 +18,46 @@ import java.nio.charset.MalformedInputException;
 import com.o3dr.hellodrone.MainActivity.CameraTakerThread;
 import com.o3dr.hellodrone.MainActivity.ConnectThread;
 
-public class GCSCommands {
 
-    String url;
+//used to communicate with GCS, waiting for commands
+public class GCSCommands {
+    //GCS url
+    String URL="";
+    //httpcon
     HttpURLConnection con;
+    //threads that control connections and triggering
     ConnectThread conT;
     CameraTakerThread camT;
-    DroidConnect connectThread = null;
 
 
 
-    public GCSCommands(String url, ConnectThread conT, CameraTakerThread camT){
-        this.url=url;
+
+    public GCSCommands(String url, ConnectThread conT, CameraTakerThread camT) throws IllegalAccessException{
+        if(url==null){
+            throw new IllegalAccessError("No URL") ;
+        }
+        this.URL=url;
         this.conT = conT;
         this.camT= camT;
 
-    }
-
-    private void initializeConnection(){
-
-        try {
-            URL url = new URL(this.url);
-            con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("POST");
-            String csrf_token_string = "sss";
-            //sets the csrf token cookie
-            con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
-            con.setRequestProperty("Content-length", "0");
-            con.setUseCaches(false);
-
-        }
-        catch(MalformedURLException e){
-
-        }
-        catch(ProtocolException e){
-
-        }
-        catch(IOException e){
-
-        }
-
-
-
 
     }
 
+
+    //wait for drone connect command
     public void droneConnect(){
         DroidConnect droidConnect = new DroidConnect();
         droidConnect.connect();
 
     }
+    //wait for trigger command
+    public void droidTrigger(){
+        DroidTrigger droidTrigger = new DroidTrigger();
+        droidTrigger.trigger();
+    }
 
 
-
+    //loops waiting for drone connect command
     private class DroidConnect extends HandlerThread{
 
         Handler mHandler = null;
@@ -84,6 +71,31 @@ public class GCSCommands {
        void connect(){
            mHandler.post(new Runnable(){
                public void run(){
+                   try {
+                       URL url = new URL(URL+"/droid/droidconnect");
+                       con = (HttpURLConnection) url.openConnection();
+                       con.setRequestMethod("POST");
+                       String csrf_token_string = "sss";
+                       //sets the csrf token cookie
+                       con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
+                       con.setRequestProperty("Content-length", "0");
+                       con.setUseCaches(false);
+
+                   }
+                   catch(MalformedURLException e){
+
+                   }
+                   catch(ProtocolException e){
+
+                   }
+                   catch(IOException e){
+
+                   }
+
+
+
+
+
                    while(true){
                        try {
                            con.connect();
@@ -100,15 +112,22 @@ public class GCSCommands {
                                        sb.append(line);
                                    }
                                    br.close();
+                                   //if server said to connect
                                    if(sb.toString()=="YES"){
-                                       conT.connect();
+                                       if(!MainActivity.drone.isConnected()) {
+                                           conT.connect();
+                                       }
 
 
                                    }
+                                   //if server said to disconnect
                                    else if(sb.toString()=="NO"){
-                                       conT.connect();
+                                       if(MainActivity.drone.isConnected()) {
+                                           conT.connect();
+                                       }
 
                                    }
+                                   //else no command has be sent
                                    else if(sb.toString()=="NO INFO"){
                                        continue;
                                    }
@@ -128,6 +147,7 @@ public class GCSCommands {
        }
     }
 
+    //used to process server trigger command
     private class DroidTrigger extends HandlerThread{
 
         Handler mHandler = null;
@@ -141,6 +161,28 @@ public class GCSCommands {
             mHandler.post(new Runnable(){
 
                 public void run(){
+
+                    try {
+                        URL url = new URL(URL+"/droid/droidtrigger");
+                        con = (HttpURLConnection) url.openConnection();
+                        con.setRequestMethod("POST");
+                        String csrf_token_string = "sss";
+                        //sets the csrf token cookie
+                        con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
+                        con.setRequestProperty("Content-length", "0");
+                        con.setUseCaches(false);
+
+                    }
+                    catch(MalformedURLException e){
+
+                    }
+                    catch(ProtocolException e){
+
+                    }
+                    catch(IOException e){
+
+                    }
+
                     while(true){
                         try {
                             con.connect();
@@ -157,17 +199,37 @@ public class GCSCommands {
                                         sb.append(line+"\n");
                                     }
                                     br.close();
-
+                                    //stop triggering
                                     if(sb.toString()=="NO"){
-                                        conT.connect();
+                                        MainActivity.on =false;
 
                                     }
+                                    //no command
                                     else if(sb.toString()=="NO INFO"){
                                         continue;
                                     }
+                                    //trigger
                                     else{
+                                        //parse JSON options
                                         String[] json = sb.toString().split("\\n");
-                                        //get trigger part, get time get smart trigger
+                                        String triggerOn = json[0];
+                                        if(triggerOn!="1"){
+                                            continue;
+                                        }
+                                        //interval
+                                        String timeInterval = json[1];
+                                        //or smartTrigger
+                                        String smartTrigger = json[2];
+                                        if(smartTrigger=="0"){
+                                            camT.setCapture(Double.parseDouble(timeInterval));
+                                        }
+                                        else if(smartTrigger=="1"){
+                                            //do smartTrigger stuff
+                                        }
+                                        //start triggering
+                                        MainActivity.on = true;
+                                        camT.capture();
+
                                     }
 
                             }
@@ -180,7 +242,9 @@ public class GCSCommands {
                     }
 
 
-            });
+            }
+        });
+
         }
     }
 

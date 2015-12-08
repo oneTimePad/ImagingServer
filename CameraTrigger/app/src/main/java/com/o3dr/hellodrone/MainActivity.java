@@ -6,14 +6,13 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import com.o3dr.hellodrone.R;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.media.AudioManager;
-import android.media.Image;
 import android.net.Uri;
 
 import android.os.Environment;
@@ -34,7 +33,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
-import com.o3dr.hellodrone.SensorTracker;
+
 import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.interfaces.DroneListener;
@@ -55,23 +54,18 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.ViewGroup.LayoutParams;
 
-import org.w3c.dom.Text;
-
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
+
+
 import java.util.HashMap;
-
-
-import java.util.Locale;
 import java.util.TimeZone;
-import java.util.concurrent.locks.LockSupport;
 
 public class MainActivity extends ActionBarActivity implements DroneListener,TowerListener {
 
     private SensorTracker mSensor;
 
     //for drone communication
-    private Drone drone;
+    public static Drone drone;
 
     //thread handler
     private final Handler handler = new Handler();
@@ -89,8 +83,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //camera
     Camera mCamera;
 
+    Double pixelPerMeter = 0.0;
+
     //continue take pics?
-    boolean on =false;
+    public static boolean on =false;
 
     //camera thread
     private CameraHandlerThread mThread = null;
@@ -103,6 +99,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //photomography thread
     private LocationThread lThread = null;
 
+    private String URL = null;
+
     //for writing to log files
     FileWriter wrt =null;
     BufferedWriter logOut = null;
@@ -113,6 +111,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     Activity act;
     //current context
     Context ctx;
+
+    File picDir;
 
 
     //baud rate
@@ -141,10 +141,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //get the sd card
         File sdCard = Environment.getExternalStorageDirectory();
         //create the pic storage directory
-        File picDir = new File(sdCard.toString() + "/picStorage");
+        picDir = new File(sdCard.toString() + "/picStorage");
 
-        //create uploader
-        uploader = new ImageUpload("http://1upl92.168.201.51:70/upload", picDir.toString());
+
 
        //create pic storage directory
         try {
@@ -215,6 +214,40 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 return false;
             }
         });
+
+        final EditText ipText = (EditText)findViewById(R.id.URL);
+        //make keyboard disappear at enter
+        ipText.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View view, int i, KeyEvent keyEvent) {
+                //on enter
+                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
+                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    //hide the keyboard
+                    mgr.hideSoftInputFromWindow(time_f.getWindowToken(), 0);
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        final EditText ppm = (EditText) findViewById(R.id.ppm);
+        ppm.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View view, int i, KeyEvent keyEvent) {
+                //on enter
+                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
+                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    //hide the keyboard
+                    mgr.hideSoftInputFromWindow(time_f.getWindowToken(), 0);
+                    return true;
+                }
+                return false;
+            }
+        });
+
+
+
         //for writing to the log file
         try {
             wrt = new FileWriter(logFile);
@@ -253,6 +286,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             alertUser(mSensor.getGyroscopeIsAvailable()? "Gyro set":"Gyro failed");
             alertUser(mSensor.getMagneticFieldIsAvailable()? "Magnetic set":"Magnetic failed");
         }
+        //create connectThread
+        cThread = new ConnectThread();
+        //create pic taker thread
+        tThread = new CameraTakerThread();
 
 
     }
@@ -337,6 +374,28 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
+    //set up remote GCS commands for trigger and connect to drone
+    public void remoteCommunications(View view){
+        //get GCS URL
+        EditText ed = (EditText) findViewById(R.id.URL);
+        URL = ed.getText().toString();
+        //start remote connections
+        //create uploader
+        GCSCommands gcs;
+        try {
+            uploader = new ImageUpload(URL, picDir.toString());
+            gcs = new GCSCommands(URL,cThread,tThread);
+        }
+        catch(IllegalAccessException e){
+            alertUser("NO GCS Selected");
+            return;
+        }
+
+        gcs.droneConnect();
+        gcs.droidTrigger();
+
+    }
+
     //update connect button upon drone connection
     protected void updateConnectedButton(Boolean isConnected) {
 
@@ -346,17 +405,17 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
+
     //connect to drone
     public void onBtnConnectTap(View view) {
-        cThread = new ConnectThread();
+
         //call on connection thread
         cThread.connect();
 
     }
     //start taking pics
     public void onBtnTakePic(View view){
-        //create pic taker thread
-        tThread = new CameraTakerThread();
+
         //start taking pics
         tThread.capture();
 
@@ -642,9 +701,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    //get PPM
+                    EditText ppm = (EditText) findViewById(R.id.ppm);
+                    pixelPerMeter = Double.parseDouble(ppm.getText().toString());
                     //get interval input
                     EditText time = (EditText) findViewById(R.id.time);
                     Double timeNum;
+
                     if(captureTime!=0) {
 
                         try {
@@ -752,6 +815,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             BottomLeft=bl;
             BottomRight=br;
 
+        }
+
+        public String toString(){
+            return "{TL:"+TopLeft.toString()+"TR:"+TopRight.toString()+"BL:"+BottomLeft.toString()+"BR:"+BottomRight.toString()+"}";
         }
     }
 
@@ -887,20 +954,30 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                 refreshGallery(outFile);
 
-
-                //HashMap<String, String> map = new HashMap<String, String>();
-                //map.put("file_path_string", fileName);
+                if(URL!=null) {
 
 
-                /*
-                synchronized (uploader) {
-                    try {
-                       uploader.sendPostRequest(map);
-                    } catch (IOException e) {
-                        Log.e("Error", e.toString());
+                    //For Ethan
+                    //ATTRIBUTES TO SEND
+                    HashMap<String, String> map = new HashMap<String, String>();
+                    map.put("file_path_string", fileName);
+                    map.put("PicNum",""+picNum);
+                    map.put("Azimuth",""+dataForPic.getAzimuth());
+                    map.put("Pitch",""+dataForPic.getPitch());
+                    map.put("Roll",""+dataForPic.getRoll());
+                    map.put("LatLonAlt",""+dataForPic.getLatLonAlt().toString());
+                    map.put("FourCorners",""+dataForPic.getFourCorners().toString());
+                    map.put("PPM",""+pixelPerMeter);
+
+                    synchronized (uploader) {
+                        try {
+                            uploader.sendPostRequest(map);
+                        } catch (IOException e) {
+                            Log.e("Error", e.toString());
+                        }
                     }
+
                 }
-                */
 
                 }catch(FileNotFoundException e){
                     e.printStackTrace();

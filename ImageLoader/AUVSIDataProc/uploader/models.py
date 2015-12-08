@@ -1,4 +1,4 @@
-from django.db import models
+from django.contrib.gis.db import models
 
 import Image
 
@@ -34,14 +34,42 @@ class Picture(models.Model):
 
 	photo = models.ImageField(storage=fs,default=0)
 
-	#latitude and longitude of camera position
-	orientation = models.CharField(max_length=20)
+	# These are just to make backups. None of this is actually
+	#needed
+	azimuth = models.DecimalField(max_digits=9, decimal_places=6)
+	pitch = models.DecimalField(max_digits=9, decimal_places=6)
+	roll =models.DecimalField(max_digits=9, decimal_places=6)
+
 	lat = models.DecimalField(max_digits=9, decimal_places=6)
 	lon = models.DecimalField(max_digits=9, decimal_places=6)
-	#pixel coordinates of camera location
-	xcoord = models.IntegerField()
-	ycoord = models.IntegerField()
+
+	latLon = models.DecimalField(max_digits=9, decimal_places=6)
+	alt = models.DecimalField(max_digits=9, decimal_places=6)
+
+	#pixels per meter
 	ppm = models.DecimalField(max_digits=9, decimal_places=6)
+
+	#This is needed
+	#four corners Lat/Lon pairs
+	topLeft = models.PointField()
+	topRight = models.PointField()
+	bottomLeft = models.PointField()
+	bottomRight = models.PointField()
+
+
+
+
+
+
+
+	#lat = models.DecimalField(max_digits=9, decimal_places=6)
+	#lon = models.DecimalField(max_digits=9, decimal_places=6)
+	#pixel coordinates of camera location
+	#xcoord = models.IntegerField()
+	#ycoord = models.IntegerField()
+	
+
+	
 
 
 class Target(models.Model):
