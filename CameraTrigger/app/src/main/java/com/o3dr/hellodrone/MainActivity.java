@@ -575,7 +575,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
     //for connection to drone
-    private class ConnectThread extends HandlerThread{
+    public class ConnectThread extends HandlerThread{
 
         Handler mHandler = null;
         ConnectThread(){
@@ -625,12 +625,17 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
     //Thread for triggering camera
-    private class CameraTakerThread extends HandlerThread{
+    public class CameraTakerThread extends HandlerThread{
         Handler mHandler = null;
+        double captureTime =0;
         CameraTakerThread(){
             super("CamerTakerThread");
             start();
             mHandler = new Handler(getLooper());
+        }
+        void setCapture(double time){
+            captureTime = time;
+
         }
 
         void capture(){
@@ -639,20 +644,26 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 public void run() {
                     //get interval input
                     EditText time = (EditText) findViewById(R.id.time);
-
-
                     Double timeNum;
-                    try {
-                        //parse to double
-                        timeNum =Double.parseDouble(time.getText().toString());
-                        if(timeNum<.65){
+                    if(captureTime!=0) {
+
+                        try {
+                            //parse to double
+                            timeNum = Double.parseDouble(time.getText().toString());
+                            if (timeNum < .65) {
+                                alertUser("Invalid Time Interval");
+                                return;
+                            }
+                        } catch (NumberFormatException e) {
                             alertUser("Invalid Time Interval");
                             return;
                         }
-                    } catch (NumberFormatException e) {
-                        alertUser("Invalid Time Interval");
-                        return;
                     }
+                    else {
+                        timeNum = captureTime;
+                    }
+
+
                     //continue taking pics
                     on = true;
                     while (on) {

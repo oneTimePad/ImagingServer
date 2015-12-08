@@ -350,10 +350,10 @@
 
 
         <form id="trigger_on_form">
-            <input name="time_interval" type="text" value="0"/>
+            <input id="time_interval" type="text" value="0"/>
             <button onclick ="trigger();" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
         <form/>
-        <button onclick="set_smart_trigger();" name="smart_trigger" type="button" id="smart_trigger" value="1">Smart Trigger on</button>
+        <button onclick="set_smart_trigger();" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
 
 
 
@@ -401,7 +401,7 @@ function set_smart_trigger(){
    
     $("#smart_trigger").val(Math.abs(smart_trigger.value-1))
     
-    if(smart_trigger.value==true){
+    if(smart_trigger.value==false){
         $("#smart_trigger").html("Smart Triggering On")
     }
     else {
@@ -412,7 +412,7 @@ function set_smart_trigger(){
 
 
 function trigger(){
-
+    
     $.ajax({
 
         url:"{%url 'gcstrigger' %}",
@@ -420,16 +420,17 @@ function trigger(){
         dataType:'JSON',
         data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
         success: function(json){
-            var time_int = document.getElementById("time_inteval")
+            var time_int = document.getElementById("time_interval")
             time_int.value=0
             var trigger_on = document.getElementById("trigger_on")
-
-            $("trigger_on").val(Math.abs(trigger_on.value-1))
-            if(trigger_on.value){
-                trigger_on.innerHtml="Stop Triggering"
+            
+            $("#trigger_on").val(Math.abs(trigger_on.value-1))
+            
+            if(trigger_on.value==0){
+                $("#trigger_on").html("Stop Triggering")
             }
             else{
-                trigger_on.innerHtml="Start Triggering"
+                $("#trigger_on").html("Start Triggering")
             }
 
         }
