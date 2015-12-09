@@ -99,7 +99,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //photomography thread
     private LocationThread lThread = null;
 
-    private String URL = null;
+    public String URL = null;
 
     //for writing to log files
     FileWriter wrt =null;
@@ -392,18 +392,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler.post(new Runnable(){
                 public void run(){
                     //get GCS URL
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            EditText ed = (EditText) findViewById(R.id.URL);
-                            URL = ed.getText().toString();
-                            Log.d("URL",URL);
-                        }
-                    });
+                    EditText ed = (EditText) findViewById(R.id.URL);
+                    URL = ed.getText().toString();
 
                     //start remote connections
                     //create uploader
                     GCSCommands gcs;
+                    Log.d("URLM",URL);
                     try {
                         uploader = new ImageUpload("http://"+URL, picDir.toString());
                         gcs = new GCSCommands(URL,cThread,tThread);
@@ -427,7 +422,27 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //set up remote GCS commands for trigger and connect to drone
     public void remoteCommunications(View view){
 
-        new RemoteThread().startThread();
+        //new RemoteThread().startThread();
+        EditText ed = (EditText) findViewById(R.id.URL);
+        URL = ed.getText().toString();
+
+        //start remote connections
+        //create uploader
+        GCSCommands gcs;
+        Log.d("URLM",URL);
+        try {
+            uploader = new ImageUpload("http://"+URL, picDir.toString());
+            gcs = new GCSCommands(URL,cThread,tThread);
+        }
+        catch(IllegalAccessException e){
+            alertUser("NO GCS Selected");
+            return;
+        }
+
+        gcs.droneConnect();
+        gcs.droidTrigger();
+        Log.d("came out","cam out");
+
     }
 
     //update connect button upon drone connection

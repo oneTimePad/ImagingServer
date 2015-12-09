@@ -73,112 +73,115 @@ public class GCSCommands {
        void connect(){
            mHandler.post(new Runnable(){
                public void run(){
-                   try {
-                       URL url = new URL("http://"+URL+"/droid/droidconnect");
-                       Log.d("url",URL);
-                       con = (HttpURLConnection) url.openConnection();
-                       con.setRequestMethod("GET");
-                       //String csrf_token_string = "sss";
-                       //sets the csrf token cookie
-                       //con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
-                       //con.setRequestProperty("Content-length", "0");
-                       //The boundary string that we will be using.
-                       //String boundary_for_multipart_post = "===" + System.currentTimeMillis() + "===";
-                       //Make the post request a multipart/form data post request, and pass in the boundary string
-                       //con.setRequestProperty("Content-Type",
-                        //       "multipart/form-data; boundary=" + boundary_for_multipart_post);
-                       con.setUseCaches(false);
-                       //initialize the output stream that will write to the body of the http post request
-                       //OutputStream out = con.getOutputStream();
-
-
-
-                       //following paragraph writes the csrf token into the body as a key-value pair
-                       //out.write( ("--" + boundary_for_multipart_post + "\r\n").getBytes() );
-                       //out.write( ("Content-Disposition: form-data; name=\"csrfmiddlewaretoken\"\r\n").getBytes() );
-                       //out.write( ("\r\n").getBytes() );
-                       //out.write( (csrf_token_string).getBytes() );
-                       //out.flush();
-
-
-                   }
-                   catch(MalformedURLException e){
-
-                   }
-                   catch(ProtocolException e){
-
-                   }
-                   catch(IOException e){
-
-                   }
-
-
-
-
 
                    while(true){
                        try {
 
-                           con.connect();
-                           int status = con.getResponseCode();
+                           URL url = new URL("http://"+URL+"/droid/droidconnect");
+                           Log.d("url",URL);
+                           con = (HttpURLConnection) url.openConnection();
+                           con.setRequestMethod("GET");
+                           //String csrf_token_string = "sss";
+                           //sets the csrf token cookie
+                           //con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
+                           //con.setRequestProperty("Content-length", "0");
+                           //The boundary string that we will be using.
+                           //String boundary_for_multipart_post = "===" + System.currentTimeMillis() + "===";
+                           //Make the post request a multipart/form data post request, and pass in the boundary string
+                           //con.setRequestProperty("Content-Type",
+                           //       "multipart/form-data; boundary=" + boundary_for_multipart_post);
+                           con.setUseCaches(false);
+                           //initialize the output stream that will write to the body of the http post request
+                           //OutputStream out = con.getOutputStream();
 
 
 
-                           switch(status){
+                           //following paragraph writes the csrf token into the body as a key-value pair
+                           //out.write( ("--" + boundary_for_multipart_post + "\r\n").getBytes() );
+                           //out.write( ("Content-Disposition: form-data; name=\"csrfmiddlewaretoken\"\r\n").getBytes() );
+                           //out.write( ("\r\n").getBytes() );
+                           //out.write( (csrf_token_string).getBytes() );
+                           //out.flush();
 
 
-                               case 200:
-                                   BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()));
-                                   StringBuilder sb = new StringBuilder();
-                                   String line;
-                                   while((line= br.readLine())!=null){
-                                       sb.append(line);
+                       con.connect();
+
+                       int status = con.getResponseCode();
+
+
+
+                       switch(status){
+
+
+                           case 200:
+                               BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                               StringBuilder sb = new StringBuilder();
+                               String line;
+                               while((line= br.readLine())!=null){
+                                   sb.append(line);
+                               }
+                               br.close();
+                               Log.d("string",""+ sb.toString().equals("NOINFO"));
+                               //if server said to connect
+                               Log.d("string", sb.toString());
+                               if(sb.toString().equals("YES")){
+                                   Log.d("Yes","Yes");
+                                   if(!MainActivity.drone.isConnected()) {
+                                       conT.connect();
                                    }
-                                   br.close();
-                                   Log.d("string",""+ sb.toString().equals("NOINFO"));
-                                   //if server said to connect
-                                   Log.d("string", sb.toString());
-                                   if(sb.toString().equals("YES")){
-                                       Log.d("Yes","Yes");
-                                       if(!MainActivity.drone.isConnected()) {
-                                           conT.connect();
-                                       }
-                                       con.disconnect();
+                                   con.disconnect();
 
 
+
+                               }
+                               //if server said to disconnect
+                               else if(sb.toString().equals("NO")){
+                                   if(MainActivity.drone.isConnected()) {
+                                       conT.connect();
                                    }
-                                   //if server said to disconnect
-                                   else if(sb.toString().equals("NO")){
-                                       if(MainActivity.drone.isConnected()) {
-                                           conT.connect();
-                                       }
-                                       con.disconnect();
+                                   con.disconnect();
 
+
+                               }
+                               //else no command has be sent
+
+                               else if(sb.toString().equals("NOINFO")){
+
+
+
+                                   con.disconnect();
+
+
+
+                               }
+                               try {
+                                       Thread.sleep(4000);
                                    }
-                                   //else no command has be sent
+                               catch (InterruptedException e){
+                                   Log.e("Error","error");
 
-                                   else if(sb.toString().equals("NOINFO")){
-                                       Log.d("LOL","LOL");
-                                       con.disconnect();
-                                       try {
-                                           Thread.sleep(4000);
-                                       }
-                                       catch (InterruptedException e){
-
-                                       }
-                                       continue;
+                               }
 
 
-                                   }
 
                            }
 
 
                        }
-                       catch(IOException e){
-                           //Log.d("Caught","Caught");
+
+                       catch(MalformedURLException e){
 
                        }
+                       catch(ProtocolException e){
+
+                       }
+                       catch(IOException e){
+
+                       }
+                       catch(NullPointerException e){
+                           Log.e("Connection Error","Invalid address");
+                       }
+
 
 
 

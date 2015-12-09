@@ -354,6 +354,7 @@
             <button onclick ="trigger();" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
         <form/>
         <button onclick="set_smart_trigger();" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
+        <button onclick="droneConnect();" id = "drone_connect" type="button" value = "1">Drone Connect</button>
 
 
 
@@ -392,7 +393,31 @@ $(document).ready(function(){
 */
 });
 
+function droneConnect(){
 
+   
+    $.ajax({
+        url:"{%url 'gcsconnect'%}",
+        type:'POST',
+        dataType: 'JSON',
+        data: {"connect": $("#drone_connect").val(),},
+        success: function(JSON){
+           
+            
+            var drone_connect = document.getElementById("drone_connect")
+            $("#drone_connect").val(Math.abs(drone_connect.value-1))
+            console.log("success")  
+            if(drone_connect.value==0){
+                $("#drone_connect").html("Drone Disconnect")
+            }
+            else{
+                $("#drone_connect").html("Drone Connect")
+            }
+
+        }
+
+    })
+}
 
 function set_smart_trigger(){
    

@@ -236,6 +236,7 @@ connect = Signal(providing_args=["on"])
 #signal connect
 @receiver(connect)
 def accept_connect_msg(sender,**kwargs):
+
 	if kwargs["on"]:
 		DroneConnectDroid.connection_allowed=1
 	elif not kwargs["on"]:
@@ -245,8 +246,9 @@ class DroneConnectGCS(View):
 
 	def post(self,request):
 		if request.is_ajax():
+			
 			connect.send(sender=self.__class__,on=request.POST["connect"])
-			return HttpResponse("Success")
+			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
 #ask should phone connect
 class DroneConnectDroid(View):
 	connection_allowed = -1
@@ -278,7 +280,7 @@ def accept_trigger_msg(sender,**kwargs):
 #ask should start taking pic
 class TriggerDroid(View):
 	def post(self,request):
-		pdb.set_trace()
+		
 		if trigger_allowed is 0:
 			return HttpResponse("NO")
 		elif trigger_allowed is 1:
