@@ -188,16 +188,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         mSensor = new SensorTracker(getApplicationContext());
         mSensor.startSensors();
 
-
-    }
-
-    @Override
-    public void onStart() {
-
-        super.onStart();
-        //connect to tower
-        this.controlTower.connect(this);
-        //for maeking interval input keyboard dissapear
         EditText time = (EditText)findViewById(R.id.time);
         final EditText time_f = time;
         //make keyboard disappear at enter
@@ -248,6 +238,18 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
 
+
+    }
+
+    @Override
+    public void onStart() {
+
+        super.onStart();
+        //connect to tower
+        this.controlTower.connect(this);
+        //for maeking interval input keyboard dissapear
+
+
         //for writing to the log file
         try {
             wrt = new FileWriter(logFile);
@@ -282,9 +284,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         alertUser("Camera set");
 
         if(mSensor!=null){
-            alertUser(mSensor.getAccelerometerIsAvailable()? "Acceleromter set": "Acceleromoter failed");
-            alertUser(mSensor.getGyroscopeIsAvailable()? "Gyro set":"Gyro failed");
-            alertUser(mSensor.getMagneticFieldIsAvailable()? "Magnetic set":"Magnetic failed");
+            //alertUser(mSensor.getAccelerometerIsAvailable()? "Acceleromter set": "Acceleromoter failed");
+            //alertUser(mSensor.getGyroscopeIsAvailable()? "Gyro set":"Gyro failed");
+            //alertUser(mSensor.getMagneticFieldIsAvailable()? "Magnetic set":"Magnetic failed");
         }
         //create connectThread
         cThread = new ConnectThread();
@@ -349,7 +351,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //3dr tower connection
     @Override
     public void onTowerConnected() {
-        alertUser("3DR Services Connected");
+        //alertUser("3DR Services Connected");
         this.controlTower.registerDrone(this.drone, this.handler);
         this.drone.registerDroneListener(this);
     }
@@ -374,26 +376,58 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
+
+
+
+    public class RemoteThread extends HandlerThread{
+
+        Handler mHandler = null;
+        RemoteThread(){
+            super("RemoteThread");
+            start();
+            mHandler = new Handler(getLooper());
+        }
+
+        void startThread(){
+            mHandler.post(new Runnable(){
+                public void run(){
+                    //get GCS URL
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            EditText ed = (EditText) findViewById(R.id.URL);
+                            URL = ed.getText().toString();
+                            Log.d("URL",URL);
+                        }
+                    });
+
+                    //start remote connections
+                    //create uploader
+                    GCSCommands gcs;
+                    try {
+                        uploader = new ImageUpload("http://"+URL, picDir.toString());
+                        gcs = new GCSCommands(URL,cThread,tThread);
+                    }
+                    catch(IllegalAccessException e){
+                        alertUser("NO GCS Selected");
+                        return;
+                    }
+
+                    gcs.droneConnect();
+                    gcs.droidTrigger();
+
+
+
+                }
+            });
+        }
+    }
+
+
     //set up remote GCS commands for trigger and connect to drone
     public void remoteCommunications(View view){
-        //get GCS URL
-        EditText ed = (EditText) findViewById(R.id.URL);
-        URL = ed.getText().toString();
-        //start remote connections
-        //create uploader
-        GCSCommands gcs;
-        try {
-            uploader = new ImageUpload(URL, picDir.toString());
-            gcs = new GCSCommands(URL,cThread,tThread);
-        }
-        catch(IllegalAccessException e){
-            alertUser("NO GCS Selected");
-            return;
-        }
 
-        gcs.droneConnect();
-        gcs.droidTrigger();
-
+        new RemoteThread().startThread();
     }
 
     //update connect button upon drone connection
@@ -454,7 +488,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //open the back camera
     private void oldOpenCamera(){
         try{
-            alertUser("Attempt to open camera");
+            //alertUser("Attempt to open camera");
             //open camera
             mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
             Camera.Parameters params = mCamera.getParameters();

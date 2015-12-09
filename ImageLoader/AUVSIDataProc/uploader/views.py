@@ -231,15 +231,15 @@ class AttributeFormCheck(View):
 
 
 
-connection_allowed = -1
+
 connect = Signal(providing_args=["on"])
 #signal connect
 @receiver(connect)
 def accept_connect_msg(sender,**kwargs):
 	if kwargs["on"]:
-		connection_allowed=1
+		DroneConnectDroid.connection_allowed=1
 	elif not kwargs["on"]:
-		connection_allowed=0
+		DroneConnectDroid.connection_allowed=0
 #tell phone to connect
 class DroneConnectGCS(View):
 
@@ -249,15 +249,19 @@ class DroneConnectGCS(View):
 			return HttpResponse("Success")
 #ask should phone connect
 class DroneConnectDroid(View):
-
-	def post(self, request):
-		if connection_allowed is 0:
+	connection_allowed = -1
+	def get(self, request):
+		
+		if self.connection_allowed is 0:
+			self.connection_allowed=-1
 			return HttpResponse("NO")
-		elif connection_allowed is 1:
+		elif self.connection_allowed is 1:
+			self.connection_allowed=-1
 			return HttpResponse("YES")
-		elif connection_allowed is-1:
-			return HttpResponse("NO INFO")
-		connection_allowed=-1
+		elif self.connection_allowed is -1:
+			self.connection_allowed=-1
+			return HttpResponse("NOINFO")
+		
 
 time=0
 smart_trigger=0
@@ -280,7 +284,7 @@ class TriggerDroid(View):
 		elif trigger_allowed is 1:
 			return HttpResponse(simplejson.dump({"time":time,"smart_trigger":smart-trigger}),'application/json')
 		elif trigger_allowed is -1:
-			return HttpResponse("NO INFO")
+			return HttpResponse("NOINFO")
 		trigger_allowed=-1
 #tell phone to start taking pics
 class TriggerGCS(View):
