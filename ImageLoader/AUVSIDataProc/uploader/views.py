@@ -254,15 +254,17 @@ class DroneConnectDroid(View):
 	connection_allowed = -1
 	def get(self, request):
 		
-		if self.connection_allowed is 0:
-			self.connection_allowed=-1
+		if DroneConnectDroid.connection_allowed is 0:
+			DroneConnectDroid.connection_allowed=-1
 			return HttpResponse("NO")
-		elif self.connection_allowed is 1:
-			self.connection_allowed=-1
+		elif DroneConnectDroid.connection_allowed is 1:
+			DroneConnectDroid.connection_allowed=-1
 			return HttpResponse("YES")
-		elif self.connection_allowed is -1:
-			self.connection_allowed=-1
+		elif DroneConnectDroid.connection_allowed is -1:
+			DroneConnectDroid.connection_allowed=-1
 			return HttpResponse("NOINFO")
+	
+
 		
 
 time=0
