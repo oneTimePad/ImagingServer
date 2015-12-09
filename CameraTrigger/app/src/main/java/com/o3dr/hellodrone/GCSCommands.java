@@ -20,6 +20,9 @@ import java.nio.charset.MalformedInputException;
 import com.o3dr.hellodrone.MainActivity.CameraTakerThread;
 import com.o3dr.hellodrone.MainActivity.ConnectThread;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 
 //used to communicate with GCS, waiting for commands
 public class GCSCommands {
@@ -63,7 +66,7 @@ public class GCSCommands {
     private class DroidConnect extends HandlerThread{
 
         Handler mHandler = null;
-        HttpURLConnection con;
+
         DroidConnect(){
             super("DroidConnect");
             start();
@@ -78,33 +81,27 @@ public class GCSCommands {
                        try {
 
                            URL url = new URL("http://"+URL+"/droid/droidconnect");
-                           Log.d("url",URL);
-                           con = (HttpURLConnection) url.openConnection();
-                           con.setRequestMethod("GET");
-                           //String csrf_token_string = "sss";
-                           //sets the csrf token cookie
-                           //con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
-                           //con.setRequestProperty("Content-length", "0");
-                           //The boundary string that we will be using.
-                           //String boundary_for_multipart_post = "===" + System.currentTimeMillis() + "===";
-                           //Make the post request a multipart/form data post request, and pass in the boundary string
-                           //con.setRequestProperty("Content-Type",
-                           //       "multipart/form-data; boundary=" + boundary_for_multipart_post);
+                           Log.d("url", URL);
+                           HttpURLConnection con = (HttpURLConnection) url.openConnection();
+
+                           con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                           con.setDoOutput(true);
                            con.setUseCaches(false);
-                           //initialize the output stream that will write to the body of the http post request
-                           //OutputStream out = con.getOutputStream();
+                           con.setRequestMethod("POST");
+                           con.connect();
+
+                           JSONObject json = new JSONObject();
+                           try {
+                               json.put("connect", "1");
+                           }
+                           catch( JSONException e){
+
+                           }
+                           OutputStream osC = con.getOutputStream();
+                           osC.write(json.toString().getBytes());
+                           osC.close();
 
 
-
-                           //following paragraph writes the csrf token into the body as a key-value pair
-                           //out.write( ("--" + boundary_for_multipart_post + "\r\n").getBytes() );
-                           //out.write( ("Content-Disposition: form-data; name=\"csrfmiddlewaretoken\"\r\n").getBytes() );
-                           //out.write( ("\r\n").getBytes() );
-                           //out.write( (csrf_token_string).getBytes() );
-                           //out.flush();
-
-
-                       con.connect();
 
                        int status = con.getResponseCode();
 
@@ -128,7 +125,29 @@ public class GCSCommands {
                                    Log.d("Yes","Yes");
                                    if(!MainActivity.drone.isConnected()) {
                                        conT.connect();
+                                       try {
+                                           conT.join();
+                                       }
+                                       catch(InterruptedException e) {
+
+                                       }
                                    }
+                                   if(!MainActivity.drone.isConnected()){
+                                       URL urlC = new URL("http://"+URL+"/droid/droidconnect");
+                                       String jsonC ="{\"status\":1,\"connected\":1}";
+                                       HttpURLConnection conn = (HttpURLConnection) urlC.openConnection();
+                                       conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                                       conn.setDoOutput(true);
+                                       conn.setDoInput(true);
+                                       conn.setRequestMethod("POST");
+                                       OutputStream os = conn.getOutputStream();
+                                       os.write(jsonC.getBytes("UTF-8"));
+                                       os.close();
+
+                                   }
+
+
+
                                    con.disconnect();
 
 

@@ -21,6 +21,7 @@ from ws4redis.redis_store import RedisMessage
 
 from .forms import AttributeForm
 import pdb
+from threading import Lock
 
 
 
@@ -231,38 +232,73 @@ class AttributeFormCheck(View):
 
 
 
-
+connection_allowed = -1
 connect = Signal(providing_args=["on"])
+
 #signal connect
 @receiver(connect)
 def accept_connect_msg(sender,**kwargs):
 
+	global connection_allowed
+	
+	
 	if kwargs["on"]:
-		DroneConnectDroid.connection_allowed=1
+		
+		connection_allowed=1
+		
 	elif not kwargs["on"]:
-		DroneConnectDroid.connection_allowed=0
+		connection_allowed=0
+	
+
+connection_status = Signal()
+
+@receiver(connection_status)
+def send_connection_status(sender,**kwargs):
+	audience = {'broadcast': True}
+	redis_publisher = RedisPublisher(facility='viewer',**audience)
+
+		#Serialize pathname
+	response_data = simplejson.dumps({'status':'connection failed'})
+
+	#send to url to websocket
+	redis_publisher.publish_message(RedisMessage(response_data))
+		
 #tell phone to connect
 class DroneConnectGCS(View):
 
 	def post(self,request):
+
 		if request.is_ajax():
 			
 			connect.send(sender=self.__class__,on=request.POST["connect"])
 			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
 #ask should phone connect
+i=0
 class DroneConnectDroid(View):
-	connection_allowed = -1
-	def get(self, request):
+	
+	def post(self, request):
 		
-		if DroneConnectDroid.connection_allowed is 0:
-			DroneConnectDroid.connection_allowed=-1
-			return HttpResponse("NO")
-		elif DroneConnectDroid.connection_allowed is 1:
-			DroneConnectDroid.connection_allowed=-1
-			return HttpResponse("YES")
-		elif DroneConnectDroid.connection_allowed is -1:
-			DroneConnectDroid.connection_allowed=-1
-			return HttpResponse("NOINFO")
+		global connection_allowed
+		
+		pdb.set_trace()
+		if request.POST["connect"]:
+
+			if connection_allowed is 0:
+				connection_allowed=-1
+				
+				return HttpResponse("NO")
+			elif connection_allowed is 1:
+				connection_allowed=-1
+				
+				return HttpResponse("YES")
+			elif connection_allowed is -1:
+				connection_allowed=-1
+				
+				return HttpResponse("NOINFO")
+		elif request.POST["status"]:
+			if not request.POST["connected"]:
+				connection_status.send(self.__class__)
+
 	
 
 		
