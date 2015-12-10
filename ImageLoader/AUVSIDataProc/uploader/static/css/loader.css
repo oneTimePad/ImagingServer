@@ -35,9 +35,10 @@
         width: 30px;
     }
     #flat{
-      
+       
         position:relative;
     }
-    #submit{
-      position: relative;
+    #trigger_on_form{
+      top:0;
+     
     }

@@ -254,6 +254,7 @@ def accept_connect_msg(sender,**kwargs):
 #signal status update
 @receiver(connection_status)
 def send_connection_status(sender,**kwargs):
+
 	#tell the GCS viewer
 	audience = {'broadcast': True}
 	redis_publisher = RedisPublisher(facility='viewer',**audience)
@@ -281,7 +282,7 @@ class DroneConnectDroid(View):
 		global connection_allowed
 
 		json_request = simplejson.loads((request.body).decode('utf-8'))
-
+		print(json_request)
 		#droid asked to connect
 		if json_request["connect"]:
 
@@ -299,8 +300,11 @@ class DroneConnectDroid(View):
 				return HttpResponse("NOINFO")
 		#droid is giving a status update
 		elif json_request["status"]:
+			pdb.set_trace()
 			if not request.POST["connected"]:
+
 				connection_status.send(self.__class__)
+				return HttpResponse("Got it")
 
 	
 # trigger time
@@ -357,6 +361,7 @@ class TriggerDroid(View):
 			#droid is telling time of shutter trigger
 		elif json_request["status"]:
 			trigger_status.send(self.__class__,time=json_request["dateTime"])
+			return HttpResponse("Got it")
 
 		
 #tell phone to start taking pics

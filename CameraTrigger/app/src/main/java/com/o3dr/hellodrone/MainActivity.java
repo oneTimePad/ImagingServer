@@ -431,17 +431,17 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //create uploader
 
         Log.d("URLM",URL);
-        synchronized (gcs){
-            try {
 
-                gcs = new GCSCommands(URL, cThread, tThread);
-                gcs.droneConnect();
-                gcs.droidTrigger();
-            } catch (IllegalAccessException e) {
-                alertUser("NO GCS Selected");
-                return;
-            }
+        try {
+
+            gcs = new GCSCommands(URL, cThread, tThread);
+            gcs.droneConnect();
+            gcs.droidTrigger();
+        } catch (IllegalAccessException e) {
+            alertUser("NO GCS Selected");
+            return;
         }
+
 
         synchronized (URL){
             try{
@@ -706,6 +706,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     public class ConnectThread extends HandlerThread{
 
         Handler mHandler = null;
+        public int Done = 0;
         ConnectThread(){
             super("ConnectThread");
             start();
@@ -744,6 +745,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             updateConnectedButton(drone.isConnected());
                         }
                     });
+
+
+                    synchronized(this) {
+                        Done =1;
+                        notify();
+                        Done =0;
+
+                    }
 
 
                 }

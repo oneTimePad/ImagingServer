@@ -134,7 +134,11 @@ public class GCSCommands {
                                        conT.connect();
                                        try {
                                            //wait till connect completes
-                                           conT.join();
+                                           synchronized (this){
+                                               while(conT.Done!=1){
+                                                   wait();
+                                               }
+                                           }
                                        }
                                        catch(InterruptedException e) {
 
@@ -142,12 +146,14 @@ public class GCSCommands {
                                    }
                                    //if connect failed
                                    if(!MainActivity.drone.isConnected()){
+                                       Log.d("Not connect","not connect post");
                                        URL urlC = new URL("http://"+URL+"/droid/droidconnect");
                                        HttpURLConnection conn = (HttpURLConnection) urlC.openConnection();
                                        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                                        conn.setDoOutput(true);
-                                       conn.setDoInput(true);
+                                       conn.setUseCaches(false);
                                        conn.setRequestMethod("POST");
+                                       conn.connect();
                                        //send json status update
                                        JSONObject json_yes = new JSONObject();
                                        try {
@@ -159,11 +165,24 @@ public class GCSCommands {
                                        catch( JSONException e){
 
                                        }
+                                       Log.d("writing","writing");
                                        OutputStream os = con.getOutputStream();
                                        OutputStreamWriter osWr = new OutputStreamWriter(os,"UTF-8");
                                        osWr.write(json.toString());
                                        osWr.flush();
                                        osWr.close();
+                                       int response_code = conn.getResponseCode();
+                                       if(response_code!=200){
+                                           Log.d("ResponseCode",""+response_code);
+
+                                       }
+                                       Log.d("success","200");
+                                       try {
+                                           Thread.sleep(4000);
+                                       }
+                                       catch(InterruptedException e) {
+
+                                       }
 
                                    }
 
