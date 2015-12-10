@@ -79,6 +79,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private int picNum;
     //for uploading to ground station
     ImageUpload uploader;
+    GCSCommands gcs;
 
     //camera
     Camera mCamera;
@@ -397,7 +398,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                     //start remote connections
                     //create uploader
-                    GCSCommands gcs;
+
                     Log.d("URLM",URL);
                     try {
                         uploader = new ImageUpload("http://"+URL, picDir.toString());
@@ -428,19 +429,31 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         //start remote connections
         //create uploader
-        GCSCommands gcs;
+
         Log.d("URLM",URL);
-        try {
-            uploader = new ImageUpload("http://"+URL, picDir.toString());
-            gcs = new GCSCommands(URL,cThread,tThread);
-        }
-        catch(IllegalAccessException e){
-            alertUser("NO GCS Selected");
-            return;
+        synchronized (gcs){
+            try {
+
+                gcs = new GCSCommands(URL, cThread, tThread);
+                gcs.droneConnect();
+                gcs.droidTrigger();
+            } catch (IllegalAccessException e) {
+                alertUser("NO GCS Selected");
+                return;
+            }
         }
 
-        gcs.droneConnect();
-        gcs.droidTrigger();
+        synchronized (URL){
+            try{
+            uploader = new ImageUpload("http://" + URL, picDir.toString());
+            }
+            catch (IllegalAccessException e){
+                alertUser("NO GCS SELECTED");
+            }
+
+        }
+
+
         Log.d("came out","cam out");
 
     }
@@ -598,6 +611,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             AudioManager mgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
 
+            synchronized (gcs) {
+                if (gcs != null) {
+                    Calendar cal = Calendar.getInstance(TimeZone.getDefault());
+                    String dateTime = cal.getTime().toLocaleString();
+                    gcs.sendPicSignal(dateTime);
+                }
+            }
 
             //for holding image data
             Data dataHolder= null;
@@ -746,6 +766,17 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         }
 
+        void smartTrigger(){
+            mHandler.post(new Runnable(){
+                @Override
+                public void run() {
+                    //smart Trigger code
+
+                }
+            });
+
+        }
+
         void capture(){
             mHandler.post(new Runnable() {
                 @Override
@@ -795,6 +826,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         if (mCamera != null) {
                             //take pics
                             mCamera.takePicture(onShutter, null, onPicTake);
+
 
 
                         }

@@ -22,7 +22,7 @@
     var curr_pic;//the id of the image in focus
     var crop = {}
 
-    $(function connect_websocket(){
+    $(function connect_websocket_pic(){
 
             //create websocket
             var web_socket = WS4Redis({
@@ -34,6 +34,26 @@
          });
         }
     )
+
+    $(function connect_websocket_droidUpdates(){
+
+            //create websocket
+            var web_socket = WS4Redis({
+            uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
+            //triggered when msg from server is sent
+            receive_message: droidUpdate,
+            heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+
+         });
+        }
+    )
+
+    function droidUpdate(response){
+        //add how to handle droid responses
+        //1) if droid is telling that connection failed
+        //2 if droid is telling the time of shutter trigger
+    }
+
 
 
     //sets up form submission
@@ -406,7 +426,7 @@ function droneConnect(){
             
             var drone_connect = document.getElementById("drone_connect")
             $("#drone_connect").val(Math.abs(drone_connect.value-1))
-            console.log("success")  
+             
             if(drone_connect.value==0){
                 $("#drone_connect").html("Drone Disconnect")
             }

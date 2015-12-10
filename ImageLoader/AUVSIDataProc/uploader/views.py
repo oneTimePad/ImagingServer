@@ -231,9 +231,12 @@ class AttributeFormCheck(View):
 			return HttpResponse("success")
 
 
-
+#is the droid allowed to connect
 connection_allowed = -1
+#signal yes it is
 connect = Signal(providing_args=["on"])
+#signal the droid has given a status update
+connection_status = Signal()
 
 #signal connect
 @receiver(connect)
@@ -241,19 +244,17 @@ def accept_connect_msg(sender,**kwargs):
 
 	global connection_allowed
 	
-	
+	#if yes connect, tell droid
 	if kwargs["on"]:
 		
 		connection_allowed=1
-		
+	# else tell to disconnect
 	elif not kwargs["on"]:
 		connection_allowed=0
-	
-
-connection_status = Signal()
-
+#signal status update
 @receiver(connection_status)
 def send_connection_status(sender,**kwargs):
+	#tell the GCS viewer
 	audience = {'broadcast': True}
 	redis_publisher = RedisPublisher(facility='viewer',**audience)
 
@@ -269,19 +270,20 @@ class DroneConnectGCS(View):
 	def post(self,request):
 
 		if request.is_ajax():
-			
 			connect.send(sender=self.__class__,on=request.POST["connect"])
 			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
+
 #ask should phone connect
-i=0
 class DroneConnectDroid(View):
 	
 	def post(self, request):
 		
 		global connection_allowed
-		
-		pdb.set_trace()
-		if request.POST["connect"]:
+
+		json_request = simplejson.loads((request.body).decode('utf-8'))
+
+		#droid asked to connect
+		if json_request["connect"]:
 
 			if connection_allowed is 0:
 				connection_allowed=-1
@@ -295,19 +297,24 @@ class DroneConnectDroid(View):
 				connection_allowed=-1
 				
 				return HttpResponse("NOINFO")
-		elif request.POST["status"]:
+		#droid is giving a status update
+		elif json_request["status"]:
 			if not request.POST["connected"]:
 				connection_status.send(self.__class__)
 
 	
-
-		
-
+# trigger time
 time=0
+#smart trigger enabled yes/no
 smart_trigger=0
+#trigger enabled
 trigger_allowed=-1
+#signal to trigger
 trigger = Signal(providing_args=["on","time","smart_trigger"])
+#signal status update
+trigger_status = Signal(providing_args=["time"])
 #signal trigger
+@receiver(trigger)
 def accept_trigger_msg(sender,**kwargs):
 	if kwargs["on"]:
 		trigger_allowed=1
@@ -315,17 +322,43 @@ def accept_trigger_msg(sender,**kwargs):
 		smart_trigger=kwargs["smart_trigger"]
 	elif not kwargs["on"]:
 		trigger_allowed=0
+
+#send time of shutter
+@receiver(trigger_status)
+def status_trigger_msg(sender,**kwargs):
+	#tell GCS viewer the status update
+	audience = {'broadcast': True}
+	redis_publisher = RedisPublisher(facility='viewer',**audience)
+
+		#Serialize pathname
+	response_data = simplejson.dumps({'time':kwargs["time"]})
+
+	#send to url to websocket
+	redis_publisher.publish_message(RedisMessage(response_data))
+
+
 #ask should start taking pic
 class TriggerDroid(View):
 	def post(self,request):
 		
-		if trigger_allowed is 0:
-			return HttpResponse("NO")
-		elif trigger_allowed is 1:
-			return HttpResponse(simplejson.dump({"time":time,"smart_trigger":smart-trigger}),'application/json')
-		elif trigger_allowed is -1:
-			return HttpResponse("NOINFO")
-		trigger_allowed=-1
+		json_request = simplejson.loads((request.body).decode('utf-8'))
+		#droid is asking to trigger
+		if json_request["trigger"]:
+			
+			if trigger_allowed is 0:
+				trigger_allowed=-1
+				return HttpResponse("NO")
+			elif trigger_allowed is 1:
+				trigger_allowed=-1
+				return HttpResponse(simplejson.dump({"time":time,"smart_trigger":smart-trigger}),'application/json')
+			elif trigger_allowed is -1:
+				trigger_allowed=-1
+				return HttpResponse("NOINFO")
+			#droid is telling time of shutter trigger
+		elif json_request["status"]:
+			trigger_status.send(self.__class__,time=json_request["dateTime"])
+
+		
 #tell phone to start taking pics
 class TriggerGCS(View):
 	def post(self,request):

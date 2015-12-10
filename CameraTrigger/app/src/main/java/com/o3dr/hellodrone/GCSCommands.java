@@ -12,6 +12,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -79,7 +80,7 @@ public class GCSCommands {
 
                    while(true){
                        try {
-
+                           //ask server what to do
                            URL url = new URL("http://"+URL+"/droid/droidconnect");
                            Log.d("url", URL);
                            HttpURLConnection con = (HttpURLConnection) url.openConnection();
@@ -89,17 +90,21 @@ public class GCSCommands {
                            con.setUseCaches(false);
                            con.setRequestMethod("POST");
                            con.connect();
-
+                            //send json that we are asking should we connect drone
+                           //not a status update
                            JSONObject json = new JSONObject();
                            try {
                                json.put("connect", "1");
+                               json.put("status","0");
                            }
                            catch( JSONException e){
 
                            }
                            OutputStream osC = con.getOutputStream();
-                           osC.write(json.toString().getBytes());
-                           osC.close();
+                           OutputStreamWriter osW = new OutputStreamWriter(osC,"UTF-8");
+                           osW.write(json.toString());
+                           osW.flush();
+                           osW.close();
 
 
 
@@ -123,30 +128,44 @@ public class GCSCommands {
                                Log.d("string", sb.toString());
                                if(sb.toString().equals("YES")){
                                    Log.d("Yes","Yes");
+                                   //if drone is not connected
                                    if(!MainActivity.drone.isConnected()) {
+                                       //connect
                                        conT.connect();
                                        try {
+                                           //wait till connect completes
                                            conT.join();
                                        }
                                        catch(InterruptedException e) {
 
                                        }
                                    }
+                                   //if connect failed
                                    if(!MainActivity.drone.isConnected()){
                                        URL urlC = new URL("http://"+URL+"/droid/droidconnect");
-                                       String jsonC ="{\"status\":1,\"connected\":1}";
                                        HttpURLConnection conn = (HttpURLConnection) urlC.openConnection();
                                        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                                        conn.setDoOutput(true);
                                        conn.setDoInput(true);
                                        conn.setRequestMethod("POST");
-                                       OutputStream os = conn.getOutputStream();
-                                       os.write(jsonC.getBytes("UTF-8"));
-                                       os.close();
+                                       //send json status update
+                                       JSONObject json_yes = new JSONObject();
+                                       try {
+                                           json_yes.put("connect", "0");
+                                           json_yes.put("status", "1");
+                                           //connection failed
+                                           json_yes.put("connected","0");
+                                       }
+                                       catch( JSONException e){
+
+                                       }
+                                       OutputStream os = con.getOutputStream();
+                                       OutputStreamWriter osWr = new OutputStreamWriter(os,"UTF-8");
+                                       osWr.write(json.toString());
+                                       osWr.flush();
+                                       osWr.close();
 
                                    }
-
-
 
                                    con.disconnect();
 
@@ -211,6 +230,43 @@ public class GCSCommands {
        }
     }
 
+
+    public void sendPicSignal(String dateTime){
+        try {
+            //ask server what to do
+            URL url = new URL("http://" + URL + "/droid/droidconnect");
+            Log.d("url", URL);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+
+            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            con.setDoOutput(true);
+            con.setUseCaches(false);
+            con.setRequestMethod("POST");
+            con.connect();
+            //send json that we are asking should we connect drone
+            //not a status update
+            JSONObject json = new JSONObject();
+            try {
+                json.put("trigger", "0");
+                json.put("status", "1");
+                json.put("dateTime",dateTime);
+
+            } catch (JSONException e) {
+
+            }
+        }
+        catch(MalformedURLException e){
+
+        }
+        catch(ProtocolException e){
+
+        }
+        catch(IOException e){
+
+        }
+
+    }
+
     //used to process server trigger command
     private class DroidTrigger extends HandlerThread{
         HttpURLConnection con;
@@ -226,95 +282,87 @@ public class GCSCommands {
 
                 public void run(){
 
-                    try {
-                        URL url = new URL("http://"+URL+"/droid/droidtrigger");
-                        con = (HttpURLConnection) url.openConnection();
-                        con.setRequestMethod("POST");
-                        String csrf_token_string = "sss";
-                        //sets the csrf token cookie
-                        con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
-                        con.setRequestProperty("Content-length", "0");
-                        con.setUseCaches(false);
-                        //set doOutput to true so that we can write bytes to the body of the http post request
-                        con.setDoOutput(true);
-                        //initialize the output stream that will write to the body of the http post request
-                        OutputStream out = con.getOutputStream();
-
-                        //The boundary string that we will be using.
-                        String boundary_for_multipart_post = "===" + System.currentTimeMillis() + "===";
-                        //Make the post request a multipart/form data post request, and pass in the boundary string
-                        con.setRequestProperty("Content-Type",
-                                "multipart/form-data; boundary=" + boundary_for_multipart_post);
-                        //following paragraph writes the csrf token into the body as a key-value pair
-                        out.write( ("--" + boundary_for_multipart_post + "\r\n").getBytes() );
-                        out.write( ("Content-Disposition: form-data; name=\"csrfmiddlewaretoken\"\r\n").getBytes() );
-                        out.write( ("\r\n").getBytes() );
-                        out.write( (csrf_token_string).getBytes() );
-                        out.flush();
-
-
-                    }
-                    catch(MalformedURLException e){
-
-                    }
-                    catch(ProtocolException e){
-
-                    }
-                    catch(IOException e){
-
-                    }
-
                     while(true){
                         try {
+                            //ask server what to do
+                            URL url = new URL("http://"+URL+"/droid/droidconnect");
+                            Log.d("url", URL);
+                            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+
+                            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                            con.setDoOutput(true);
+                            con.setUseCaches(false);
+                            con.setRequestMethod("POST");
+                            con.connect();
+                            //send json that we are asking should we connect drone
+                            //not a status update
+                            JSONObject json = new JSONObject();
+                            try {
+                                json.put("trigger", "1");
+                                json.put("status","0");
+                            }
+                            catch( JSONException e){
+
+                            }
+                            OutputStream osC = con.getOutputStream();
+                            OutputStreamWriter osW = new OutputStreamWriter(osC,"UTF-8");
+                            osW.write(json.toString());
+                            osW.flush();
+                            osW.close();
                             con.connect();
                             int status = con.getResponseCode();
 
                             switch(status){
 
+
                                 case 200:
-                                case 201:
                                     BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()));
                                     StringBuilder sb = new StringBuilder();
                                     String line;
                                     while((line= br.readLine())!=null){
-                                        sb.append(line+"\n");
+                                        sb.append(line);
                                     }
                                     br.close();
                                     //stop triggering
-                                    if(sb.toString()=="NO"){
+                                    if(sb.toString().equals("NO")){
                                         MainActivity.on =false;
-
+                                        con.disconnect();
                                     }
                                     //no command
-                                    else if(sb.toString()=="NO INFO"){
+                                    else if(sb.toString().equals("NOINFO")){
+                                        con.disconnect();
                                         continue;
                                     }
                                     //trigger
-                                    else{
-                                        //parse JSON options
-                                        String[] json = sb.toString().split("\\n");
-                                        String triggerOn = json[0];
-                                        if(triggerOn!="1"){
-                                            continue;
-                                        }
-                                        //interval
-                                        String timeInterval = json[1];
-                                        //or smartTrigger
-                                        String smartTrigger = json[2];
-                                        if(smartTrigger=="0"){
-                                            camT.setCapture(Double.parseDouble(timeInterval));
-                                        }
-                                        else if(smartTrigger=="1"){
-                                            //do smartTrigger stuff
-                                        }
-                                        //start triggering
-                                        MainActivity.on = true;
-                                        camT.capture();
+                                    else {
+                                        JSONObject json_response = null;
+                                        try {
+                                            json_response = new JSONObject(sb.toString());
 
+
+                                            //interval
+                                            String timeInterval = json_response.get("time").toString();
+                                            //or smartTrigger
+                                            String smartTrigger = json_response.get("smart_trigger").toString();
+                                            if (smartTrigger.equals("0")) {
+                                                camT.setCapture(Double.parseDouble(timeInterval));
+                                                //start triggering
+                                                MainActivity.on = true;
+                                                camT.capture();
+                                            } else if (smartTrigger.equals("1")) {
+                                                //start smart Trigger
+                                               camT.smartTrigger();
+                                            }
+
+                                            con.disconnect();
+
+                                        } catch (JSONException e) {
+                                        }
                                     }
 
                             }
-                            con.disconnect();
+
+
                         }
                         catch(IOException e){
 
