@@ -282,7 +282,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         preview.setCamera(mCamera);
 
 
-        alertUser("Camera set");
+
 
         if(mSensor!=null){
             //alertUser(mSensor.getAccelerometerIsAvailable()? "Acceleromter set": "Acceleromoter failed");
@@ -399,7 +399,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     //start remote connections
                     //create uploader
 
-                    Log.d("URLM",URL);
+
                     try {
                         uploader = new ImageUpload("http://"+URL, picDir.toString());
                         gcs = new GCSCommands(URL,cThread,tThread);
@@ -430,7 +430,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //start remote connections
         //create uploader
 
-        Log.d("URLM",URL);
+
 
         try {
 
@@ -454,7 +454,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
 
 
-        Log.d("came out","cam out");
 
     }
 
@@ -521,6 +520,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
             Camera.Parameters params = mCamera.getParameters();
             params.setRotation(90);
+            alertUser("Camera set");
         }catch(RuntimeException e){
             alertUser("Failed to open camera");
             Log.e("Camera Failed", "failed to open back camera");
@@ -622,16 +622,23 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             //for holding image data
             Data dataHolder= null;
             //perform photomography and lat/lon/alt collection
+            lThread.run();
             synchronized (lThread) {
-                dataHolder=lThread.getDataHolder();
-                try {
-                    //wait for it to finish
-                    lThread.join();
-                }
-                catch(InterruptedException e){
+                while(lThread.locked){
+                    Log.d("stuck","Stuck");
+                    try {
+                        Log.d("s","s");
+                        lThread.wait(3000);
+                    }
+                    catch(InterruptedException e){
 
+                    }
                 }
+               dataHolder = lThread.dataHolder;
             }
+            Log.d("out","out");
+            Log.d("AZI",""+dataHolder.getAzimuth());
+            Log.d("DONE","DONE");
 
 
 
@@ -760,7 +767,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //Thread for triggering camera
     public class CameraTakerThread extends HandlerThread{
         Handler mHandler = null;
-        double captureTime =0;
+        double captureTime =0.0;
         CameraTakerThread(){
             super("CamerTakerThread");
             start();
@@ -788,33 +795,38 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 public void run() {
                     //get PPM
                     EditText ppm = (EditText) findViewById(R.id.ppm);
-                    pixelPerMeter = Double.parseDouble(ppm.getText().toString());
+                    try {
+                        pixelPerMeter = Double.parseDouble(ppm.getText().toString());
+                    }
+                    catch(NumberFormatException e){
+                        pixelPerMeter = 0.0;
+                    }
                     //get interval input
                     EditText time = (EditText) findViewById(R.id.time);
                     Double timeNum;
 
-                    if(captureTime!=0) {
 
-                        try {
-                            //parse to double
-                            timeNum = Double.parseDouble(time.getText().toString());
-                            if (timeNum < .65) {
-                                alertUser("Invalid Time Interval");
-                                return;
-                            }
-                        } catch (NumberFormatException e) {
+
+                    try {
+                        //parse to double
+                        timeNum = Double.parseDouble(time.getText().toString());
+                        if (timeNum < .65) {
                             alertUser("Invalid Time Interval");
                             return;
                         }
-                    }
-                    else {
+                    } catch (NumberFormatException e) {
+                        alertUser("Invalid Time Interval");
                         timeNum = captureTime;
                     }
 
 
+
+
                     //continue taking pics
                     on = true;
+                    Log.d("attempted","pic take");
                     while (on) {
+                        Log.d("in loop","n loo");
                         //restart viewer
                         Log.d("roll",""+mSensor.getRoll());
                         Log.d("pitch",""+-1*mSensor.getPitch());
@@ -890,7 +902,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
-    //class for holder image four corners geo locations
+    //class for holder image four corners geo Locations
     private class FourCorners{
         public LatLong TopLeft, TopRight, BottomLeft, BottomRight;
 
@@ -953,33 +965,36 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
    //Thread for performing Photomography operations
     class LocationThread extends Thread implements Runnable {
         private final Handler mHandler;
-        private Data dataHolder;
+        public Data dataHolder;
+        public boolean locked=true;
         LocationThread(Handler handler) {
             mHandler = handler;
         }
 
         void setDataHolder(){
-            //get gps data
-            LatLongAlt lla = getLatLonAlt();
-            if(lla==null){
-                return;
+            synchronized (this) {
+
+                //get gps data
+                LatLongAlt lla = getLatLonAlt();
+                if (lla == null) {
+                    return;
+                }
+                //create image data holder
+                dataHolder = new Data(lla, mSensor.getAzimuth(), -1 * mSensor.getPitch(), mSensor.getRoll());
+                //get four corner geo locations
+                GeotagActivity gT = new GeotagActivity(dataHolder.getLatLonAlt(), dataHolder.getAzimuth(), dataHolder.getPitch(), dataHolder.getRoll());
+                //create four corners holder
+                FourCorners fc = new FourCorners(gT.getTopLeft(), gT.getTopRight(), gT.getBottomLeft(), gT.getBottomRight());
+                //set four corners
+                dataHolder.setFourCorners(fc);
+                locked = false;
+                this.notify();
             }
-            //create image data holder
-            dataHolder=new Data(lla,mSensor.getAzimuth(),-1*mSensor.getPitch(),mSensor.getRoll());
-            //get four corner geo locations
-            GeotagActivity gT = new GeotagActivity(dataHolder.getLatLonAlt(),dataHolder.getAzimuth(),dataHolder.getPitch(),dataHolder.getRoll());
-            //create four corners holder
-            FourCorners fc = new FourCorners(gT.getTopLeft(), gT.getTopRight(),gT.getBottomLeft(),gT.getBottomRight());
-            //set four corners
-            dataHolder.setFourCorners(fc);
+
 
         }
 
-        //return the create image data holder
-        Data getDataHolder(){
-            run();
-            return dataHolder;
-        }
+
 
         @Override
         public void run() {
@@ -1040,7 +1055,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                 refreshGallery(outFile);
 
-                if(URL!=null) {
+                /*if(URL!=null) {
 
 
                     //For Ethan
@@ -1061,15 +1076,16 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         } catch (IOException e) {
                             Log.e("Error", e.toString());
                         }
-                    }
+                    }*/
+
+                }
+            catch(FileNotFoundException e){
+                e.printStackTrace();
+            }
+                catch( IOException e){
 
                 }
 
-                }catch(FileNotFoundException e){
-                    e.printStackTrace();
-                }catch(IOException e){
-                    e.printStackTrace();
-                }
 
 
 

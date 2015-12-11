@@ -28,47 +28,12 @@
             var web_socket = WS4Redis({
             uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
             //triggered when msg from server is sent
-            receive_message: getPic,
+            receive_message: parseWebSkt,
             heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
 
-         });
+            });
         }
     )
-
-    $(function connect_websocket_droidUpdates(){
-
-            //create websocket
-            var web_socket = WS4Redis({
-            uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
-            //triggered when msg from server is sent
-            receive_message: droidUpdate,
-            heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
-
-         });
-        }
-    )
-
-    function droidUpdate(response){
-        //add how to handle droid responses
-        //1) if droid is telling that connection failed
-        //2 if droid is telling the time of shutter trigger
-
-        if(response.hasOwnProperty("status")){
-            if(response["status"]==0){
-                var drone_connect = document.getElementById("drone_connect")
-                $("#drone_connect").val(Math.abs(drone_connect.value-1))
-                $("#drone_connect").html("Drone Connect")
-                alert("Failed To Connect To Drone")
-            }
-
-        }
-        else if(reponse.hasOwnProperty("time")){
-            //send to alert box
-
-        }
-    }
-
-
 
     //sets up form submission
     $(function form_submit_setup(){
@@ -119,36 +84,55 @@
 
 
     //handles picture received from websocket
-    function getPic(response){
+    function parseWebSkt(response){
         //parse json server response
-       var json_response = JSON.parse(response);
+         console.log("here")
+         var json_response = JSON.parse(response);
+        if(json_response.hasOwnProperty("status") == true){
+            if(json_response["status"] == "connection failed")
+            {
+                var drone_connect = document.getElementById("drone_connect")
+                $("#drone_connect").val(Math.abs(drone_connect.value-1))
+                $("#drone_connect").html("Drone Connect")
+                alert("Failed To Connect To Drone")
+            }
 
-        console.log("pic"+json_response.pk+" recieved")
-
-        var grid = document.getElementById('imagegrid');
-
-        if (counter%numcols==0) {
-            grid.appendChild(document.createElement("tr"));//adding a row
         }
-        counter++;
-        //finding the last row in the grid
-        var rows = document.getElementsByTagName("tr");
-        var row = rows[rows.length-1];
-        //adding a column and the thumbnail
-        var col = document.createElement("td");
-        var img = document.createElement("img");
+        else if(json_response.hasOwnProperty("time") == true)
+        {
+                alert(json_response["time"]);
+        }
 
-        //crab the image url
-        img.src=json_response.image;
-        img.id=json_response.pk;
-        img.width=imgwidth;//scale the images so that they all have the same width
-        img.addEventListener("click", function() {
-            setFocusedImage(this);
-            return false;
-        });
+        else{
+           
 
-        col.appendChild(img);
-        row.appendChild(col);
+            console.log("pic"+json_response.pk+" recieved")
+
+            var grid = document.getElementById('imagegrid');
+
+            if (counter%numcols==0) {
+                grid.appendChild(document.createElement("tr"));//adding a row
+            }
+            counter++;
+            //finding the last row in the grid
+            var rows = document.getElementsByTagName("tr");
+            var row = rows[rows.length-1];
+            //adding a column and the thumbnail
+            var col = document.createElement("td");
+            var img = document.createElement("img");
+
+            //crab the image url
+            img.src=json_response.image;
+            img.id=json_response.pk;
+            img.width=imgwidth;//scale the images so that they all have the same width
+            img.addEventListener("click", function() {
+                setFocusedImage(this);
+                return false;
+            });
+
+            col.appendChild(img);
+            row.appendChild(col);
+        }
     }
 
     window.onload = function(){
@@ -474,7 +458,7 @@ function set_smart_trigger(){
 
 
 function trigger(){
-    
+    console.log()
     $.ajax({
 
         url:"{%url 'gcstrigger' %}",
@@ -482,6 +466,14 @@ function trigger(){
         dataType:'JSON',
         data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
         success: function(json){
+           
+
+            if(json.hasOwnProperty("failure")==true){
+                alert("Invalid Time Interval")
+                return;
+            }
+
+
             var time_int = document.getElementById("time_interval")
             time_int.value=0
             var trigger_on = document.getElementById("trigger_on")

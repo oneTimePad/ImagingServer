@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 droidpatterns =[
     url(r'^droidconnect',csrf_exempt(DroneConnectDroid.as_view()),name="droidconnect"),
     url(r'^gcsconnect',DroneConnectGCS.as_view(),name='gcsconnect'),
-    url(r'^droidtrigger',TriggerDroid.as_view(),name='droidtrigger'),
+    url(r'^droidtrigger',csrf_exempt(TriggerDroid.as_view()),name='droidtrigger'),
     url(r'^gcstrigger',TriggerGCS.as_view(),name='gcstrigger'),
 ]
 

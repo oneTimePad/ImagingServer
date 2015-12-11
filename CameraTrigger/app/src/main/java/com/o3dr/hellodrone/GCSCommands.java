@@ -58,8 +58,8 @@ public class GCSCommands {
     }
     //wait for trigger command
     public void droidTrigger(){
-        //DroidTrigger droidTrigger = new DroidTrigger();
-        //droidTrigger.trigger();
+        DroidTrigger droidTrigger = new DroidTrigger();
+        droidTrigger.trigger();
     }
 
 
@@ -148,7 +148,7 @@ public class GCSCommands {
                                    //if connect failed
                                    if(!MainActivity.drone.isConnected()){
                                        con.disconnect();
-                                       Log.d("Not connect","not connect post");
+
                                        URL urlC = new URL("http://"+URL+"/droid/droidconnect");
                                        HttpURLConnection conn = (HttpURLConnection) urlC.openConnection();
                                        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -167,21 +167,18 @@ public class GCSCommands {
                                        catch( JSONException e){
 
                                        }
-                                       Log.d("writing","writing");
+
                                        OutputStream os = conn.getOutputStream();
                                        OutputStreamWriter osWr = new OutputStreamWriter(os,"UTF-8");
                                        osWr.write(json_yes.toString());
                                        osWr.flush();
                                        osWr.close();
                                        int response_code = conn.getResponseCode();
-                                       Log.d("resp",""+response_code);
-                                       if(response_code!=200){
-                                           Log.d("ResponseCode",""+response_code);
 
-                                       }
-                                       Log.d("success","200");
+
+
                                        try {
-                                           Thread.sleep(4000);
+                                           Thread.sleep(8000);
                                        }
                                        catch(InterruptedException e) {
 
@@ -307,7 +304,7 @@ public class GCSCommands {
                     while(true){
                         try {
                             //ask server what to do
-                            URL url = new URL("http://"+URL+"/droid/droidconnect");
+                            URL url = new URL("http://"+URL+"/droid/droidtrigger");
                             Log.d("url", URL);
                             HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
@@ -347,29 +344,34 @@ public class GCSCommands {
                                     br.close();
                                     //stop triggering
                                     if(sb.toString().equals("NO")){
+
                                         MainActivity.on =false;
                                         con.disconnect();
                                     }
                                     //no command
                                     else if(sb.toString().equals("NOINFO")){
                                         con.disconnect();
-                                        continue;
                                     }
                                     //trigger
                                     else {
+
                                         JSONObject json_response = null;
                                         try {
+
                                             json_response = new JSONObject(sb.toString());
+
 
 
                                             //interval
                                             String timeInterval = json_response.get("time").toString();
+
                                             //or smartTrigger
                                             String smartTrigger = json_response.get("smart_trigger").toString();
                                             if (smartTrigger.equals("0")) {
                                                 camT.setCapture(Double.parseDouble(timeInterval));
                                                 //start triggering
                                                 MainActivity.on = true;
+                                                Log.d("Triggering", "now");
                                                 camT.capture();
                                             } else if (smartTrigger.equals("1")) {
                                                 //start smart Trigger
@@ -381,6 +383,17 @@ public class GCSCommands {
                                         } catch (JSONException e) {
                                         }
                                     }
+
+
+
+
+
+                            }
+                            try {
+                                Thread.sleep(4000);
+                            }
+                            catch (InterruptedException e){
+                                Log.e("Error","error");
 
                             }
 

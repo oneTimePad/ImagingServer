@@ -245,22 +245,22 @@ def accept_connect_msg(sender,**kwargs):
 	global connection_allowed
 	
 	#if yes connect, tell droid
-	if kwargs["on"]:
+	if kwargs["on"] == "1":
 		
 		connection_allowed=1
 	# else tell to disconnect
-	elif not kwargs["on"]:
+	elif not kwargs["on"] == "0":
 		connection_allowed=0
 #signal status update
 @receiver(connection_status)
 def send_connection_status(sender,**kwargs):
-
+	
 	#tell the GCS viewer
 	audience = {'broadcast': True}
 	redis_publisher = RedisPublisher(facility='viewer',**audience)
 
 		#Serialize pathname
-	response_data = simplejson.dumps({'status':'connection failed'})
+	response_data = simplejson.dumps({"status":"connection failed"})
 
 	#send to url to websocket
 	redis_publisher.publish_message(RedisMessage(response_data))
@@ -280,11 +280,13 @@ class DroneConnectDroid(View):
 	def post(self, request):
 		
 		global connection_allowed
-
+		
 		json_request = simplejson.loads((request.body).decode('utf-8'))
-		print(json_request)
+		
+
 		#droid asked to connect
-		if json_request["connect"]:
+		
+		if json_request["connect"] == "1":
 
 			if connection_allowed is 0:
 				connection_allowed=-1
@@ -298,10 +300,12 @@ class DroneConnectDroid(View):
 				connection_allowed=-1
 				
 				return HttpResponse("NOINFO")
+
+
 		#droid is giving a status update
-		elif json_request["status"]:
-			pdb.set_trace()
-			if not request.POST["connected"]:
+		elif json_request["status"] == "1":
+			
+			if json_request["connected"] == "0":
 
 				connection_status.send(self.__class__)
 				return HttpResponse("Got it")
@@ -320,11 +324,15 @@ trigger_status = Signal(providing_args=["time"])
 #signal trigger
 @receiver(trigger)
 def accept_trigger_msg(sender,**kwargs):
-	if kwargs["on"]:
+	global trigger_allowed
+	global time
+	global smart_trigger
+	
+	if kwargs["on"] =="1":
 		trigger_allowed=1
 		time=kwargs["time"]
 		smart_trigger=kwargs["smart_trigger"]
-	elif not kwargs["on"]:
+	elif kwargs["on"] == "0":
 		trigger_allowed=0
 
 #send time of shutter
@@ -345,21 +353,30 @@ def status_trigger_msg(sender,**kwargs):
 class TriggerDroid(View):
 	def post(self,request):
 		
+		global trigger_allowed
+		global time
+		global smart_trigger
 		json_request = simplejson.loads((request.body).decode('utf-8'))
+
+
+		
 		#droid is asking to trigger
-		if json_request["trigger"]:
+		if json_request["trigger"] == "1":
 			
 			if trigger_allowed is 0:
+
 				trigger_allowed=-1
 				return HttpResponse("NO")
 			elif trigger_allowed is 1:
+				
 				trigger_allowed=-1
-				return HttpResponse(simplejson.dump({"time":time,"smart_trigger":smart-trigger}),'application/json')
+
+				return HttpResponse(simplejson.dumps({"time":time,"smart_trigger":smart_trigger}),'application/json')
 			elif trigger_allowed is -1:
 				trigger_allowed=-1
 				return HttpResponse("NOINFO")
 			#droid is telling time of shutter trigger
-		elif json_request["status"]:
+		elif json_request["status"] == "1":
 			trigger_status.send(self.__class__,time=json_request["dateTime"])
 			return HttpResponse("Got it")
 
@@ -368,5 +385,8 @@ class TriggerDroid(View):
 class TriggerGCS(View):
 	def post(self,request):
 		if request.is_ajax():
+			print(time)
+			if time == "0":
+				return HttpResponse(simplejson.dumps({"failure":"invalid time interval"}),'application/json')
 			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
 			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
