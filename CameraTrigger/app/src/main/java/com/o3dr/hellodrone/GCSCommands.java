@@ -123,29 +123,31 @@ public class GCSCommands {
                                    sb.append(line);
                                }
                                br.close();
-                               Log.d("string",""+ sb.toString().equals("NOINFO"));
-                               //if server said to connect
-                               Log.d("string", sb.toString());
+
                                if(sb.toString().equals("YES")){
                                    Log.d("Yes","Yes");
                                    //if drone is not connected
                                    if(!MainActivity.drone.isConnected()) {
                                        //connect
                                        conT.connect();
-                                       try {
-                                           //wait till connect completes
-                                           synchronized (this){
-                                               while(conT.Done!=1){
-                                                   wait();
-                                               }
-                                           }
-                                       }
-                                       catch(InterruptedException e) {
+                                            try {
+                                                //wait till connect completes
+                                                //just to be safe
+                                                synchronized (conT) {
+                                                    while (!conT.done) {
+                                                        conT.wait(2000);
+                                                    }
+                                                }
+                                            }
+                                            catch(InterruptedException e){
 
-                                       }
+                                            }
+
+
                                    }
                                    //if connect failed
                                    if(!MainActivity.drone.isConnected()){
+                                       con.disconnect();
                                        Log.d("Not connect","not connect post");
                                        URL urlC = new URL("http://"+URL+"/droid/droidconnect");
                                        HttpURLConnection conn = (HttpURLConnection) urlC.openConnection();
@@ -166,12 +168,13 @@ public class GCSCommands {
 
                                        }
                                        Log.d("writing","writing");
-                                       OutputStream os = con.getOutputStream();
+                                       OutputStream os = conn.getOutputStream();
                                        OutputStreamWriter osWr = new OutputStreamWriter(os,"UTF-8");
-                                       osWr.write(json.toString());
+                                       osWr.write(json_yes.toString());
                                        osWr.flush();
                                        osWr.close();
                                        int response_code = conn.getResponseCode();
+                                       Log.d("resp",""+response_code);
                                        if(response_code!=200){
                                            Log.d("ResponseCode",""+response_code);
 
@@ -186,7 +189,7 @@ public class GCSCommands {
 
                                    }
 
-                                   con.disconnect();
+
 
 
 

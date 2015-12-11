@@ -706,7 +706,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     public class ConnectThread extends HandlerThread{
 
         Handler mHandler = null;
-        public int Done = 0;
+        public boolean done = false;
         ConnectThread(){
             super("ConnectThread");
             start();
@@ -716,43 +716,39 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         void connect(){
             mHandler.post(new Runnable(){
                 public void run(){
+                    synchronized (this) {
+                        //connect to drone
+                        if (drone.isConnected()) {
 
-                    //connect to drone
-                    if(drone.isConnected()) {
-
-                        drone.disconnect();
-                    } else {
-                        Bundle extraParams = new Bundle();
-                        extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, DEFAULT_USB_BAUD_RATE); // Set default baud rate to 57600
-                        //connect with usb
-                        ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
-                        //ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_BLUETOOTH,extraParams,null);
-                        drone.connect(connectionParams);
+                            drone.disconnect();
+                        } else {
+                            Bundle extraParams = new Bundle();
+                            extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, DEFAULT_USB_BAUD_RATE); // Set default baud rate to 57600
+                            //connect with usb
+                            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
+                            //ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_BLUETOOTH,extraParams,null);
+                            drone.connect(connectionParams);
 
 
-                    }
-                    /*
-                    try {
-                        Thread.sleep(8000);
-                    }
-                    catch(InterruptedException e){
-
-                    }*/
-                    //update connect button
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            updateConnectedButton(drone.isConnected());
                         }
-                    });
+                        done = true;
+                        this.notify();
 
-
-                    synchronized(this) {
-                        Done =1;
-                        notify();
-                        Done =0;
 
                     }
+                        //update connect button
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                updateConnectedButton(drone.isConnected());
+                            }
+                        });
+
+
+
+
+
+
 
 
                 }
