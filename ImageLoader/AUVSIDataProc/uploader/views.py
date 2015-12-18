@@ -54,21 +54,16 @@ class Upload(View):
 
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
-		#get request
-		#pdb.set_trace()
+		
 
-		req_post = request.POST
-		#get data
+		pdb.set_trace()
 
-
-		#get actual image
-		pic = request.FILES['image']
-
+		json_request = simplejson.loads((request.body).decode('utf-8'))
 
 
 
 		#create picture
-		picture = Picture.objects.create(text=text,photo=pic)
+		picture = Picture.objects.create(fileName=str(json_request["file_name"]),photo=json_request["file"])
 
 		#trigger signal
 		image_done.send(sender=self.__class__,num_pic=picture.pk)

@@ -18,6 +18,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.HandlerThread;
 import android.os.PowerManager;
+import android.support.annotation.Nullable;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.os.Handler;
@@ -54,6 +55,10 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.ViewGroup.LayoutParams;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 
 
@@ -77,8 +82,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private File logFile;
     //current picture
     private int picNum;
-    //for uploading to ground station
-    ImageUpload uploader;
+    //gcs
     GCSCommands gcs;
 
     //camera
@@ -378,48 +382,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     }
 
 
-
-
-    public class RemoteThread extends HandlerThread{
-
-        Handler mHandler = null;
-        RemoteThread(){
-            super("RemoteThread");
-            start();
-            mHandler = new Handler(getLooper());
-        }
-
-        void startThread(){
-            mHandler.post(new Runnable(){
-                public void run(){
-                    //get GCS URL
-                    EditText ed = (EditText) findViewById(R.id.URL);
-                    URL = ed.getText().toString();
-
-                    //start remote connections
-                    //create uploader
-
-
-                    try {
-                        uploader = new ImageUpload("http://"+URL, picDir.toString());
-                        gcs = new GCSCommands(URL,cThread,tThread);
-                    }
-                    catch(IllegalAccessException e){
-                        alertUser("NO GCS Selected");
-                        return;
-                    }
-
-                    gcs.droneConnect();
-                    gcs.droidTrigger();
-
-
-
-                }
-            });
-        }
-    }
-
-
     //set up remote GCS commands for trigger and connect to drone
     public void remoteCommunications(View view){
 
@@ -443,15 +405,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
 
 
-        synchronized (URL){
-            try{
-            uploader = new ImageUpload("http://" + URL, picDir.toString());
-            }
-            catch (IllegalAccessException e){
-                alertUser("NO GCS SELECTED");
-            }
 
-        }
 
 
 
@@ -530,6 +484,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     }
 
     //get lat/lon/alt of image
+    @Nullable
     private LatLongAlt getLatLonAlt() {
         //get altitude
         Altitude droneAltitude = drone.getAttribute(AttributeType.ALTITUDE);
@@ -552,13 +507,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         Gps droneGps = drone.getAttribute(AttributeType.GPS);
 
         if(droneGps==null){
-            alertUser("GPS not connected drone");
+
             return null;
         }
         //get lon and lat
         LatLong vehiclePosition = droneGps.getPosition();
         if(vehiclePosition==null){
-            alertUser("GPS not connected vehicle");
+
             return null;
         }
 
@@ -592,7 +547,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             Log.d("taken", "taken");
             synchronized (uThread) {
                 //send image to ground
-                uThread.sendPic(bytes,StoragePic, uploader,picNum++);
+                uThread.sendPic(bytes,StoragePic,picNum++);
             }
 
 
@@ -621,24 +576,23 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
             //for holding image data
             Data dataHolder= null;
-            //perform photomography and lat/lon/alt collection
+            lThread.setLocked(true);
             lThread.run();
-            synchronized (lThread) {
-                while(lThread.locked){
-                    Log.d("stuck","Stuck");
-                    try {
-                        Log.d("s","s");
-                        lThread.wait(3000);
-                    }
-                    catch(InterruptedException e){
+            //perform photomography and lat/lon/alt collection
+            while(lThread.isLocked()){
 
-                    }
+                try {
+
+                    lThread.sleep(1000);
                 }
-               dataHolder = lThread.dataHolder;
+                catch(InterruptedException e){
+
+                }
             }
-            Log.d("out","out");
-            Log.d("AZI",""+dataHolder.getAzimuth());
-            Log.d("DONE","DONE");
+
+           dataHolder = lThread.dataHolder;
+
+
 
 
 
@@ -646,12 +600,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             //create log file
             try {
                 String logData;
-                if(dataHolder!=null) {
-                    logData = "took " + picNum + " " + dataHolder.getLatLonAlt().toString()+" "+dataHolder.getPitch()+" "+dataHolder.getRoll();
+                if(dataHolder!=null&& dataHolder.getLatLonAlt()!=null) {
+                    logData = picNum + " GPS:" + dataHolder.getLatLonAlt().toString()+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
 
                 }
                 else{
-                    logData = "took " + picNum+" "+"GPS NOT CONNECTED";
+                    logData = picNum+" "+"GPS NOT CONNECTED"+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
                 }
                 logOut.write(logData);
                 logOut.newLine();
@@ -667,10 +621,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 if(dataHolder!=null) {
 
                     uThread.setDataForPic(dataHolder);
-                    final String tl = dataHolder.getFourCorners().TopLeft.toString();
-                    final String tr = dataHolder.getFourCorners().TopRight.toString();
-                    final String bl = dataHolder.getFourCorners().BottomLeft.toString();
-                    final String br = dataHolder.getFourCorners().BottomRight.toString();
+
+                    final FourCorners fc= dataHolder.getFourCorners();
+
                     final double pitch = dataHolder.getPitch();
                     final double roll  = dataHolder.getRoll();
 
@@ -688,14 +641,15 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             TextView bre = (TextView) findViewById(R.id.bre);
                             TextView pitche = (TextView) findViewById(R.id.pitche);
                             TextView rolle = (TextView) findViewById(R.id.rolle);
+                            if(fc!=null) {
+                                tle.setText(fc.TopLeft.toString());
+                                tre.setText(fc.TopRight.toString());
+                                ble.setText(fc.BottomLeft.toString());
+                                bre.setText(fc.BottomRight.toString());
+                            }
 
-                            tle.setText(tl);
-                            tre.setText(tr);
-                            ble.setText(bl);
-                            bre.setText(br);
-
-                            pitche.setText("" + pitch);
-                            rolle.setText("" + roll);
+                            pitche.setText(String.format("%.2f",pitch));
+                            rolle.setText(String.format("%.2f", roll));
 
 
                         }
@@ -824,12 +778,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                     //continue taking pics
                     on = true;
-                    Log.d("attempted","pic take");
+
                     while (on) {
-                        Log.d("in loop","n loo");
-                        //restart viewer
-                        Log.d("roll",""+mSensor.getRoll());
-                        Log.d("pitch",""+-1*mSensor.getPitch());
+
                         while(Math.abs(mSensor.getPitch())>30 || Math.abs(mSensor.getRoll())>30){
                             try {
                                 Thread.sleep(1000);
@@ -918,6 +869,16 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         public String toString(){
             return "{TL:"+TopLeft.toString()+"TR:"+TopRight.toString()+"BL:"+BottomLeft.toString()+"BR:"+BottomRight.toString()+"}";
         }
+
+        public JSONObject toJSON(){
+            try {
+                return new JSONObject().put("TL", TopLeft.toString()).put("TR", TopRight.toString()).put("BL", BottomLeft.toString()).put("BR", BottomRight.toString());
+            }
+            catch(JSONException e){
+                return null;
+            }
+
+        }
     }
 
 
@@ -926,8 +887,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         private float azimuth;
         private float pitch;
         private float roll;
-        private LatLongAlt gpsData;
-        private FourCorners fourC;
+        private LatLongAlt gpsData = null;
+        private FourCorners fourC = null;
 
 
         Data(LatLongAlt gpsData, float azimuth, float pitch, float roll){
@@ -966,35 +927,45 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     class LocationThread extends Thread implements Runnable {
         private final Handler mHandler;
         public Data dataHolder;
-        public boolean locked=true;
+        public boolean locked;
         LocationThread(Handler handler) {
             mHandler = handler;
         }
 
         void setDataHolder(){
-            synchronized (this) {
 
-                //get gps data
-                LatLongAlt lla = getLatLonAlt();
-                if (lla == null) {
-                    return;
-                }
-                //create image data holder
-                dataHolder = new Data(lla, mSensor.getAzimuth(), -1 * mSensor.getPitch(), mSensor.getRoll());
+
+            //get gps data
+            LatLongAlt lla = getLatLonAlt();
+
+            //create image data holder
+            dataHolder = new Data(lla, mSensor.getAzimuth(), -1 * mSensor.getPitch(), mSensor.getRoll());
+
+            if(lla!=null) {
                 //get four corner geo locations
                 GeotagActivity gT = new GeotagActivity(dataHolder.getLatLonAlt(), dataHolder.getAzimuth(), dataHolder.getPitch(), dataHolder.getRoll());
                 //create four corners holder
                 FourCorners fc = new FourCorners(gT.getTopLeft(), gT.getTopRight(), gT.getBottomLeft(), gT.getBottomRight());
                 //set four corners
                 dataHolder.setFourCorners(fc);
-                locked = false;
-                this.notify();
             }
+
+            setLocked(false);
+
+
+
 
 
         }
 
 
+       public synchronized boolean isLocked(){
+            return locked;
+        }
+
+       public  synchronized void setLocked(boolean locked){
+           this.locked = locked;
+       }
 
         @Override
         public void run() {
@@ -1032,7 +1003,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
 
         //post to gcs
-        synchronized void post(byte[]data, File dir, ImageUpload uploader, int picNum) {
+        synchronized void post(byte[]data, File dir, int picNum) {
 
             FileOutputStream outStream = null;
 
@@ -1054,37 +1025,49 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
                 refreshGallery(outFile);
+                if(URL!=null) {
+                    Log.d("attemping","attemping to send");
+                    JSONObject request = new JSONObject();
+                    try {
+                        request.put("file_name", fileName);
+                        request.put("file",new String(data, StandardCharsets.UTF_8));
+                        request.put("PicNum", picNum);
+                        if (dataForPic != null) {
+                            request.put("Azimuth", dataForPic.getAzimuth());
+                            request.put("Roll", dataForPic.getRoll());
+                            request.put("Pitch", dataForPic.getPitch());
+                            if (dataForPic.getLatLonAlt() != null) {
+                                request.put("GPS", dataForPic.getLatLonAlt().toString());
 
-                /*if(URL!=null) {
+                            } else {
+                                request.put("GPS", null);
+                            }
 
+                            if (dataForPic.getFourCorners() != null) {
 
-                    //For Ethan
-                    //ATTRIBUTES TO SEND
-                    HashMap<String, String> map = new HashMap<String, String>();
-                    map.put("file_path_string", fileName);
-                    map.put("PicNum",""+picNum);
-                    map.put("Azimuth",""+dataForPic.getAzimuth());
-                    map.put("Pitch",""+dataForPic.getPitch());
-                    map.put("Roll",""+dataForPic.getRoll());
-                    map.put("LatLonAlt",""+dataForPic.getLatLonAlt().toString());
-                    map.put("FourCorners",""+dataForPic.getFourCorners().toString());
-                    map.put("PPM",""+pixelPerMeter);
+                                try {
+                                    request.put("FourCorners", dataForPic.getFourCorners().toJSON());
+                                } catch (JSONException e) {
 
-                    synchronized (uploader) {
-                        try {
-                            uploader.sendPostRequest(map);
-                        } catch (IOException e) {
-                            Log.e("Error", e.toString());
+                                }
+                            }
+                            request.put("PPM", pixelPerMeter);
                         }
-                    }*/
+                    } catch (JSONException e) {
 
+                    }
+                    synchronized (gcs){
+                        gcs.sendPicture(request);
+                    }
                 }
+            }
             catch(FileNotFoundException e){
                 e.printStackTrace();
             }
-                catch( IOException e){
+            catch( IOException e){
 
-                }
+            }
+
 
 
 
@@ -1095,13 +1078,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             notify();
         }
         //call to tell thread to send pic
-        void sendPic(final byte[]data_f,final File dir_f, final ImageUpload uploader_f,final int pic_num){
+        void sendPic(final byte[]data_f,final File dir_f,final int pic_num){
 
             mHandler.post(new Runnable(){
                 @Override
                 public void run() {
 
-                    post(data_f,dir_f,uploader_f,pic_num);
+                    post(data_f,dir_f,pic_num);
                     notifyOnSuccess();
                 }
             });

@@ -19,8 +19,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.storage import FileSystemStorage
 # Create your models here.
 
-STORAGE = '/var/www/html/PHOTOS'
-STORAGE_Target = '/var/www/html/TARGETS'
+STORAGE = '/var/www/html/PHOTOS/'
+STORAGE_Target = '/var/www/html/TARGETS/'
 
 #uses django storage, change path to fit yours
 fs = FileSystemStorage(location=STORAGE)
@@ -31,30 +31,30 @@ import pdb
 class Picture(models.Model):
 	#picture object
 	#use a related manager to get the list of targets for a specific picture
-
+	fileName = models.CharField(max_length=100)
 	photo = models.ImageField(storage=fs,default=0)
 
 	# These are just to make backups. None of this is actually
 	#needed
-	azimuth = models.DecimalField(max_digits=9, decimal_places=6)
-	pitch = models.DecimalField(max_digits=9, decimal_places=6)
-	roll =models.DecimalField(max_digits=9, decimal_places=6)
+	#azimuth = models.DecimalField(max_digits=9, decimal_places=6)
+	#pitch = models.DecimalField(max_digits=9, decimal_places=6)
+	#roll =models.DecimalField(max_digits=9, decimal_places=6)
 
-	lat = models.DecimalField(max_digits=9, decimal_places=6)
-	lon = models.DecimalField(max_digits=9, decimal_places=6)
+	#lat = models.DecimalField(max_digits=9, decimal_places=6)
+	#lon = models.DecimalField(max_digits=9, decimal_places=6)
 
-	latLon = models.DecimalField(max_digits=9, decimal_places=6)
-	alt = models.DecimalField(max_digits=9, decimal_places=6)
+	#latLon = models.DecimalField(max_digits=9, decimal_places=6)
+	#alt = models.DecimalField(max_digits=9, decimal_places=6)
 
 	#pixels per meter
-	ppm = models.DecimalField(max_digits=9, decimal_places=6)
+	#ppm = models.DecimalField(max_digits=9, decimal_places=6)
 
 	#This is needed
 	#four corners Lat/Lon pairs
-	topLeft = models.PointField()
-	topRight = models.PointField()
-	bottomLeft = models.PointField()
-	bottomRight = models.PointField()
+	#topLeft = models.PointField()
+	#topRight = models.PointField()
+	#bottomLeft = models.PointField()
+	#bottomRight = models.PointField()
 
 
 

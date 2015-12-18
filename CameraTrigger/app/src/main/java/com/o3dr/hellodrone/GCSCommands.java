@@ -250,6 +250,49 @@ public class GCSCommands {
     }
 
 
+    public void sendPicture(JSONObject request_data) throws IOException {
+        Log.d("posting","posting");
+        URL url = new URL("http://" +URL+"/droid/upload");
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("POST");
+
+        String csrf_token_string = "sss";
+        //sets the csrf token cookie
+        //con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
+        con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        /*try {
+            request_data.put("csrfmiddlewaretoken", csrf_token_string);
+        }
+        catch (JSONException e){
+            Log.e("csrf","csrf");
+        }*/
+        //set doOutput to true so that we can write bytes to the body of the http post request
+        con.setDoOutput(true);
+        con.connect();
+        //initialize the output stream that will write to the body of the http post request
+        OutputStream out = con.getOutputStream();
+
+        OutputStreamWriter outW = new OutputStreamWriter(out);
+        outW.write(request_data.toString());
+        outW.flush();
+        outW.close();
+
+        switch(con.getResponseCode()){
+            case 200:
+                Log.d("200","Success");
+                break;
+            case 500:
+                Log.e("500", "Internal Server error");
+                break;
+            case 403:
+                Log.e("403","Forbidden");
+                break;
+            default:
+                Log.e("#","Something else");
+        }
+    }
+
+
     public void sendPicSignal(String dateTime){
         try {
             //ask server what to do
@@ -328,7 +371,7 @@ public class GCSCommands {
                             osW.write(json.toString());
                             osW.flush();
                             osW.close();
-                            con.connect();
+
                             int status = con.getResponseCode();
 
                             switch(status){

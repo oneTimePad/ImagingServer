@@ -9,6 +9,7 @@ droidpatterns =[
     url(r'^gcsconnect',DroneConnectGCS.as_view(),name='gcsconnect'),
     url(r'^droidtrigger',csrf_exempt(TriggerDroid.as_view()),name='droidtrigger'),
     url(r'^gcstrigger',TriggerGCS.as_view(),name='gcstrigger'),
+    url(r'^upload$',csrf_exempt(Upload.as_view()),name='upload'),
 ]
 
 urlpatterns = [
@@ -16,7 +17,6 @@ urlpatterns = [
     # url(r'^$', 'AUVSIDataProc.views.home', name='home'),
     # url(r'^blog/', include('blog.urls')),
 
-    url(r'^upload$',Upload.as_view(),name='upload'),
     url(r'^viewer$',Index.as_view(),name='index'),
     url(r'^attrform$',AttributeFormCheck.as_view(),name='attrform'),
     url(r'^deletepic$',DeletePicture.as_view(),name='deletepic'),
