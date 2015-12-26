@@ -394,6 +394,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         EditText ed = (EditText) findViewById(R.id.URL);
         URL = ed.getText().toString();
 
+        if(URL.equals("")){
+            URL = "192.168.1.170:2000";
+            alertUser("Using Default IP");
+        }
         //start remote connections
         //create uploader
 
@@ -517,6 +521,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
         //get lon and lat
         LatLong vehiclePosition = droneGps.getPosition();
+
         if(vehiclePosition==null){
 
             return null;
@@ -877,7 +882,15 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         public JSONObject toJSON(){
             try {
-                return new JSONObject().put("TL", TopLeft.toString()).put("TR", TopRight.toString()).put("BL", BottomLeft.toString()).put("BR", BottomRight.toString());
+                JSONObject tl = new JSONObject().put("X",TopLeft.getLatitude()).put("Y",TopLeft.getLongitude());
+
+                JSONObject tr = new JSONObject().put("X",TopRight.getLatitude()).put("Y",TopRight.getLongitude());
+
+                JSONObject bl = new JSONObject().put("X",BottomLeft.getLatitude()).put("Y",BottomLeft.getLongitude());
+
+                JSONObject br = new JSONObject().put("X",BottomRight.getLatitude()).put("Y",BottomRight.getLongitude());
+
+                return new JSONObject().put("TL", tl).put("TR", tr).put("BL", bl).put("BR", br);
             }
             catch(JSONException e){
                 return null;
@@ -916,7 +929,19 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
 
         LatLongAlt getLatLonAlt(){
+
+
             return gpsData;
+        }
+        JSONObject getLatLonAltJSON(){
+            if(gpsData !=null) {
+                try {
+                    return new JSONObject().put("lat", gpsData.getLatitude()).put("lon", gpsData.getLongitude()).put("alt", gpsData.getAltitude());
+                } catch (JSONException e) {
+
+                }
+            }
+            return null;
         }
 
         void setFourCorners(FourCorners fc){
@@ -1052,7 +1077,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             request.put("Roll", dataForPic.getRoll());
                             request.put("Pitch", dataForPic.getPitch());
                             if (dataForPic.getLatLonAlt() != null) {
-                                request.put("GPS", dataForPic.getLatLonAlt().toString());
+                                request.put("GPS", dataForPic.getLatLonAltJSON());
 
                             } else {
                                 request.put("GPS", null);

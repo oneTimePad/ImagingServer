@@ -55,7 +55,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'uploader',
-    'ws4redis',    
+    'ws4redis',
 )
 
 MIDDLEWARE_CLASSES = (

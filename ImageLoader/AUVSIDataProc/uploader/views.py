@@ -24,9 +24,11 @@ import pdb
 from threading import Lock
 
 from io import BytesIO
+from decimal import Decimal
 
 import base64
 
+from django.core import serializers
 
 
 #hard coded
@@ -34,22 +36,6 @@ IMAGE_STORAGE = "http://localhost:80/PHOTOS"
 
 
 image_done = Signal(providing_args=["num_pic"])
-#Have a signal for creating a new target?
-
-#make so that RedisPublish doesn't get initilized
-def initialize(func):
-
-	def wrapper(*args,**kwargs):
-		#used for broadcast msg to websocket
-		audience = {'broadcast': True}
-		redis_publisher = RedisPublisher(facility='viewer',**audience)
-
-		return func(redis_publisher,*args,**kwargs)
-
-	return wrapper
-
-
-
 
 
 class Upload(View):
@@ -72,16 +58,51 @@ class Upload(View):
 		#save image to stringIO file as JPEG
 		image.save(image_io,format='JPEG')
 		#create picture
-		picture = Picture.objects.create(fileName=str(json_request["file_name"]))
+		picture = Picture.objects.create()
 
 
 
 
 		#convert image to django recognized format
-		django_image = InMemoryUploadedFile(image_io,None,"Picture"+str(picture.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
-		picture.photo= django_image
+		django_image = InMemoryUploadedFile(image_io,None,IMAGE_STORAGE+"/Picture"+str(picture.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
+
+		#set pic name
+		picture.fileName = IMAGE_STORAGE+"/Picture"+str(picture.pk).zfill(4)+'.jpeg'
+		#set Image
+		picture.photo=django_image
+
+		picture.azimuth = Decimal(json_request['Azimuth'])
+		picture.pitch = Decimal(json_request['Pitch'])
+		picture.roll= Decimal(json_request['Roll'])
+
+		if "PPM" in json_request.keys():
+			picture.ppm = Decimal(json_request['PPM'])
+		# set latlonAlt
+		if "GPS" in json_request.keys():
+			latLonAlt = simplejson.loads(json_request['GPS'])
+			picture.lat = latLonAlt['lat']
+			picture.lon = latLonAlt['lon']
+			picture.alt = latLonAlt['alt']
+		#set FourCorners
+		if "FourCorners" in json_request.keys():
+			fourCorners = simplejson.loads(json_request['FourCorners'])
+			tl = simplejson.loads(fourCorners['tl'])
+			tr = simplejson.loads(fourCorners['tr'])
+			bl = simplejson.loads(fourCorners['bl'])
+			br = simplejson.loads(fourCorners['br'])
+
+			picture.topLeftX = tl['X']
+			picture.topLeftY = tl['Y']
+			picture.topRightX = tr['X']
+			picture.topRightY = tr['Y']
+			picture.bottomLeftX = bl['X']
+			picture.bottomLeftY = bl['Y']
+			picture.bottomRightX = br['X']
+			picture.bottomRightY = br['Y']
+
 		picture.save()
-		
+
+
 
 		#trigger signal
 		image_done.send(sender=self.__class__,num_pic=picture.pk)
@@ -90,21 +111,25 @@ class Upload(View):
 
 
 #triggered when image object created	`
-@initialize
-def send_pic(pub,num_pic,**kwargs):
+def send_pic(num_pic,**kwargs):
 	#create pic
 	picture = Picture.objects.get(pk=num_pic)
 
 
 	#get the local path of the pic
 
-	path = picture.photo
+	#path = picture.photo
 
 	#Serialize pathname
-	response_data = simplejson.dumps({'type':'picture','image':IMAGE_STORAGE+str(path)[1:],'pk':picture.pk})
+	serPic = serializers.serialize("json",[picture])
+	#response_data = simplejson.dumps({'type':'picture','image':IMAGE_STORAGE+str(path)[1:],'pk':picture.pk})
+	response_data = simplejson.dumps({'type':'picture','image':serPic})
 
+	audience = {'broadcast': True}
+	redis_publisher = RedisPublisher(facility='viewer',**audience)
+	redis_wbskt=redis_publisher
 	#send to url to websocket
-	pub.publish_message(RedisMessage(response_data))
+	redis_wbskt.publish_message(RedisMessage(response_data))
 
 
 image_done.connect(send_pic)
@@ -137,7 +162,6 @@ class Index(View,TemplateResponseMixin,ContextMixin):
 
 
 	def get(self,request):
-
 		return self.render_to_response(self.get_context_data())
 
 
@@ -212,7 +236,7 @@ class AttributeFormCheck(View):
 		if request.is_ajax():
 
 
-			pdb.set_trace()
+
 
 			#post data
 			post_vars= self.request.POST
@@ -317,7 +341,7 @@ class DroneConnectDroid(View):
 
 		#droid is giving a status update
 		elif json_request["status"] == "1":
-
+			print("Status")
 			if json_request["connected"] == "0":
 
 				connection_status.send(self.__class__)

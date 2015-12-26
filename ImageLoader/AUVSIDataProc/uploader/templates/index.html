@@ -32,6 +32,9 @@
             heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
 
             });
+
+            document.img_properties = new Array()
+
         }
     )
 
@@ -86,9 +89,12 @@
     //handles picture received from websocket
     function parseWebSkt(response){
         //parse json server response
-         console.log("here")
+
          var json_response = JSON.parse(response);
+
+
         if(json_response.hasOwnProperty("status") == true){
+
             if(json_response["status"] == "connection failed")
             {
                 var drone_connect = document.getElementById("drone_connect")
@@ -100,13 +106,16 @@
         }
         else if(json_response.hasOwnProperty("time") == true)
         {
+
                 alert(json_response["time"]);
         }
 
-        else{
-           
+        else if(json_response.hasOwnProperty("type") == true){
 
-            console.log("pic"+json_response.pk+" recieved")
+          if(json_response['type']== "picture"){
+
+            var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf(']')))
+
 
             var grid = document.getElementById('imagegrid');
 
@@ -122,8 +131,14 @@
             var img = document.createElement("img");
 
             //crab the image url
-            img.src=json_response.image;
-            img.id=json_response.pk;
+
+            var img_fields = picture.fields
+            console.log(img_fields.fileName)
+            img.src= img_fields.fileName
+            img.id=parseInt(picture.pk)
+
+            document.img_properties[counter]= img_fields
+
             img.width=imgwidth;//scale the images so that they all have the same width
             img.addEventListener("click", function() {
                 setFocusedImage(this);
@@ -132,6 +147,7 @@
 
             col.appendChild(img);
             row.appendChild(col);
+          }
         }
     }
 
@@ -380,7 +396,7 @@
 
 
 
-   
+
     <div id="right-panel">
         <table id="imagegrid">
         </table>
@@ -416,18 +432,18 @@ $(document).ready(function(){
 
 function droneConnect(){
 
-   
+
     $.ajax({
         url:"{%url 'gcsconnect'%}",
         type:'POST',
         dataType: 'JSON',
         data: {"connect": $("#drone_connect").val(),},
         success: function(JSON){
-           
-            
+
+
             var drone_connect = document.getElementById("drone_connect")
             $("#drone_connect").val(Math.abs(drone_connect.value-1))
-             
+
             if(drone_connect.value==0){
                 $("#drone_connect").html("Drone Disconnect")
             }
@@ -441,12 +457,12 @@ function droneConnect(){
 }
 
 function set_smart_trigger(){
-   
-    
+
+
     var smart_trigger= document.getElementById("smart_trigger")
-   
+
     $("#smart_trigger").val(Math.abs(smart_trigger.value-1))
-    
+
     if(smart_trigger.value==false){
         $("#smart_trigger").html("Smart Triggering On")
     }
@@ -466,7 +482,7 @@ function trigger(){
         dataType:'JSON',
         data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
         success: function(json){
-           
+
 
             if(json.hasOwnProperty("failure")==true){
                 alert("Invalid Time Interval")
@@ -477,9 +493,9 @@ function trigger(){
             var time_int = document.getElementById("time_interval")
             time_int.value=0
             var trigger_on = document.getElementById("trigger_on")
-            
+
             $("#trigger_on").val(Math.abs(trigger_on.value-1))
-            
+
             if(trigger_on.value==0){
                 $("#trigger_on").html("Stop Triggering")
             }

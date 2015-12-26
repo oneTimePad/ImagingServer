@@ -1,4 +1,4 @@
-from django.contrib.gis.db import models
+
 
 from PIL import Image
 
@@ -9,7 +9,7 @@ from io import StringIO
 import cv2
 
 import numpy as np
-
+from django.db import models
 
 
 
@@ -31,42 +31,32 @@ import pdb
 class Picture(models.Model):
 	#picture object
 	#use a related manager to get the list of targets for a specific picture
-	fileName = models.CharField(max_length=100)
+	fileName = models.CharField(max_length=100,default="photo")
 	photo = models.ImageField(storage=fs,default=0)
+
+
+
 
 	# These are just to make backups. None of this is actually
 	#needed
-	#azimuth = models.DecimalField(max_digits=9, decimal_places=6)
-	#pitch = models.DecimalField(max_digits=9, decimal_places=6)
-	#roll =models.DecimalField(max_digits=9, decimal_places=6)
+	azimuth = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	pitch = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	roll =models.DecimalField(max_digits=9, decimal_places=6,default=0)
 
-	#lat = models.DecimalField(max_digits=9, decimal_places=6)
-	#lon = models.DecimalField(max_digits=9, decimal_places=6)
-
-	#latLon = models.DecimalField(max_digits=9, decimal_places=6)
-	#alt = models.DecimalField(max_digits=9, decimal_places=6)
-
+	lat = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	lon = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	alt = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	#pixels per meter
-	#ppm = models.DecimalField(max_digits=9, decimal_places=6)
+	ppm = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 
-	#This is needed
-	#four corners Lat/Lon pairs
-	#topLeft = models.PointField()
-	#topRight = models.PointField()
-	#bottomLeft = models.PointField()
-	#bottomRight = models.PointField()
-
-
-
-
-
-
-
-	#lat = models.DecimalField(max_digits=9, decimal_places=6)
-	#lon = models.DecimalField(max_digits=9, decimal_places=6)
-	#pixel coordinates of camera location
-	#xcoord = models.IntegerField()
-	#ycoord = models.IntegerField()
+	topLeftX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	topLeftY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	topRightX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	topRightY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	bottomLeftX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	bottomLeftY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	bottomRightX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	bottomRightY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 
 
 
@@ -145,7 +135,7 @@ class Target(models.Model):
 
 
 		#convert image to django recognized format
-		django_cropped_image = InMemoryUploadedFile(im_io,None,"target"+str(target.pk).zfill(4)+'.jpeg','image/jpeg',image_io.len,None)
+		django_cropped_image = InMemoryUploadedFile(image_io,None,"target"+str(target.pk).zfill(4)+'.jpeg','image/jpeg',image_io.len,None)
 
 		#assign target image to target object
 		self.target_pic=django_cropped_image
