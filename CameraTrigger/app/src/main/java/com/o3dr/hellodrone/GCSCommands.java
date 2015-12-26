@@ -300,7 +300,7 @@ public class GCSCommands {
     public void sendPicSignal(String dateTime){
         try {
             //ask server what to do
-            URL url = new URL("http://" + URL + "/droid/droidconnect");
+            URL url = new URL("http://" + URL + "/droid/droidtrigger");
             Log.d("url", URL);
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
@@ -311,11 +311,27 @@ public class GCSCommands {
             con.connect();
             //send json that we are asking should we connect drone
             //not a status update
+
             JSONObject json = new JSONObject();
             try {
                 json.put("trigger", "0");
                 json.put("status", "1");
                 json.put("dateTime",dateTime);
+
+                OutputStream out = con.getOutputStream();
+
+                OutputStreamWriter outW = new OutputStreamWriter(out);
+                outW.write(json.toString());
+                outW.flush();
+                outW.close();
+                int status = con.getResponseCode();
+
+                switch(status){
+                    case 200:
+                       break;
+                    default:
+                        Log.e("error",""+status);
+                }
 
             } catch (JSONException e) {
 
@@ -330,6 +346,7 @@ public class GCSCommands {
         catch(IOException e){
 
         }
+
 
     }
 
@@ -426,6 +443,7 @@ public class GCSCommands {
                                             }
 
                                             con.disconnect();
+
 
                                         } catch (JSONException e) {
                                         }

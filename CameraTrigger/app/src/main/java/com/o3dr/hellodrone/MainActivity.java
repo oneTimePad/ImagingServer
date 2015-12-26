@@ -396,7 +396,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         if(URL.equals("")){
             URL = "192.168.1.170:2000";
-            alertUser("Using Default IP");
+            ed.setText(URL,TextView.BufferType.EDITABLE);
+            alertUser("Using Default IP:PORT");
         }
         //start remote connections
         //create uploader
@@ -581,6 +582,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     Calendar cal = Calendar.getInstance(TimeZone.getDefault());
                     String dateTime = cal.getTime().toLocaleString();
                     gcs.sendPicSignal(dateTime);
+
                 }
             }
 

@@ -20,10 +20,7 @@ urlpatterns = [
     url(r'^viewer$',Index.as_view(),name='index'),
     url(r'^attrform$',AttributeFormCheck.as_view(),name='attrform'),
     url(r'^deletepic$',DeletePicture.as_view(),name='deletepic'),
-    url(r'^getpicturedata$',GetPictureData.as_view(),name='getpicturedata'),
     url(r'^gettargets$',GetTargets.as_view(),name='gettargets'),
     url(r'^gettargetdata$',GetTargetData.as_view(),name='gettargetdata'),
     url(r'^droid/',include(droidpatterns)),
 ]
-
-

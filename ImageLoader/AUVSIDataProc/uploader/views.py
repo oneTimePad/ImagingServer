@@ -183,18 +183,7 @@ class DeletePicture(View):
 
 			return HttpResponse("success")
 
-class GetPictureData(View):
 
-	def get(self,request):
-		if request.is_ajax():
-
-			pic_id = request.GET['pk']
-			picture = Picture.objects.get(pk=pic_id)
-			dict={}
-			dict["latitude"]=picture.lat
-			dict["longitude"]=picture.long
-			dict["orientation"]=picture.orientation
-			return JsonResponse(simplejson.dumps(dict))
 
 class GetTargets(View):
 
@@ -414,8 +403,9 @@ class TriggerDroid(View):
 				return HttpResponse("NOINFO")
 			#droid is telling time of shutter trigger
 		elif json_request["status"] == "1":
+			
 			trigger_status.send(self.__class__,time=json_request["dateTime"])
-			return HttpResponse("Got it")
+			return HttpResponse("Success")
 
 
 #tell phone to start taking pics
