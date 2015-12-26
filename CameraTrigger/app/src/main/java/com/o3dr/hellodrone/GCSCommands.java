@@ -52,8 +52,10 @@ public class GCSCommands {
 
     //wait for drone connect command
     public void droneConnect(){
+
         DroidConnect droidConnect = new DroidConnect();
         droidConnect.connect();
+
 
     }
     //wait for trigger command
@@ -80,9 +82,10 @@ public class GCSCommands {
 
                    while(true){
                        try {
+
                            //ask server what to do
                            URL url = new URL("http://"+URL+"/droid/droidconnect");
-                           Log.d("url", URL);
+
                            HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
                            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -90,6 +93,7 @@ public class GCSCommands {
                            con.setUseCaches(false);
                            con.setRequestMethod("POST");
                            con.connect();
+
                             //send json that we are asking should we connect drone
                            //not a status update
                            JSONObject json = new JSONObject();

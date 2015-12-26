@@ -1,11 +1,14 @@
 package com.o3dr.hellodrone;
 
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+
 
 import android.app.Activity;
 import android.content.Context;
@@ -22,6 +25,8 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.os.Handler;
+
+import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 
@@ -393,12 +398,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //create uploader
 
 
-
         try {
 
             gcs = new GCSCommands(URL, cThread, tThread);
             gcs.droneConnect();
             gcs.droidTrigger();
+
         } catch (IllegalAccessException e) {
             alertUser("NO GCS Selected");
             return;
@@ -1023,6 +1028,15 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 outStream.write(data);
                 outStream.close();
 
+                FileInputStream fin = new FileInputStream(outFile);
+                DataInputStream dis = new DataInputStream(fin);
+
+                byte fileContent[] = new byte[(int)outFile.length()];
+                dis.readFully(fileContent);
+
+
+
+
 
                 refreshGallery(outFile);
                 if(URL!=null) {
@@ -1030,7 +1044,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     JSONObject request = new JSONObject();
                     try {
                         request.put("file_name", fileName);
-                        request.put("file",new String(data, StandardCharsets.UTF_8));
+                        Log.e("data",""+data.length);
+                        request.put("file", Base64.encodeToString(fileContent, Base64.DEFAULT).toString());
                         request.put("PicNum", picNum);
                         if (dataForPic != null) {
                             request.put("Azimuth", dataForPic.getAzimuth());

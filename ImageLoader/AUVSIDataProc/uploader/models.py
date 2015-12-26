@@ -1,17 +1,17 @@
 from django.contrib.gis.db import models
 
-import Image
+from PIL import Image
 
 from matplotlib import cm
 
-import StringIO
+from io import StringIO
 
 import cv2
 
 import numpy as np
 
 
-from colorful.fields import RGBColorField
+
 
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -67,9 +67,9 @@ class Picture(models.Model):
 	#pixel coordinates of camera location
 	#xcoord = models.IntegerField()
 	#ycoord = models.IntegerField()
-	
 
-	
+
+
 
 
 class Target(models.Model):

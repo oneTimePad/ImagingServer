@@ -23,7 +23,9 @@ from .forms import AttributeForm
 import pdb
 from threading import Lock
 
+from io import BytesIO
 
+import base64
 
 
 
@@ -54,16 +56,32 @@ class Upload(View):
 
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
-		
 
-		pdb.set_trace()
+
 
 		json_request = simplejson.loads((request.body).decode('utf-8'))
 
 
 
+		image = Image.open(BytesIO(base64.b64decode(json_request['file'])))
+
+		#string as file
+		image_io = BytesIO()
+		image_io.seek(0)
+
+		#save image to stringIO file as JPEG
+		image.save(image_io,format='JPEG')
 		#create picture
-		picture = Picture.objects.create(fileName=str(json_request["file_name"]),photo=json_request["file"])
+		picture = Picture.objects.create(fileName=str(json_request["file_name"]))
+
+
+
+
+		#convert image to django recognized format
+		django_image = InMemoryUploadedFile(image_io,None,"Picture"+str(picture.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
+		picture.photo= django_image
+		picture.save()
+		
 
 		#trigger signal
 		image_done.send(sender=self.__class__,num_pic=picture.pk)
@@ -129,7 +147,7 @@ class DeletePicture(View):
 
 		if request.is_ajax():
 
-			
+
 			pic_id = request.POST['pk']
 
 			picture = Picture.objects.get(pk=pic_id)
@@ -145,7 +163,7 @@ class GetPictureData(View):
 
 	def get(self,request):
 		if request.is_ajax():
-			
+
 			pic_id = request.GET['pk']
 			picture = Picture.objects.get(pk=pic_id)
 			dict={}
@@ -158,7 +176,7 @@ class GetTargets(View):
 
 	def get(self,request):
 		if request.is_ajax():
-		
+
 			pic_id = request.GET['pk']
 			picture = Picture.objects.get(pk=pic_id)
 			#should get all the related targets using a related manager
@@ -175,7 +193,7 @@ class GetTargetData(View):
 
 	def get(self,request):
 		if request.is_ajax():
-			
+
 			target_id = request.GET['pk']
 			target = Target.objects.get(pk=target_id)
 			dict={}
@@ -238,10 +256,10 @@ connection_status = Signal()
 def accept_connect_msg(sender,**kwargs):
 
 	global connection_allowed
-	
+
 	#if yes connect, tell droid
 	if kwargs["on"] == "1":
-		
+
 		connection_allowed=1
 	# else tell to disconnect
 	elif not kwargs["on"] == "0":
@@ -249,7 +267,7 @@ def accept_connect_msg(sender,**kwargs):
 #signal status update
 @receiver(connection_status)
 def send_connection_status(sender,**kwargs):
-	
+
 	#tell the GCS viewer
 	audience = {'broadcast': True}
 	redis_publisher = RedisPublisher(facility='viewer',**audience)
@@ -259,7 +277,7 @@ def send_connection_status(sender,**kwargs):
 
 	#send to url to websocket
 	redis_publisher.publish_message(RedisMessage(response_data))
-		
+
 #tell phone to connect
 class DroneConnectGCS(View):
 
@@ -271,41 +289,41 @@ class DroneConnectGCS(View):
 
 #ask should phone connect
 class DroneConnectDroid(View):
-	
+
 	def post(self, request):
-		
+
 		global connection_allowed
-		
+
 		json_request = simplejson.loads((request.body).decode('utf-8'))
-		
+
 
 		#droid asked to connect
-		
+
 		if json_request["connect"] == "1":
 
 			if connection_allowed is 0:
 				connection_allowed=-1
-				
+
 				return HttpResponse("NO")
 			elif connection_allowed is 1:
 				connection_allowed=-1
-				
+
 				return HttpResponse("YES")
 			elif connection_allowed is -1:
 				connection_allowed=-1
-				
+
 				return HttpResponse("NOINFO")
 
 
 		#droid is giving a status update
 		elif json_request["status"] == "1":
-			
+
 			if json_request["connected"] == "0":
 
 				connection_status.send(self.__class__)
 				return HttpResponse("Got it")
 
-	
+
 # trigger time
 time=0
 #smart trigger enabled yes/no
@@ -322,7 +340,7 @@ def accept_trigger_msg(sender,**kwargs):
 	global trigger_allowed
 	global time
 	global smart_trigger
-	
+
 	if kwargs["on"] =="1":
 		trigger_allowed=1
 		time=kwargs["time"]
@@ -347,23 +365,23 @@ def status_trigger_msg(sender,**kwargs):
 #ask should start taking pic
 class TriggerDroid(View):
 	def post(self,request):
-		
+
 		global trigger_allowed
 		global time
 		global smart_trigger
 		json_request = simplejson.loads((request.body).decode('utf-8'))
 
 
-		
+
 		#droid is asking to trigger
 		if json_request["trigger"] == "1":
-			
+
 			if trigger_allowed is 0:
 
 				trigger_allowed=-1
 				return HttpResponse("NO")
 			elif trigger_allowed is 1:
-				
+
 				trigger_allowed=-1
 
 				return HttpResponse(simplejson.dumps({"time":time,"smart_trigger":smart_trigger}),'application/json')
@@ -375,12 +393,12 @@ class TriggerDroid(View):
 			trigger_status.send(self.__class__,time=json_request["dateTime"])
 			return HttpResponse("Got it")
 
-		
+
 #tell phone to start taking pics
 class TriggerGCS(View):
 	def post(self,request):
 		if request.is_ajax():
-			print(time)
+
 			if time == "0":
 				return HttpResponse(simplejson.dumps({"failure":"invalid time interval"}),'application/json')
 			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
