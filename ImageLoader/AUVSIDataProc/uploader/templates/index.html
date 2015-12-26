@@ -216,21 +216,30 @@
     //set the focusedImage to the given image, also changing the curr_pic, and initializes the canvas
     function setFocusedImage(image) {
         document.focusedImage.src=image.src;
+        document.focusedImage.length = 500
+        document.focusedImage.width =500
         curr_pic=image.id;
         canvasinit();//to resize the canvas and start a new crop
         //getting targets using the pk of the current image
-        var curr_pic_props = document.img_properties[curr_pic]
 
-        td=$("#picture-data");
-        td.empty();
-        td.append("<p>Latitude: "+curr_pic_props.lat+"</p>")
-        td.append("<p>Longitude: "+curr_pic_props.lon+"</p>")
-        td.append("<p>Altitude:"+curr_pic_props.alt+"</p>")
-        td.append("<p>Azimuth:"+curr_pic_props.azimuth+"</p>")
-        td.append("<p>Pitch:"+curr_pic_props.pitch+"</p>")
-        td.append("<p>Roll:"+curr_pic_props.roll+"</p>")
-        //this hasn't been calculated yet
-        //td.append("<p>Orientation: "+json_response.orientation+"</p>")
+
+        if(curr_pic>= document.img_properties.length){
+            console.log("pic index too big")
+        }
+        else{
+          var curr_pic_props = document.img_properties[curr_pic]
+
+          td=$("#picture-data");
+          td.empty();
+          td.append("<p>Latitude: "+curr_pic_props.lat+"</p>")
+          td.append("<p>Longitude: "+curr_pic_props.lon+"</p>")
+          td.append("<p>Altitude:"+curr_pic_props.alt+"</p>")
+          td.append("<p>Azimuth:"+curr_pic_props.azimuth+"</p>")
+          td.append("<p>Pitch:"+curr_pic_props.pitch+"</p>")
+          td.append("<p>Roll:"+curr_pic_props.roll+"</p>")
+          //this hasn't been calculated yet
+          //td.append("<p>Orientation: "+json_response.orientation+"</p>")
+        }
 
 
         $.ajax({
