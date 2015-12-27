@@ -16,11 +16,19 @@
 
 
 <script>
-    var numcols=0;//set when the window loads
-    var imgwidth=200;
-    var counter=0;//counts the number of images added so far
-    var curr_pic;//the id of the image in focus
-    var crop = {}
+
+    numcols=0//set when the window loads
+    imgwidth=200
+    counter=0//counts the number of images added so far
+    pic_curr=0//the id of the image in focus
+    console.log(pic_curr)
+    crop = {}
+
+    $(function(){
+          pic_curr = 0
+          document.focusedImage=0
+
+    })
 
     $(function connect_websocket_pic(){
 
@@ -58,8 +66,7 @@
 
                //put each one in an array
                inputs.each(function(){
-                    console.log(this.name)
-                    console.log($(this).val())
+
 
                     input_array[this.name]=$(this).val()
 
@@ -87,7 +94,7 @@
                   $.ajax({
                         url: "{% url 'attrform'%}",
                         type: "POST",
-                        data: {"pk":curr_pic,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
+                        data: {"pk":pic_curr,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
 
                         }
                     )
@@ -170,6 +177,9 @@
     }
 
     window.onload = function(){
+
+        $("#imagegrid").empty()
+
         //making the grid and viewer panels the height of the window
         //if the window height changes, the page has to be reloaded
         //when the window cannot fit the grid vertically, we can scroll through them
@@ -192,9 +202,9 @@
             //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
             switch (key.keyCode) {
                 case leftarrow:
-                    //need to find the index of the current focused image, based on the id curr_pic
+                    //need to find the index of the current focused image, based on the id pic_curr
                     var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
-                    var currimage = document.getElementById(curr_pic);
+                    var currimage = document.getElementById(pic_curr);
                     var index = $.inArray(currimage, gallery);
                     index--;
                     if (index<0) break;//do nothing if there are no images before
@@ -202,9 +212,9 @@
                     setFocusedImage(currimage);
                     break;
                 case rightarrow:
-                    //need to find the index of the current focused image, based on the id curr_pic
+                    //need to find the index of the current focused image, based on the id pic_curr
                     var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
-                    var currimage = document.getElementById(curr_pic);
+                    var currimage = document.getElementById(pic_curr);
                     var index = $.inArray(currimage, gallery);
                     index++;
                     if (index>=gallery.length) break;//do nothing if there are no images after
@@ -214,11 +224,11 @@
                 //deletes imagesz
                 case deletearrow:
                     //ajax request to server to delete image with
-                    //curr_pic as the picture object pk
+                    //pic_curr as the picture object pk
                     $.ajax({
                         url:"{% url 'deletepic'%}",
                         type:"POST",
-                        data: {"pk":curr_pic},
+                        data: {"pk":pic_curr},
                     })
                     break
 
@@ -229,28 +239,28 @@
         //document.focusedImage.onload = canvasinit();
     }
 
-    //set the focusedImage to the given image, also changing the curr_pic, and initializes the canvas
+    //set the focusedImage to the given image, also changing the pic_curr, and initializes the canvas
     function setFocusedImage(image) {
         document.focusedImage.src=image.src;
         document.focusedImage.length = 400
         document.focusedImage.width =450
-        curr_pic=image.id;
+        pic_curr=image.id;
         canvasinit();//to resize the canvas and start a new crop
         //getting targets using the pk of the current image
 
-
-        if(curr_pic>= document.img_properties.length){
+        console.log(pic_curr)
+        if(pic_curr>= document.img_properties.length){
             console.log("pic index too big")
         }
         else{
-          var curr_pic_props = document.img_properties[curr_pic]
-
-          document.getElementById("picture-data").value+="Latitude: "+curr_pic_props.lat+"\n"
-          document.getElementById("picture-data").value+="Longitude: "+curr_pic_props.lon+"\n"
-          document.getElementById("picture-data").value+="Altitude:"+curr_pic_props.alt+"\n"
-          document.getElementById("picture-data").value+="Azimuth:"+curr_pic_props.azimuth+"\n"
-          document.getElementById("picture-data").value+="Pitch:"+curr_pic_props.pitch+"\n"
-          document.getElementById("picture-data").value+="Roll:"+curr_pic_props.roll+"\n"
+          var pic_curr_props = document.img_properties[pic_curr]
+          document.getElementById('picture-data').value=""
+          document.getElementById("picture-data").value+="Latitude: "+pic_curr_props.lat+"\n"
+          document.getElementById("picture-data").value+="Longitude: "+pic_curr_props.lon+"\n"
+          document.getElementById("picture-data").value+="Altitude:"+pic_curr_props.alt+"\n"
+          document.getElementById("picture-data").value+="Azimuth:"+pic_curr_props.azimuth+"\n"
+          document.getElementById("picture-data").value+="Pitch:"+pic_curr_props.pitch+"\n"
+          document.getElementById("picture-data").value+="Roll:"+pic_curr_props.roll+"\n"
 
           //this hasn't been calculated yet
           //td.append("<p>Orientation: "+json_response.orientation+"</p>")
@@ -259,11 +269,13 @@
 
         $.ajax({
           url: "{% url 'gettargets'%}",
-          type: "GET",
+          type: "POST",
           dataType: "json",
           data: {"pk": image.id},
           success: function(json) {
+            console.log(json)
             if(json.hasOwnProperty("NoTargets")==true){
+              console.log("no targets found")
               return;
             }
 
@@ -271,10 +283,10 @@
             td.empty();
 
             for (i in json) {
-              console.log(i.pk)
+              var targetProps = json[i]
               image=document.createElement("img");
-              image.src=i.image;
-              image.id=i.pk;
+              image.src=targetProps.image;
+              image.id=targetProps.pk;
               image.width=imgwidth;//so all the targets are shown as thumbnails
               image.addEventListener("click", function() {
                 showTargetData(this);
@@ -291,20 +303,17 @@
       console.log(pk)
       $.ajax({
         url: "{% url 'gettargetdata'%}",
-        type: "GET",
+        type: "POST",
         dataType: "json",
         data: {"pk": pk},
         success: function(json) {
-          json_response=json
-          //how to set default values in the django attribute form with javascript?
-          //currently just displaying target data
-          td = $("#current-target");
-          td.empty();
-          td.append("<p>Color: "+json_response.color+"</p>")
-          td.append("<p>Letter Color: "+json_response.lcolor+"</p>")
-          td.append("<p>Orientation: "+json_response.orientation+"</p>")
-          td.append("<p>Shape: "+json_response.shape+"</p>")
-          td.append("<p>Letter: "+json_response.letter+"</p>")
+          document.getElementById('current-target').value+=""
+          document.getElementById("current-target").value+="Color: "+json.color+"\n"
+          document.getElementById("current-target").value+="Letter Color: "+json.lcolor+"\n"
+          document.getElementById("current-target").value+="Orientation: "+json.orientation+"\n"
+          document.getElementById("current-target").value+="Shape: "+json.shape+"\n"
+          document.getElementById("current-target").value+="Letter: "+json.letter+"\n"
+
         }
       })
     }
@@ -402,9 +411,22 @@
         <textarea id="triggerLogs" cols=30>
         </textarea>
         <p id="descr">This is where image and target data could be displayed</p>
-        <textarea id="picture-data"></textarea>
+        <div class="data">
+          <div class="datarow">
+            <div class="datacol">
+              <label for="picture-data">Picture Data</label>
+              <textarea id="picture-data" rows =6></textarea>
+            </div>
+            <div class="datacol">
+              <label for="current-target" rows =6>Current Target Data</label>
+              <textarea id="current-target"></textarea>
+            </div>
+          </div>
+        </div>
+
+
         <div id="targets"></div>
-        <div id="current-target"></div>
+
         {%csrf_token%}
         <form id="attr_form">
             <input name="color" type='text' id="palette"/>

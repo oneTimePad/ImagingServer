@@ -129,10 +129,14 @@ class DeletePicture(View):
 
 class GetTargets(View):
 
-	def get(self,request):
+	def post(self,request):
+
 		if request.is_ajax():
 
-			picture = Picture.objects.get(pk=request.GET['pk'])
+			try:
+				picture = Picture.objects.get(pk=request.POST['pk'])
+			except Picture.DoesNotExist:
+				return HttpResponseForbidden()
 			#should get all the related targets using a related manager
 			targets = picture.target_set.all()
 
@@ -147,20 +151,22 @@ class GetTargets(View):
 			else:
 				return HttpResponse(simplejson.dumps({"NoTargets":"0"}),'application/json')
 
+
+
 class GetTargetData(View):
 
-	def get(self,request):
+	def post(self,request):
 		if request.is_ajax():
 
-			target = Target.objects.get(pk=request.GET['pk'])
+			target = Target.objects.get(pk=request.POST['pk'])
 			targetData={}
 			targetData["color"]=target.color
 			targetData["lcolor"]=target.lcolor
 			targetData["orientation"]=target.orientation
 			targetData["shape"]=target.shape
 			targetData["letter"]=target.letter
-			targetData['lat']=target.lat
-			targetData['lon']=target.lon
+			targetData['lat']=str(target.lat)
+			targetData['lon']=str(target.lon)
 			return HttpResponse(simplejson.dumps(targetData),'application/json')
 
 
@@ -195,12 +201,16 @@ class AttributeFormCheck(View):
 
 
 			#crop target
+
 			target.crop(size_data=size_data,parent_pic=parent_pic)
+			
+			target.letter=post_vars['attr[letter]']
 			target.color = post_vars['color']
 			target.lcolor = post_vars['lcolor']
 			shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
 			target.shape = str(shapeChoices[post_vars['attr[shape]'][0]])
 			target.orientation = post_vars['attr[orientation]'][0]
+			target.save()
 
 			return HttpResponse("success")
 

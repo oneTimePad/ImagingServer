@@ -117,7 +117,7 @@ class Target(models.Model):
 
 
 		#convert image to django recognized format
-		django_cropped_image = InMemoryUploadedFile(image_io,None,"target"+str(self.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
+		django_cropped_image = InMemoryUploadedFile(image_io,None,"Target"+str(self.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
 
 		#assign target image to target object
 		self.target_pic=django_cropped_image

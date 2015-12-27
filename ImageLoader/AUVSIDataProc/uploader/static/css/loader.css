@@ -14,13 +14,13 @@
       padding: 5px;
     }
     #left-panel
-    {        
+    {
         background-color:transparent;
         width:50%;
         float:left;
     }
     #right-panel
-    {        
+    {
         background-color:transparent;
         width:50%;
         float:left;
@@ -35,10 +35,33 @@
         width: 30px;
     }
     #flat{
-       
+
         position:relative;
     }
     #trigger_on_form{
       top:0;
-     
+
+    }
+    .datarow{
+      flex: 1;
+      display: flex;
+      flex-flow: row;
+    }
+    .datacol{
+      flex: 1;
+      display:flex;
+      flex-flow:column;
+      margin: 0px 3px;
+    }
+    label{
+      display: block;
+      padding-left: 2px;
+    }
+    textarea{
+      flex: 1;
+      display: block;
+      margin: 2px 0;
+      padding: 1px;
+      border: 1px solid
+      resize: none;
     }
