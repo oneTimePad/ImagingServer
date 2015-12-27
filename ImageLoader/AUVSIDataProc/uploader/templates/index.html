@@ -229,14 +229,13 @@
         else{
           var curr_pic_props = document.img_properties[curr_pic]
 
-          td=$("#picture-data");
-          td.empty();
-          td.append("<p>Latitude: "+curr_pic_props.lat+"</p>")
-          td.append("<p>Longitude: "+curr_pic_props.lon+"</p>")
-          td.append("<p>Altitude:"+curr_pic_props.alt+"</p>")
-          td.append("<p>Azimuth:"+curr_pic_props.azimuth+"</p>")
-          td.append("<p>Pitch:"+curr_pic_props.pitch+"</p>")
-          td.append("<p>Roll:"+curr_pic_props.roll+"</p>")
+          document.getElementById("picture-data").value+="Latitude: "+curr_pic_props.lat+"\n"
+          document.getElementById("picture-data").value+="Longitude: "+curr_pic_props.lon+"\n"
+          document.getElementById("picture-data").value+="Altitude:"+curr_pic_props.alt+"\n"
+          document.getElementById("picture-data").value+="Azimuth:"+curr_pic_props.azimuth+"\n"
+          document.getElementById("picture-data").value+="Pitch:"+curr_pic_props.pitch+"\n"
+          document.getElementById("picture-data").value+="Roll:"+curr_pic_props.roll+"\n"
+
           //this hasn't been calculated yet
           //td.append("<p>Orientation: "+json_response.orientation+"</p>")
         }
@@ -383,7 +382,7 @@
         <textarea id="triggerLogs" cols=30>
         </textarea>
         <p id="descr">This is where image and target data could be displayed</p>
-        <div id="picture-data"></div>
+        <textarea id="picture-data"></textarea>
         <div id="targets"></div>
         <div id="current-target"></div>
         {%csrf_token%}

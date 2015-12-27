@@ -13,10 +13,6 @@ droidpatterns =[
 ]
 
 urlpatterns = [
-    # Examples:
-    # url(r'^$', 'AUVSIDataProc.views.home', name='home'),
-    # url(r'^blog/', include('blog.urls')),
-
     url(r'^viewer$',Index.as_view(),name='index'),
     url(r'^attrform$',AttributeFormCheck.as_view(),name='attrform'),
     url(r'^deletepic$',DeletePicture.as_view(),name='deletepic'),

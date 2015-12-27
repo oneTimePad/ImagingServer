@@ -1,34 +1,18 @@
 from django.shortcuts import render
-
 from django.http import HttpResponse,HttpResponseRedirect,HttpResponseForbidden,JsonResponse
 import json as simplejson
-# Create your views here.
-
 from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
-
-from django.views.generic.edit import FormMixin
-
-import os
-
 from .models import *
-#import pdb; pdb.set_trace()
-
 from django.db.models.signals import *
 from django.dispatch import *
-
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
-
 from .forms import AttributeForm
-import pdb
-from threading import Lock
-
 from io import BytesIO
 from decimal import Decimal
-
 import base64
-
 from django.core import serializers
+import pdb
 
 
 #hard coded
@@ -36,19 +20,13 @@ IMAGE_STORAGE = "http://localhost:80/PHOTOS"
 
 
 image_done = Signal(providing_args=["num_pic"])
-
-
 class Upload(View):
 
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
-
-
-
+		#convert to json
 		json_request = simplejson.loads((request.body).decode('utf-8'))
-
-
-
+		#make memory img
 		image = Image.open(BytesIO(base64.b64decode(json_request['file'])))
 
 		#string as file
@@ -59,9 +37,6 @@ class Upload(View):
 		image.save(image_io,format='JPEG')
 		#create picture
 		picture = Picture.objects.create()
-
-
-
 
 		#convert image to django recognized format
 		django_image = InMemoryUploadedFile(image_io,None,IMAGE_STORAGE+"/Picture"+str(picture.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
@@ -77,7 +52,7 @@ class Upload(View):
 
 		if "PPM" in json_request.keys():
 			picture.ppm = Decimal(json_request['PPM'])
-		# set latlonAlt
+		# set latLonAlt
 		if "GPS" in json_request.keys():
 			latLonAlt = simplejson.loads(json_request['GPS'])
 			picture.lat = latLonAlt['lat']
@@ -102,27 +77,20 @@ class Upload(View):
 
 		picture.save()
 
-
-
 		#trigger signal
 		image_done.send(sender=self.__class__,num_pic=picture.pk)
 		#return success
 		return HttpResponse("success")
 
-
-#triggered when image object created	`
+#triggered when image object created
+@receiver(image_done)
 def send_pic(num_pic,**kwargs):
 	#create pic
 	picture = Picture.objects.get(pk=num_pic)
 
-
-	#get the local path of the pic
-
-	#path = picture.photo
-
 	#Serialize pathname
 	serPic = serializers.serialize("json",[picture])
-	#response_data = simplejson.dumps({'type':'picture','image':IMAGE_STORAGE+str(path)[1:],'pk':picture.pk})
+	#create json response
 	response_data = simplejson.dumps({'type':'picture','image':serPic})
 
 	audience = {'broadcast': True}
@@ -131,59 +99,33 @@ def send_pic(num_pic,**kwargs):
 	#send to url to websocket
 	redis_wbskt.publish_message(RedisMessage(response_data))
 
-
-image_done.connect(send_pic)
-
-#would this work so that the redis publisher is made only once?
-# @initialize
-# def send_target(pub,num_target,**kwargs):
-# 	target = Target.objects.get(pk=num_target)
-# 	path = target.target_pic
-# 	response_data = simplejson.dumps({'type','target','image':IMAGE_STORAGE+str(path)[1:],'pk':target.pk})
-# 	pub.publish_message(RedisMessage(response_data))
-#actually I could just have it sent when the user focuses on a new image...
-
 #server webpage
 class Index(View,TemplateResponseMixin,ContextMixin):
 	template_name = 'index.html'
 
 	content_type='text/html'
 
-
-
-
 	def get_context_data(self,**kwargs):
 		#put attrbribute form  in template context
 		context = super(Index,self).get_context_data(**kwargs)
 		context['form'] = AttributeForm
-
 		return context
-
-
 
 	def get(self,request):
 		return self.render_to_response(self.get_context_data())
-
 
 class DeletePicture(View):
 
 	def post(self,request):
 
 		if request.is_ajax():
-
-
 			pic_id = request.POST['pk']
-
 			picture = Picture.objects.get(pk=pic_id)
-
 			photo_path = picture.photo.path
 			os.remove(photo_path)
-
 			picture.delete()
 
 			return HttpResponse("success")
-
-
 
 class GetTargets(View):
 
@@ -224,9 +166,6 @@ class AttributeFormCheck(View):
 
 		if request.is_ajax():
 
-
-
-
 			#post data
 			post_vars= self.request.POST
 			#convert to dict
@@ -240,7 +179,6 @@ class AttributeFormCheck(View):
 
 			#package crop data to tuple
 			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
-
 
 			#get parent image pk
 			parent_image = post_vars['pk']
@@ -403,7 +341,7 @@ class TriggerDroid(View):
 				return HttpResponse("NOINFO")
 			#droid is telling time of shutter trigger
 		elif json_request["status"] == "1":
-			
+
 			trigger_status.send(self.__class__,time=json_request["dateTime"])
 			return HttpResponse("Success")
 
