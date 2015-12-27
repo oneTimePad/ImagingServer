@@ -16,6 +16,7 @@ import pdb
 
 #hard coded
 IMAGE_STORAGE = "http://localhost:80/PHOTOS"
+TARGET_STORAGE = "http://localhost:80/TARGETS"
 
 image_done = Signal(providing_args=["num_pic"])
 class Upload(View):
@@ -131,32 +132,37 @@ class GetTargets(View):
 	def get(self,request):
 		if request.is_ajax():
 
-			pic_id = request.GET['pk']
-			picture = Picture.objects.get(pk=pic_id)
+			picture = Picture.objects.get(pk=request.GET['pk'])
 			#should get all the related targets using a related manager
-			targets = picture.target_set
-			dict={}
-			tdata=[]
+			targets = picture.target_set.all()
+
+			i=0
+			targetDict={}
 			for t in targets:
-				tdata.append({"pk":t.pk,"image":IMAGE_STORAGE+t.target_pic})
-			dict["targets"]=tdata
-			response_data = simplejson.dumps(dict)
-			return JsonResponse(response_data)
+				print(t.pk)
+				targetDict["target"+str(i)]={'pk':t.pk,'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg'}
+				i+=1
+			if len(targetDict) != 0:
+				return HttpResponse(simplejson.dumps(targetDict),'application/json')
+			else:
+				return HttpResponse(simplejson.dumps({"NoTargets":"0"}),'application/json')
 
 class GetTargetData(View):
 
 	def get(self,request):
 		if request.is_ajax():
 
-			target_id = request.GET['pk']
-			target = Target.objects.get(pk=target_id)
-			dict={}
-			dict["color"]=target.color
-			dict["lcolor"]=target.lcolor
-			dict["orientation"]=target.orientation
-			dict["shape"]=target.shape
-			dict["letter"]=target.letter
-			return JsonResponse(simplejson.dumps(dict))
+			target = Target.objects.get(pk=request.GET['pk'])
+			targetData={}
+			targetData["color"]=target.color
+			targetData["lcolor"]=target.lcolor
+			targetData["orientation"]=target.orientation
+			targetData["shape"]=target.shape
+			targetData["letter"]=target.letter
+			targetData['lat']=target.lat
+			targetData['lon']=target.lon
+			return HttpResponse(simplejson.dumps(targetData),'application/json')
+
 
 #manual attribute form
 class AttributeFormCheck(View):
@@ -183,7 +189,7 @@ class AttributeFormCheck(View):
 
 			#create target object
 			target = Target.objects.create(picture=parent_pic)
-			pdb.set_trace()
+
 			#package crop data to tuple
 			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
 
