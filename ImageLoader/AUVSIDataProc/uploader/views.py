@@ -12,6 +12,7 @@ from io import BytesIO
 from decimal import Decimal
 import base64
 from django.core import serializers
+import os
 import pdb
 
 #hard coded
@@ -123,9 +124,23 @@ class DeletePicture(View):
 			picture = Picture.objects.get(pk=pic_id)
 			photo_path = picture.photo.path
 			os.remove(photo_path)
+			targets = picture.target_set.all()
+			for t in targets:
+				os.remove(t.target_pic.path)
+				t.delete()
 			picture.delete()
 
 			return HttpResponse("success")
+
+class GetTarget(View):
+
+	def post(self,request):
+		if request.is_ajax():
+
+			target = Target.objects.get(pk=request.POST['pk'])
+			return HttpResponse(simplejson.dumps({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'}),'application/json')
+
+
 
 class GetTargets(View):
 
@@ -203,7 +218,30 @@ class AttributeFormCheck(View):
 			#crop target
 
 			target.crop(size_data=size_data,parent_pic=parent_pic)
-			
+
+			target.letter=post_vars['attr[letter]']
+			target.color = post_vars['color']
+			target.lcolor = post_vars['lcolor']
+			shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
+			target.shape = str(shapeChoices[post_vars['attr[shape]'][0]])
+			target.orientation = post_vars['attr[orientation]'][0]
+			target.save()
+
+			return HttpResponse(simplejson.dumps({'pk':target.pk}),'application/json')
+
+class TargetEdit(View):
+	def post(self,request):
+
+		if request.is_ajax():
+			pdb.set_trace()
+			#post data
+			post_vars= self.request.POST
+			#convert to dict
+			post_vars=dict(post_vars)
+
+			#get target
+			target = Target.objects.get(pk=post_vars['pk'][0])
+
 			target.letter=post_vars['attr[letter]']
 			target.color = post_vars['color']
 			target.lcolor = post_vars['lcolor']
@@ -213,6 +251,9 @@ class AttributeFormCheck(View):
 			target.save()
 
 			return HttpResponse("success")
+
+
+
 
 
 #is the droid allowed to connect

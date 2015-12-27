@@ -21,6 +21,7 @@
     imgwidth=200
     counter=0//counts the number of images added so far
     pic_curr=0//the id of the image in focus
+    curr_target=-1
     console.log(pic_curr)
     crop = {}
 
@@ -88,18 +89,59 @@
                  lcolor = $("#lpalette").val().substring($("#lpalette").val().indexOf("(")+1,$("#lpalette").val().indexOf(")"))
                }
 
+               if(curr_target==-1){
+                  //if there attributes, send them
 
-                //if there attributes, send them
+                  if(input_array){
+                    $.ajax({
+                          url: "{% url 'attrform'%}",
+                          type: "POST",
+                          data: {"pk":pic_curr,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
+                          success: function(json){
+                            console.log(json.pk)
+                            $.ajax({
+                              url: "{% url 'gettarget'%}",
+                              type: "POST",
+                              dataType: "json",
+                              data: {"pk": parseInt(json.pk)},
+                              success: function(json) {
+
+                                td = $("#targets");
+                                image=document.createElement("img");
+
+                                image.src=json.image;
+                                image.id=json.pk
+                                image.width=imgwidth;//so all the targets are shown as thumbnails
+                                image.addEventListener("click", function() {
+                                  showTargetData(this);
+                                  curr_target = this.id
+                                  return false;
+                                })
+                                td.append(image);
+
+
+                              }
+                            })
+                          }
+
+                    })
+
+
+
+                  }
+              }
+              else{
                 if(input_array){
                   $.ajax({
-                        url: "{% url 'attrform'%}",
+                        url: "{% url 'targetedit'%}",
                         type: "POST",
-                        data: {"pk":pic_curr,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
+                        data: {"pk":curr_target,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
 
                         }
                     )
+                  }
 
-                }
+              }
 
             }
         )
@@ -198,7 +240,7 @@
             var space=32;
             var leftarrow = 37;
             var rightarrow = 39;
-            var deletearrow = 46
+
             //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
             switch (key.keyCode) {
                 case leftarrow:
@@ -222,26 +264,40 @@
                     setFocusedImage(currimage);
                     break;
                 //deletes imagesz
-                case deletearrow:
-                    //ajax request to server to delete image with
-                    //pic_curr as the picture object pk
-                    $.ajax({
-                        url:"{% url 'deletepic'%}",
-                        type:"POST",
-                        data: {"pk":pic_curr},
-                    })
-                    break
+
+            }
+        });
+        document.addEventListener("keyup",function(key){
+          var deletearrow = 46
+
+          //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
+          switch (key.keyCode) {
+              case deletearrow:
+                  //ajax request to server to delete image with
+                  //pic_curr as the picture object pk
+                  $.ajax({
+                      url:"{% url 'deletepic'%}",
+                      type:"POST",
+                      data: {"pk":pic_curr},
+                  })
+                  document.focusedImage.src=0
+
+                  $("#targets").empty()
+                  $("#"+pic_curr).remove()
+                  break
 
                 default:
                     return;
             }
-        });
+        })
+
+
         //document.focusedImage.onload = canvasinit();
     }
 
     //set the focusedImage to the given image, also changing the pic_curr, and initializes the canvas
     function setFocusedImage(image) {
-        document.focusedImage.src=image.src;
+        document.focusedImage.src=image.src
         document.focusedImage.length = 400
         document.focusedImage.width =450
         pic_curr=image.id;
@@ -290,6 +346,7 @@
               image.width=imgwidth;//so all the targets are shown as thumbnails
               image.addEventListener("click", function() {
                 showTargetData(this);
+                curr_target = this.id
                 return false;
               })
               td.append(image);
@@ -300,7 +357,7 @@
 
     function showTargetData(image) {
       pk = image.id;
-      console.log(pk)
+
       $.ajax({
         url: "{% url 'gettargetdata'%}",
         type: "POST",
@@ -308,11 +365,21 @@
         data: {"pk": pk},
         success: function(json) {
           document.getElementById('current-target').value+=""
+          $("#current-target").text("")
           document.getElementById("current-target").value+="Color: "+json.color+"\n"
           document.getElementById("current-target").value+="Letter Color: "+json.lcolor+"\n"
           document.getElementById("current-target").value+="Orientation: "+json.orientation+"\n"
           document.getElementById("current-target").value+="Shape: "+json.shape+"\n"
           document.getElementById("current-target").value+="Letter: "+json.letter+"\n"
+          document.getElementById("current-target").value+="Lat: "+json.lat+"\n"
+          document.getElementById("current-target").value+="Lon: "+json.lon+"\n"
+
+          $("#lpalette").val(json.lcolor)
+          $("#palette").val(json.color)
+          $("#orientation").val(json.orientation)
+          $("#shape").val(json.shape)
+          $("#letter").val(json.letter)
+
 
         }
       })
@@ -378,6 +445,7 @@
             p1=[event.clientX-xOff, event.clientY-yOff];
             cropinit=true;
         });
+
         //so that if the user releases the mouse after it leaves the canvas, the crop completes
         canvas.addEventListener("mouseleave", function() {
             cropinit=false;
@@ -396,6 +464,7 @@
             ctx.clearRect(0,0,canvas.width,canvas.height);
             ctx.fillRect(corner[0],corner[1],boxW,boxH);
             cropinit=false;
+            curr_target=-1
         });
     }
 
@@ -406,7 +475,7 @@
     <div id="left-panel">
         <div id="container" style="cursor: crosshair;">
             <canvas id="selector" style="position: absolute; z-index: 1;"></canvas>
-            <img src="" name="focusedImage" alt="" style="position: relative; z-index: 0;">
+            <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
         </div>
         <textarea id="triggerLogs" cols=30>
         </textarea>
@@ -415,10 +484,10 @@
           <div class="datarow">
             <div class="datacol">
               <label for="picture-data">Picture Data</label>
-              <textarea id="picture-data" rows =6></textarea>
+              <textarea id="picture-data" rows =8></textarea>
             </div>
             <div class="datacol">
-              <label for="current-target" rows =6>Current Target Data</label>
+              <label for="current-target" rows =8>Current Target Data</label>
               <textarea id="current-target"></textarea>
             </div>
           </div>

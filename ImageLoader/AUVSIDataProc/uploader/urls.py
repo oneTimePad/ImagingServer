@@ -14,8 +14,10 @@ droidpatterns =[
 
 urlpatterns = [
     url(r'^viewer$',Index.as_view(),name='index'),
+    url(r'^targetedit$',TargetEdit.as_view(),name='targetedit'),
     url(r'^attrform$',AttributeFormCheck.as_view(),name='attrform'),
     url(r'^deletepic$',DeletePicture.as_view(),name='deletepic'),
+    url(r'^gettarget$',GetTarget.as_view(),name='gettarget'),
     url(r'^gettargets$',GetTargets.as_view(),name='gettargets'),
     url(r'^gettargetdata$',GetTargetData.as_view(),name='gettargetdata'),
     url(r'^droid/',include(droidpatterns)),
