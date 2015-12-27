@@ -1,21 +1,11 @@
-
-
 from PIL import Image
-
 from matplotlib import cm
-
-from io import StringIO
-
+from io import BytesIO
 import cv2
-
 import numpy as np
+import pdb
 from django.db import models
-
-
-
-
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
 from django.core.files.storage import FileSystemStorage
 # Create your models here.
 
@@ -26,16 +16,11 @@ STORAGE_Target = '/var/www/html/TARGETS/'
 fs = FileSystemStorage(location=STORAGE)
 fs_targets = FileSystemStorage(location=STORAGE_Target)
 
-import pdb
-
 class Picture(models.Model):
 	#picture object
 	#use a related manager to get the list of targets for a specific picture
 	fileName = models.CharField(max_length=100,default="photo")
 	photo = models.ImageField(storage=fs,default=0)
-
-
-
 
 	# These are just to make backups. None of this is actually
 	#needed
@@ -46,6 +31,7 @@ class Picture(models.Model):
 	lat = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	lon = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	alt = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+
 	#pixels per meter
 	ppm = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 
@@ -57,10 +43,6 @@ class Picture(models.Model):
 	bottomLeftY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	bottomRightX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	bottomRightY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-
-
-
-
 
 class Target(models.Model):
 	ORIENTATION_CHOICES = (
@@ -91,20 +73,20 @@ class Target(models.Model):
 	)
 	#targets relate to pictures
 	picture = models.ForeignKey('Picture')
-	target_pic = models.ImageField(storage=fs_targets)
+	target_pic = models.ImageField(storage=fs_targets,default=0)
 	color = models.CharField(max_length=10)
 	lcolor = models.CharField(max_length=10)
 	orientation = models.CharField(max_length=2,choices=ORIENTATION_CHOICES)
 	shape = models.CharField(max_length=3,choices=SHAPE_CHOICES)
 	letter = models.CharField(max_length=1)
 	#latitude and longitude for top left corner of target cropped image
-	lat = models.DecimalField(max_digits=9, decimal_places=6)
-	lon = models.DecimalField(max_digits=9, decimal_places=6)
+	lat = models.DecimalField(max_digits=9, decimal_places=6, default=0)
+	lon = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 
 	#crop target from image
 	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app
 		self.picture=parent_pic
-		size_data = attributes['size_data']
+
 
 		#unpackage crop data
 		x,y,height,width = size_data
@@ -128,26 +110,18 @@ class Target(models.Model):
 		image_cropped_image = Image.fromarray(cropped_image,mode='RGB')
 
 		#string as file
-		image_io = StringIO.StringIO()
+		image_io = BytesIO()
 
 		#save image to stringIO file as JPEG
 		image_cropped_image.save(image_io,format='JPEG')
 
 
 		#convert image to django recognized format
-		django_cropped_image = InMemoryUploadedFile(image_io,None,"target"+str(target.pk).zfill(4)+'.jpeg','image/jpeg',image_io.len,None)
+		django_cropped_image = InMemoryUploadedFile(image_io,None,"target"+str(self.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
 
 		#assign target image to target object
 		self.target_pic=django_cropped_image
 
-		#setting gps loc of target
-		ppm = parent_pic.ppm
-		imglat = parent_pic.lat
-		imglong = parent_pic.long
-		xcoord = parent_pic.xcoord
-		ycoord = parent_pic.ycoord
-		self.lat = imglat + (y-ycoord)*ppm
-		self.long = imglong + (x-xcoord)*ppm
 
 		#save to db
 		self.save()

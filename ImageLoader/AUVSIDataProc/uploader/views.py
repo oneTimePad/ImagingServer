@@ -14,10 +14,8 @@ import base64
 from django.core import serializers
 import pdb
 
-
 #hard coded
 IMAGE_STORAGE = "http://localhost:80/PHOTOS"
-
 
 image_done = Signal(providing_args=["num_pic"])
 class Upload(View):
@@ -60,6 +58,7 @@ class Upload(View):
 			picture.alt = latLonAlt['alt']
 		#set FourCorners
 		if "FourCorners" in json_request.keys():
+
 			fourCorners = simplejson.loads(json_request['FourCorners'])
 			tl = simplejson.loads(fourCorners['tl'])
 			tr = simplejson.loads(fourCorners['tr'])
@@ -171,26 +170,31 @@ class AttributeFormCheck(View):
 			#convert to dict
 			post_vars=dict(post_vars)
 
-			#get client color
-			color = post_vars['attr[color]']
 
-			#create target object
-			target = Target.objects.create(color=int(color[0]))
 
-			#package crop data to tuple
-			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
 
 			#get parent image pk
 			parent_image = post_vars['pk']
 			#get parent pic from db
+
 			parent_pic = Picture.objects.get(pk=parent_image[0])
 
-			#add parent to target relation
-			#target.pictures.add(parent_pic)
-			target.picture=parent_pic
+
+
+			#create target object
+			target = Target.objects.create(picture=parent_pic)
+			pdb.set_trace()
+			#package crop data to tuple
+			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
+
 
 			#crop target
 			target.crop(size_data=size_data,parent_pic=parent_pic)
+			target.color = post_vars['color']
+			target.lcolor = post_vars['lcolor']
+			shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
+			target.shape = str(shapeChoices[post_vars['attr[shape]'][0]])
+			target.orientation = post_vars['attr[orientation]'][0]
 
 			return HttpResponse("success")
 

@@ -65,13 +65,29 @@
 
                })
 
-               console.log(input_array)
+               var color
+               if($("#palette").val()==""){
+                 color ="0,0,0"
+               }
+               else{
+                 color = $("#palette").val().substring($("#palette").val().indexOf("(")+1,$("#palette").val().indexOf(")"))
+               }
+
+               var lcolor
+               if($("#lpalette").val()==""){
+                 lcolor ="0,0,0"
+               }
+               else{
+                 lcolor = $("#lpalette").val().substring($("#lpalette").val().indexOf("(")+1,$("#lpalette").val().indexOf(")"))
+               }
+
+
                 //if there attributes, send them
                 if(input_array){
                   $.ajax({
                         url: "{% url 'attrform'%}",
                         type: "POST",
-                        data: {"pk":curr_pic,"attr":input_array,'crop':crop},
+                        data: {"pk":curr_pic,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
 
                         }
                     )
@@ -388,6 +404,7 @@
         {%csrf_token%}
         <form id="attr_form">
             <input name="color" type='text' id="palette"/>
+            <input name="lcolor" type='text' id="lpalette"/>
             {{form.as_p}}
             <button type="button" id="submit"/>Submit</button>
         </form>
@@ -431,15 +448,21 @@ $(document).ready(function(){
             ['green', 'yellow', 'purple', 'brown', 'orange']
         ]
     });
-/*
-    $("#flat").spectrum({
-        flat:true,
-        showInput:true,
-        allowEmpty:true
+
+});
+
+$(document).ready(function(){
+//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
+    $("#lpalette").spectrum({
+        showPaletteOnly: true,
+        showPalette:true,
+        color: 'black',
+        palette: [
+            ['black', 'white', 'gray', 'red', 'blue'],
+            ['green', 'yellow', 'purple', 'brown', 'orange']
+        ]
     });
 
-    var flat = document.getElementById('flat')
-*/
 });
 
 function droneConnect(){
