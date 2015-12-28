@@ -22,7 +22,7 @@
     counter=0//counts the number of images added so far
     pic_curr=0//the id of the image in focus
     curr_target=-1
-    console.log(pic_curr)
+
     crop = {}
 
     $(function(){
@@ -169,6 +169,14 @@
             }
 
         }
+
+        else if(json_response.hasOwnProperty("disconnected") == true){
+            alert("Android Device Disconnected")
+        }
+        else if(json_response.hasOwnProperty("connected") == true){
+            alert("Android Device Connected")
+        }
+
         else if(json_response.hasOwnProperty("time") == true)
         {
 

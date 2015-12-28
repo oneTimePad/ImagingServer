@@ -21,6 +21,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.HandlerThread;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -128,6 +129,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //baud rate
     private final int DEFAULT_USB_BAUD_RATE = 57600;
 
+    private String android_id;
+
 
 
 
@@ -141,6 +144,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         super.onCreate(savedInstanceState);
         //setting the current context
         setContentView(R.layout.activity_main);
+        android_id=Settings.Secure.getString(getApplicationContext().getContentResolver(),
+                Settings.Secure.ANDROID_ID);
 
         final Context context = getApplicationContext();
         //get the drone
@@ -348,14 +353,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         if(mSensor!=null){
             mSensor.stopSensors();
         }
-        /*
-        if(mCamera!=null) {
-            //preview.stopPreviewAndFreeCamera();
-            //mCamera.release();
-        }*/
 
-
-        //finish();
     }
 
     //3dr tower connection
@@ -405,7 +403,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         try {
 
-            gcs = new GCSCommands(URL, cThread, tThread);
+            gcs = new GCSCommands(URL, cThread, tThread,android_id);
             gcs.droneConnect();
             gcs.droidTrigger();
 

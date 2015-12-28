@@ -14,6 +14,9 @@ import base64
 from django.core import serializers
 import os
 import pdb
+from django.core.cache import cache
+import time
+import _thread
 
 #hard coded
 IMAGE_STORAGE = "http://localhost:80/PHOTOS"
@@ -99,6 +102,30 @@ def send_pic(num_pic,**kwargs):
 	redis_wbskt=redis_publisher
 	#send to url to websocket
 	redis_wbskt.publish_message(RedisMessage(response_data))
+
+
+class DroidConnectionCheck:
+
+	def __init__(self,id):
+
+		self.id = id
+
+	def start(self):
+		while True:
+			if not cache.has_key(self.id):
+
+				cache.delete("droid_connect")
+				audience = {'broadcast': True}
+				redis_publisher = RedisPublisher(facility='viewer',**audience)
+				redis_wbskt=redis_publisher
+				#send to url to websocket
+				response_data = simplejson.dumps({'disconnected':'disconnected'})
+				redis_wbskt.publish_message(RedisMessage(response_data))
+				break
+			time.sleep(4)
+
+
+
 
 #server webpage
 class Index(View,TemplateResponseMixin,ContextMixin):
@@ -233,7 +260,7 @@ class TargetEdit(View):
 	def post(self,request):
 
 		if request.is_ajax():
-			pdb.set_trace()
+
 			#post data
 			post_vars= self.request.POST
 			#convert to dict
@@ -313,6 +340,23 @@ class DroneConnectDroid(View):
 
 		if json_request["connect"] == "1":
 
+			if 'id' in json_request and 'time' in json_request:
+				if not cache.has_key(json_request['id']):
+					cache.set(json_request['id'],json_request['time'],8)
+				else:
+					cache.delete(json_request['id'])
+					cache.set(json_request['id'],json_request['time'],8)
+				if not cache.has_key("droid_connect"):
+					dCC = DroidConnectionCheck(json_request['id'])
+					_thread.start_new_thread(dCC.start,())
+					cache.set("droid_connect",dCC)
+					audience = {'broadcast': True}
+					redis_publisher = RedisPublisher(facility='viewer',**audience)
+					redis_wbskt=redis_publisher
+					#send to url to websocket
+					response_data = simplejson.dumps({'connected':'connected'})
+					redis_wbskt.publish_message(RedisMessage(response_data))
+
 			if connection_allowed is 0:
 				connection_allowed=-1
 
@@ -337,25 +381,25 @@ class DroneConnectDroid(View):
 
 
 # trigger time
-time=0
+trigger_time=0
 #smart trigger enabled yes/no
 smart_trigger=0
 #trigger enabled
 trigger_allowed=-1
 #signal to trigger
-trigger = Signal(providing_args=["on","time","smart_trigger"])
+trigger = Signal(providing_args=["on","trigger_time","smart_trigger"])
 #signal status update
 trigger_status = Signal(providing_args=["time"])
 #signal trigger
 @receiver(trigger)
 def accept_trigger_msg(sender,**kwargs):
 	global trigger_allowed
-	global time
+	global trigger_time
 	global smart_trigger
 
 	if kwargs["on"] =="1":
 		trigger_allowed=1
-		time=kwargs["time"]
+		trigger_time=kwargs["time"]
 		smart_trigger=kwargs["smart_trigger"]
 	elif kwargs["on"] == "0":
 		trigger_allowed=0
@@ -379,7 +423,7 @@ class TriggerDroid(View):
 	def post(self,request):
 
 		global trigger_allowed
-		global time
+		global trigger_time
 		global smart_trigger
 		json_request = simplejson.loads((request.body).decode('utf-8'))
 
@@ -396,14 +440,14 @@ class TriggerDroid(View):
 
 				trigger_allowed=-1
 
-				return HttpResponse(simplejson.dumps({"time":time,"smart_trigger":smart_trigger}),'application/json')
+				return HttpResponse(simplejson.dumps({"time":trigger_time,"smart_trigger":smart_trigger}),'application/json')
 			elif trigger_allowed is -1:
 				trigger_allowed=-1
 				return HttpResponse("NOINFO")
 			#droid is telling time of shutter trigger
 		elif json_request["status"] == "1":
 
-			trigger_status.send(self.__class__,time=json_request["dateTime"])
+			trigger_status.send(self.__class__,trigger_time=json_request["dateTime"])
 			return HttpResponse("Success")
 
 
@@ -412,7 +456,7 @@ class TriggerGCS(View):
 	def post(self,request):
 		if request.is_ajax():
 
-			if time == "0":
+			if request.POST["time"] == "0":
 				return HttpResponse(simplejson.dumps({"failure":"invalid time interval"}),'application/json')
 			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
 			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')

@@ -3,6 +3,7 @@ package com.o3dr.hellodrone;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.provider.Settings;
 import android.support.annotation.IntegerRes;
 import android.util.Log;
 
@@ -18,6 +19,8 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.MalformedInputException;
+import java.util.concurrent.TimeUnit;
+
 import com.o3dr.hellodrone.MainActivity.CameraTakerThread;
 import com.o3dr.hellodrone.MainActivity.ConnectThread;
 
@@ -34,21 +37,29 @@ public class GCSCommands {
     //threads that control connections and triggering
     ConnectThread conT;
     CameraTakerThread camT;
+    private String android_id;
 
 
-
-
-    public GCSCommands(String url, ConnectThread conT, CameraTakerThread camT) throws IllegalAccessException{
+    public GCSCommands(String url, ConnectThread conT, CameraTakerThread camT, String android_id) throws IllegalAccessException{
         if(url==null){
             throw new IllegalAccessError("No URL") ;
         }
         this.URL=url;
         this.conT = conT;
         this.camT= camT;
+        this.android_id = android_id;
 
 
     }
 
+
+    private String getTime(){
+        long millis =System.currentTimeMillis();
+        String hms = String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)),
+                TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+        return  hms;
+    }
 
     //wait for drone connect command
     public void droneConnect(){
@@ -98,6 +109,8 @@ public class GCSCommands {
                            //not a status update
                            JSONObject json = new JSONObject();
                            try {
+                               json.put("id",android_id);
+                               json.put("time",getTime());
                                json.put("connect", "1");
                                json.put("status","0");
                            }
@@ -381,6 +394,7 @@ public class GCSCommands {
                             //not a status update
                             JSONObject json = new JSONObject();
                             try {
+
                                 json.put("trigger", "1");
                                 json.put("status","0");
                             }
