@@ -119,7 +119,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //for previewing the pic
     Preview preview;
     //this activity
-    Activity act;
+    private static Activity act;
     //current context
     Context ctx;
 
@@ -136,17 +136,33 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        //ignore this
+        try {
+            Process process = Runtime.getRuntime().exec("su");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         //do some window stuff
         ctx = this;
         act = this;
+        //not important
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+        //Here is the important stuff
         super.onCreate(savedInstanceState);
-        //setting the current context
+
+        //set layout
         setContentView(R.layout.activity_main);
+
+        //this is the android devices, id used as cache key in django
         android_id=Settings.Secure.getString(getApplicationContext().getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
+        //no purpose
         final Context context = getApplicationContext();
         //get the drone
         drone = new Drone(context);
@@ -393,7 +409,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         URL = ed.getText().toString();
 
         if(URL.equals("")){
-            URL = "192.168.1.170:2000";
+            URL = "192.168.2.1:2000";
             ed.setText(URL,TextView.BufferType.EDITABLE);
             alertUser("Using Default IP:PORT");
         }
@@ -1137,7 +1153,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
-
+    public static MainActivity getContext(){
+        return (MainActivity)act;
+    }
 
 
 

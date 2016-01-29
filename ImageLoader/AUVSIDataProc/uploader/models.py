@@ -85,6 +85,9 @@ class Target(models.Model):
 
 	#crop target from image
 	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app
+
+		pdb.set_trace()
+
 		self.picture=parent_pic
 
 
@@ -103,7 +106,7 @@ class Target(models.Model):
 		y= int(y)
 
 		#crop the image
-		cropped_image = original_image[y:(y+int(height[0])),x:(x+int(width[0])),]
+		cropped_image = original_image[x:(x+int(width[0])),y:(y+int(height[0])),]
 
 
 		#convert numpy array to image

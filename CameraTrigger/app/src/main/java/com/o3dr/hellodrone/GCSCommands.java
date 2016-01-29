@@ -6,6 +6,7 @@ import android.os.HandlerThread;
 import android.provider.Settings;
 import android.support.annotation.IntegerRes;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.o3dr.android.client.Drone;
 
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -24,12 +26,13 @@ import java.util.concurrent.TimeUnit;
 import com.o3dr.hellodrone.MainActivity.CameraTakerThread;
 import com.o3dr.hellodrone.MainActivity.ConnectThread;
 
+import org.apache.http.conn.ConnectTimeoutException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 
 //used to communicate with GCS, waiting for commands
-public class GCSCommands {
+public class GCSCommands{
     //GCS url
     String URL="";
     //httpcon
@@ -87,8 +90,11 @@ public class GCSCommands {
             mHandler= new Handler(getLooper());
         }
 
+
+
        void connect(){
            mHandler.post(new Runnable(){
+               @Override
                public void run(){
 
                    while(true){
@@ -103,6 +109,7 @@ public class GCSCommands {
                            con.setDoOutput(true);
                            con.setUseCaches(false);
                            con.setRequestMethod("POST");
+                           con.setConnectTimeout(2000);
                            con.connect();
 
                             //send json that we are asking should we connect drone
@@ -152,7 +159,7 @@ public class GCSCommands {
                                                 //just to be safe
                                                 synchronized (conT) {
                                                     while (!conT.done) {
-                                                        conT.wait(2000);
+                                                        conT.wait(5000);
                                                     }
                                                 }
                                             }
@@ -242,6 +249,12 @@ public class GCSCommands {
 
 
                        }
+                        catch (ConnectException e){
+                           throw new RuntimeException();
+
+                        }
+
+
 
                        catch(MalformedURLException e){
 

@@ -122,7 +122,7 @@ class DroidConnectionCheck:
 				response_data = simplejson.dumps({'disconnected':'disconnected'})
 				redis_wbskt.publish_message(RedisMessage(response_data))
 				break
-			time.sleep(4)
+			time.sleep(8)
 
 
 
@@ -408,11 +408,12 @@ def accept_trigger_msg(sender,**kwargs):
 @receiver(trigger_status)
 def status_trigger_msg(sender,**kwargs):
 	#tell GCS viewer the status update
+
 	audience = {'broadcast': True}
 	redis_publisher = RedisPublisher(facility='viewer',**audience)
 
 		#Serialize pathname
-	response_data = simplejson.dumps({'time':kwargs["time"]})
+	response_data = simplejson.dumps({'time':kwargs["trigger_time"]})
 
 	#send to url to websocket
 	redis_publisher.publish_message(RedisMessage(response_data))
