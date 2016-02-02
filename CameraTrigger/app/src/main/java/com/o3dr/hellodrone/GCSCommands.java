@@ -65,13 +65,14 @@ public class GCSCommands{
     }
 
     //wait for drone connect command
+    /*
     public void droneConnect(){
 
         DroidConnect droidConnect = new DroidConnect();
         droidConnect.connect();
 
 
-    }
+    }*/
     //wait for trigger command
     public void droidTrigger(){
         DroidTrigger droidTrigger = new DroidTrigger();
@@ -80,6 +81,7 @@ public class GCSCommands{
 
 
     //loops waiting for drone connect command
+    /*
     private class DroidConnect extends HandlerThread{
 
         Handler mHandler = null;
@@ -278,7 +280,7 @@ public class GCSCommands{
            });
        }
     }
-
+    */
 
     public void sendPicture(JSONObject request_data) throws IOException {
         Log.d("posting","posting");

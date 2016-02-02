@@ -4,6 +4,7 @@
     <string name="app_name">Hello Drone</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="uriport">GCS IP:PORT</string>
 
     <string-array name="drone_connection_types">
         <item>USB</item>

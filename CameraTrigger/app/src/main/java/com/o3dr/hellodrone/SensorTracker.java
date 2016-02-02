@@ -8,7 +8,9 @@ package com.o3dr.hellodrone;
         import android.hardware.SensorManager;
         import android.util.Log;
 
-public class SensorTracker extends Activity implements SensorEventListener {
+        import java.io.Serializable;
+
+public class SensorTracker extends Activity implements SensorEventListener,Serializable {
     private final Context mContext;
     private SensorManager mSensorManager;
     private Sensor gyro;

@@ -131,19 +131,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     private String android_id;
 
-
+    //PowerManager.WakeLock wl;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
-        //ignore this
-        try {
-            Process process = Runtime.getRuntime().exec("su");
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         //do some window stuff
         ctx = this;
@@ -151,6 +144,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //not important
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
 
         //Here is the important stuff
         super.onCreate(savedInstanceState);
@@ -162,63 +157,76 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         android_id=Settings.Secure.getString(getApplicationContext().getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
-        //no purpose
         final Context context = getApplicationContext();
         //get the drone
         drone = new Drone(context);
         //initialize picnum
-        picNum = 0;
+        boolean go = true;
+        if(savedInstanceState==null) {
+            picNum = savedInstanceState.getInt("picNum");
+            StoragePic = (File) savedInstanceState.getSerializable("dir");
+            logFile = (File)savedInstanceState.getSerializable("logs");
+            mSensor = (SensorTracker)savedInstanceState.getSerializable("sensors");
 
-        //get the sd card
-        File sdCard = Environment.getExternalStorageDirectory();
-        //create the pic storage directory
-        picDir = new File(sdCard.toString() + "/picStorage");
-
-
-
-       //create pic storage directory
-        try {
-            //if directory doesn't exist, make it
-            if (!picDir.exists()) {
-                picDir.mkdirs();
+            if(StoragePic!=null){
+                go = false;
             }
-
-
-            StoragePic = picDir;
-
-        } catch (SecurityException e) {
-            alertUser("Storage creation failed. Exiting");
-            System.exit(1);
 
         }
-        //used for setting current time log file was made
-        Calendar cal = Calendar.getInstance(TimeZone.getDefault());
-        String dateTime = cal.getTime().toLocaleString();
+        if(go) {
+            picNum = 0;
 
-        //create the pic logs directrory
-        File logDir =  new File(sdCard.toString()+"/PicLogs");
+            //get the sd card
+            File sdCard = Environment.getExternalStorageDirectory();
+            //create the pic storage directory
+            picDir = new File(sdCard.toString() + "/picStorage");
 
 
-        try {
+            //create pic storage directory
+            try {
+                //if directory doesn't exist, make it
+                if (!picDir.exists()) {
+                    picDir.mkdirs();
+                }
 
-            if (!logDir.exists()) {
-                logDir.mkdirs();
+
+                StoragePic = picDir;
+
+            } catch (SecurityException e) {
+                alertUser("Storage creation failed. Exiting");
+                System.exit(1);
+
+            }
+            //used for setting current time log file was made
+            Calendar cal = Calendar.getInstance(TimeZone.getDefault());
+            String dateTime = cal.getTime().toLocaleString();
+
+            //create the pic logs directrory
+            File logDir = new File(sdCard.toString() + "/PicLogs");
+
+
+            try {
+
+                if (!logDir.exists()) {
+                    logDir.mkdirs();
+                }
+
+                //create new log file
+                logFile = new File(logDir, "logs " + dateTime + ".txt");
+
+            } catch (SecurityException e) {
+                alertUser("Storage creation failed. Exiting");
+                System.exit(1);
+
             }
 
-            //create new log file
-            logFile = new File(logDir,"logs "+dateTime+".txt");
-
-        } catch (SecurityException e) {
-            alertUser("Storage creation failed. Exiting");
-            System.exit(1);
-
+            //photomography object
+            mSensor = new SensorTracker(getApplicationContext());
+            mSensor.startSensors();
         }
         //3dr control tower
         controlTower = new ControlTower(getApplicationContext());
-        //photomography object
-        mSensor = new SensorTracker(getApplicationContext());
-        mSensor.startSensors();
-
+        /*
         EditText time = (EditText)findViewById(R.id.time);
         final EditText time_f = time;
         //make keyboard disappear at enter
@@ -235,7 +243,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 return false;
             }
         });
-
+        */
         final EditText ipText = (EditText)findViewById(R.id.URL);
         //make keyboard disappear at enter
         ipText.setOnKeyListener(new View.OnKeyListener() {
@@ -245,13 +253,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
                     InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                     //hide the keyboard
-                    mgr.hideSoftInputFromWindow(time_f.getWindowToken(), 0);
+                    mgr.hideSoftInputFromWindow(ipText.getWindowToken(), 0);
                     return true;
                 }
                 return false;
             }
         });
-
+        /*
         final EditText ppm = (EditText) findViewById(R.id.ppm);
         ppm.setOnKeyListener(new View.OnKeyListener() {
             @Override
@@ -265,10 +273,17 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 }
                 return false;
             }
-        });
+        });*/
 
+    }
 
-
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState){
+        savedInstanceState.putSerializable("dir",StoragePic);
+        savedInstanceState.putSerializable("logs",logFile);
+        //might not work
+        savedInstanceState.putSerializable("sensors",mSensor);
+        savedInstanceState.putInt("picNum",picNum);
 
     }
 
@@ -311,14 +326,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         preview.setKeepScreenOn(true);
         preview.setCamera(mCamera);
 
-
-
-
-        if(mSensor!=null){
-            //alertUser(mSensor.getAccelerometerIsAvailable()? "Acceleromter set": "Acceleromoter failed");
-            //alertUser(mSensor.getGyroscopeIsAvailable()? "Gyro set":"Gyro failed");
-            //alertUser(mSensor.getMagneticFieldIsAvailable()? "Magnetic set":"Magnetic failed");
-        }
         //create connectThread
         cThread = new ConnectThread();
         //create pic taker thread
@@ -375,7 +382,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //3dr tower connection
     @Override
     public void onTowerConnected() {
-        //alertUser("3DR Services Connected");
+        alertUser("3DR Services Connected");
         this.controlTower.registerDrone(this.drone, this.handler);
         this.drone.registerDroneListener(this);
     }
@@ -420,18 +427,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         try {
 
             gcs = new GCSCommands(URL, cThread, tThread,android_id);
-            gcs.droneConnect();
+            //gcs.droneConnect();
             gcs.droidTrigger();
 
         } catch (IllegalAccessException e) {
             alertUser("NO GCS Selected");
             return;
         }
-
-
-
-
-
 
     }
 
@@ -440,7 +442,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         Button connectButton = (Button)findViewById(R.id.btnConnect);
 
-        connectButton.setText(isConnected ? "Disconnect" : "Connect");
+        connectButton.setText(isConnected ? "AP Disconnect" : "AP Connect");
 
     }
 
@@ -452,6 +454,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         cThread.connect();
 
     }
+    /*
     //start taking pics
     public void onBtnTakePic(View view){
 
@@ -463,6 +466,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     public void onBtnStopPic(View view){
         on=false;
     }
+    */
 
 
     //create thread that will run camera callbacks
@@ -501,7 +505,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             alertUser("Camera set");
         }catch(RuntimeException e){
             alertUser("Failed to open camera");
-            Log.e("Camera Failed", "failed to open back camera");
+            Log.e("Camera Failed", "failed to open back camera", e);
         }
 
 
@@ -1153,9 +1157,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
-    public static MainActivity getContext(){
-        return (MainActivity)act;
-    }
 
 
 

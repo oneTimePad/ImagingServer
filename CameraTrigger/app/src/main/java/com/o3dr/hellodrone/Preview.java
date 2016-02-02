@@ -35,9 +35,6 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
 
     public void setCamera(Camera camera) {
 
-
-
-
         mCamera = camera;
 
         if (mCamera != null) {
@@ -115,6 +112,8 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
         // Surface will be destroyed when we return, so stop the preview.
         if (mCamera != null) {
             mCamera.stopPreview();
+            mCamera.release();
+            mCamera = null;
         }
         //mCamera.release();
     }
@@ -122,9 +121,11 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
 
     public void stopPreviewAndFreeCamera() {
 
+
         if (mCamera != null) {
             // Call stopPreview() to stop updating the preview surface.
             mCamera.stopPreview();
+            mCamera.release();
 
             // Important: Call release() to release the camera for use by other
             // applications. Applications should release the camera immediately
@@ -171,7 +172,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
     }
 
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        if(mCamera != null) {
+        if(mCamera != null && mPreviewSize != null) {
             Camera.Parameters parameters = mCamera.getParameters();
             parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
             requestLayout();
