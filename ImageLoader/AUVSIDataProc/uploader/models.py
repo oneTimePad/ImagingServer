@@ -86,7 +86,7 @@ class Target(models.Model):
 	#crop target from image
 	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app
 
-		pdb.set_trace()
+		
 
 		self.picture=parent_pic
 

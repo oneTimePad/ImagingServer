@@ -13,6 +13,7 @@ import java.io.IOException;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.media.AudioManager;
@@ -145,6 +146,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
 
 
         //Here is the important stuff
@@ -161,69 +163,57 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //get the drone
         drone = new Drone(context);
         //initialize picnum
-        boolean go = true;
-        if(savedInstanceState==null) {
-            picNum = savedInstanceState.getInt("picNum");
-            StoragePic = (File) savedInstanceState.getSerializable("dir");
-            logFile = (File)savedInstanceState.getSerializable("logs");
-            mSensor = (SensorTracker)savedInstanceState.getSerializable("sensors");
 
-            if(StoragePic!=null){
-                go = false;
+        picNum = 0;
+
+        //get the sd card
+        File sdCard = Environment.getExternalStorageDirectory();
+        //create the pic storage directory
+        picDir = new File(sdCard.toString() + "/picStorage");
+
+
+        //create pic storage directory
+        try {
+            //if directory doesn't exist, make it
+            if (!picDir.exists()) {
+                picDir.mkdirs();
             }
+
+
+            StoragePic = picDir;
+
+        } catch (SecurityException e) {
+            alertUser("Storage creation failed. Exiting");
+            System.exit(1);
 
         }
-        if(go) {
-            picNum = 0;
+        //used for setting current time log file was made
+        Calendar cal = Calendar.getInstance(TimeZone.getDefault());
+        String dateTime = cal.getTime().toLocaleString();
 
-            //get the sd card
-            File sdCard = Environment.getExternalStorageDirectory();
-            //create the pic storage directory
-            picDir = new File(sdCard.toString() + "/picStorage");
-
-
-            //create pic storage directory
-            try {
-                //if directory doesn't exist, make it
-                if (!picDir.exists()) {
-                    picDir.mkdirs();
-                }
+        //create the pic logs directrory
+        File logDir = new File(sdCard.toString() + "/PicLogs");
 
 
-                StoragePic = picDir;
+        try {
 
-            } catch (SecurityException e) {
-                alertUser("Storage creation failed. Exiting");
-                System.exit(1);
-
-            }
-            //used for setting current time log file was made
-            Calendar cal = Calendar.getInstance(TimeZone.getDefault());
-            String dateTime = cal.getTime().toLocaleString();
-
-            //create the pic logs directrory
-            File logDir = new File(sdCard.toString() + "/PicLogs");
-
-
-            try {
-
-                if (!logDir.exists()) {
-                    logDir.mkdirs();
-                }
-
-                //create new log file
-                logFile = new File(logDir, "logs " + dateTime + ".txt");
-
-            } catch (SecurityException e) {
-                alertUser("Storage creation failed. Exiting");
-                System.exit(1);
-
+            if (!logDir.exists()) {
+                logDir.mkdirs();
             }
 
-            //photomography object
-            mSensor = new SensorTracker(getApplicationContext());
-            mSensor.startSensors();
+            //create new log file
+            logFile = new File(logDir, "logs " + dateTime + ".txt");
+
+        } catch (SecurityException e) {
+            alertUser("Storage creation failed. Exiting");
+            System.exit(1);
+
         }
+
+        //photomography object
+        mSensor = new SensorTracker(getApplicationContext());
+        mSensor.startSensors();
+
         //3dr control tower
         controlTower = new ControlTower(getApplicationContext());
         /*
@@ -277,15 +267,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle savedInstanceState){
-        savedInstanceState.putSerializable("dir",StoragePic);
-        savedInstanceState.putSerializable("logs",logFile);
-        //might not work
-        savedInstanceState.putSerializable("sensors",mSensor);
-        savedInstanceState.putInt("picNum",picNum);
 
-    }
 
     @Override
     public void onStart() {
@@ -440,7 +422,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //update connect button upon drone connection
     protected void updateConnectedButton(Boolean isConnected) {
 
-        Button connectButton = (Button)findViewById(R.id.btnConnect);
+        Button connectButton = (Button)findViewById(R.id.btnconnect);
 
         connectButton.setText(isConnected ? "AP Disconnect" : "AP Connect");
 
@@ -778,15 +760,16 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 @Override
                 public void run() {
                     //get PPM
-                    EditText ppm = (EditText) findViewById(R.id.ppm);
-                    try {
+                    //EditText ppm = (EditText) findViewById(R.id.ppm);
+                    /*try {
                         pixelPerMeter = Double.parseDouble(ppm.getText().toString());
                     }
                     catch(NumberFormatException e){
                         pixelPerMeter = 0.0;
-                    }
+                    }*/
                     //get interval input
-                    EditText time = (EditText) findViewById(R.id.time);
+                    //EditText time = (EditText) findViewById(R.id.time);
+                    /*
                     Double timeNum;
 
 
@@ -802,8 +785,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         alertUser("Invalid Time Interval");
                         timeNum = captureTime;
                     }
-
-
+                    */
+                    Double timeNum = captureTime;
 
 
                     //continue taking pics
