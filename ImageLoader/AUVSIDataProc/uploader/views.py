@@ -456,8 +456,10 @@ class TriggerDroid(View):
 class TriggerGCS(View):
 	def post(self,request):
 		if request.is_ajax():
-
-			if request.POST["time"] == "0":
+			pdb.set_trace()
+			if int(request.POST["time"]) < 0:
 				return HttpResponse(simplejson.dumps({"failure":"invalid time interval"}),'application/json')
+			elif int(request.POST["time"]) == 0:
+				return HttpResponse(simplejson.dumps({"nothing":"nothing"}))
 			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
 			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')

@@ -157,7 +157,7 @@
 
          var json_response = JSON.parse(response);
 
-
+        /*
         if(json_response.hasOwnProperty("status") == true){
 
             if(json_response["status"] == "connection failed")
@@ -168,9 +168,9 @@
                 alert("Failed To Connect To Drone")
             }
 
-        }
+        }*/
 
-        else if(json_response.hasOwnProperty("disconnected") == true){
+        if(json_response.hasOwnProperty("disconnected") == true){
             alert("Android Device Disconnected")
         }
         else if(json_response.hasOwnProperty("connected") == true){
@@ -625,6 +625,10 @@ function trigger(){
             if(json.hasOwnProperty("failure")==true){
                 alert("Invalid Time Interval")
                 return;
+            }
+
+            if(json.hasOwnProperty("nothing") == true){
+              return;
             }
 
 
