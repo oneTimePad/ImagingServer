@@ -86,7 +86,7 @@ class Target(models.Model):
 	#crop target from image
 	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app
 
-		
+
 
 		self.picture=parent_pic
 
@@ -100,6 +100,7 @@ class Target(models.Model):
 
 		#read in that image
 		original_image = cv2.imread(file_name)
+		original_image = cv2.resize(original_image,(400,400))
 
 		#convert strange json format to integers
 		x = int(x)

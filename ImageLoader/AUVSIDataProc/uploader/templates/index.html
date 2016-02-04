@@ -17,19 +17,25 @@
 
 <script>
 
-    numcols=0//set when the window loads
-    imgwidth=200
-    counter=0//counts the number of images added so far
-    pic_curr=0//the id of the image in focus
-    curr_target=-1
+    numcols=0;//set when the window loads
+    imgwidth=200;
+    imgheight=200;
+    counter=0;//counts the number of images added so far
+    pic_curr=0;//the id of the image in focus
+    curr_target=-1;
+    num_targets_of_cur_pic=0;
+    tar_list_counter= 0;
+    loading=1
+    offset = 0
 
-    crop = {}
+    crop = {};
 
     $(function(){
-          pic_curr = 0
-          document.focusedImage=0
-
+      console.log("empty")
+      $("#imagegrid").empty();
     })
+
+
 
     $(function connect_websocket_pic(){
 
@@ -106,18 +112,33 @@
                               data: {"pk": parseInt(json.pk)},
                               success: function(json) {
 
-                                td = $("#targets");
-                                image=document.createElement("img");
+                                var grid= $("#targetsgrid");
+
+
+                                if (num_targets_of_cur_pic%numcols==0) {
+                                   grid.append(document.createElement("tr"));//adding a row
+                                }
+                                num_targets_of_cur_pic++
+                                //finding the last row in the grid
+                                var rows = grid.find($("tr"))
+
+                                var row = rows[rows.length-1];
+
+                                //adding a column and the thumbnail
+                                var col = document.createElement("td");
+                                image = document.createElement("img");
 
                                 image.src=json.image;
                                 image.id=json.pk
-                                image.width=imgwidth;//so all the targets are shown as thumbnails
+                                image.height=100
+                                image.width=100;//so all the targets are shown as thumbnails
                                 image.addEventListener("click", function() {
                                   showTargetData(this);
                                   curr_target = this.id
                                   return false;
                                 })
-                                td.append(image);
+                                col.appendChild(image);
+                                row.appendChild(col);
 
 
                               }
@@ -157,18 +178,6 @@
 
          var json_response = JSON.parse(response);
 
-        /*
-        if(json_response.hasOwnProperty("status") == true){
-
-            if(json_response["status"] == "connection failed")
-            {
-                var drone_connect = document.getElementById("drone_connect")
-                $("#drone_connect").val(Math.abs(drone_connect.value-1))
-                $("#drone_connect").html("Drone Connect")
-                alert("Failed To Connect To Drone")
-            }
-
-        }*/
 
         if(json_response.hasOwnProperty("disconnected") == true){
             alert("Android Device Disconnected")
@@ -186,20 +195,22 @@
         }
 
         else if(json_response.hasOwnProperty("type") == true){
-
+          if(loading==1){
+            loading=0;
+            return;
+          }
           if(json_response['type']== "picture"){
 
             var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf(']')))
 
-
-            var grid = document.getElementById('imagegrid');
+            var grid =$('#imagegrid');
 
             if (counter%numcols==0) {
-                grid.appendChild(document.createElement("tr"));//adding a row
+                grid.append(document.createElement("tr"));//adding a row
             }
             counter++;
             //finding the last row in the grid
-            var rows = document.getElementsByTagName("tr");
+            var rows = grid.find($("tr"));
             var row = rows[rows.length-1];
             //adding a column and the thumbnail
             var col = document.createElement("td");
@@ -208,13 +219,22 @@
             //crab the image url
 
             var img_fields = picture.fields
+            if(counter == 1){
+              off_set=parseInt(picture.pk);
 
+
+            }
             img.src= img_fields.fileName
-            img.id=parseInt(picture.pk)
+            img.id=parseInt(picture.pk)-off_set
+
+
+            console.log(counter)
 
             document.img_properties[counter]= img_fields
 
+
             img.width=imgwidth;//scale the images so that they all have the same width
+            img.height=imgheight
             img.addEventListener("click", function() {
                 setFocusedImage(this);
                 return false;
@@ -290,6 +310,7 @@
                   })
                   document.focusedImage.src=0
 
+
                   $("#targets").empty()
                   $("#"+pic_curr).remove()
                   break
@@ -317,6 +338,7 @@
             console.log("pic index too big")
         }
         else{
+          console.log("pic"+pic_curr)
           var pic_curr_props = document.img_properties[pic_curr]
           document.getElementById('picture-data').value=""
           document.getElementById("picture-data").value+="Latitude: "+pic_curr_props.lat+"\n"
@@ -338,26 +360,41 @@
           data: {"pk": image.id},
           success: function(json) {
             console.log(json)
+            num_targets_of_cur_pic = 0
             if(json.hasOwnProperty("NoTargets")==true){
               console.log("no targets found")
               return;
             }
+            var grid= $("#targetsgrid");
+            grid.empty()
 
-            td = $("#targets");
-            td.empty();
+            //finding the last row in the grid
+            var rows = grid.find($("tr"));
+            var row = rows[rows.length-1];
+            //adding a column and the thumbnail
 
+            num_targets_of_cur_pic = json.length
             for (i in json) {
               var targetProps = json[i]
               image=document.createElement("img");
               image.src=targetProps.image;
               image.id=targetProps.pk;
-              image.width=imgwidth;//so all the targets are shown as thumbnails
+              image.width=100;
+              image.height=100;//so all the targets are shown as thumbnails
               image.addEventListener("click", function() {
                 showTargetData(this);
                 curr_target = this.id
                 return false;
               })
-              td.append(image);
+
+              var col = document.createElement("td");
+              if (num_targets_of_cur_pic%numcols==0) {
+                 grid.append(document.createElement("tr"));//adding a row
+              }
+              num_targets_of_cur_pic++
+              col.append(image);
+              row.append(col);
+
             }
           }
         })
@@ -502,7 +539,9 @@
         </div>
 
 
-        <div id="targets"></div>
+            <div id="targets">
+            <table id="targetsgrid"></table>
+          </div>
 
         {%csrf_token%}
         <form id="attr_form">
@@ -521,7 +560,7 @@
             <button onclick ="trigger();" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
         <form/>
         <button onclick="set_smart_trigger();" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
-        <button onclick="droneConnect();" id = "drone_connect" type="button" value = "1">Drone Connect</button>
+
 
     </div>
 
@@ -529,8 +568,7 @@
 
 
     <div id="right-panel">
-        <table id="imagegrid">
-        </table>
+        <table id="imagegrid"></table>
         <!--Change this from a table to a list of images w/ automatic wrapping so that images can be easily deleted-->
 
     </div>
@@ -568,31 +606,6 @@ $(document).ready(function(){
 
 });
 
-function droneConnect(){
-
-
-    $.ajax({
-        url:"{%url 'gcsconnect'%}",
-        type:'POST',
-        dataType: 'JSON',
-        data: {"connect": $("#drone_connect").val(),},
-        success: function(JSON){
-
-
-            var drone_connect = document.getElementById("drone_connect")
-            $("#drone_connect").val(Math.abs(drone_connect.value-1))
-
-            if(drone_connect.value==0){
-                $("#drone_connect").html("Drone Disconnect")
-            }
-            else{
-                $("#drone_connect").html("Drone Connect")
-            }
-
-        }
-
-    })
-}
 
 function set_smart_trigger(){
 

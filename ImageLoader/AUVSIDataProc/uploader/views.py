@@ -90,6 +90,7 @@ class Upload(View):
 @receiver(image_done)
 def send_pic(num_pic,**kwargs):
 	#create pic
+	
 	picture = Picture.objects.get(pk=num_pic)
 
 	#Serialize pathname
@@ -283,103 +284,6 @@ class TargetEdit(View):
 
 
 
-#is the droid allowed to connect
-connection_allowed = -1
-#signal yes it is
-connect = Signal(providing_args=["on"])
-#signal the droid has given a status update
-connection_status = Signal()
-
-#signal connect
-@receiver(connect)
-def accept_connect_msg(sender,**kwargs):
-
-	global connection_allowed
-
-	#if yes connect, tell droid
-	if kwargs["on"] == "1":
-
-		connection_allowed=1
-	# else tell to disconnect
-	elif not kwargs["on"] == "0":
-		connection_allowed=0
-#signal status update
-@receiver(connection_status)
-def send_connection_status(sender,**kwargs):
-
-	#tell the GCS viewer
-	audience = {'broadcast': True}
-	redis_publisher = RedisPublisher(facility='viewer',**audience)
-
-		#Serialize pathname
-	response_data = simplejson.dumps({"status":"connection failed"})
-
-	#send to url to websocket
-	redis_publisher.publish_message(RedisMessage(response_data))
-
-#tell phone to connect
-class DroneConnectGCS(View):
-
-	def post(self,request):
-
-		if request.is_ajax():
-			connect.send(sender=self.__class__,on=request.POST["connect"])
-			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
-
-#ask should phone connect
-class DroneConnectDroid(View):
-
-	def post(self, request):
-
-		global connection_allowed
-
-		json_request = simplejson.loads((request.body).decode('utf-8'))
-
-
-		#droid asked to connect
-
-		if json_request["connect"] == "1":
-
-			if 'id' in json_request and 'time' in json_request:
-				if not cache.has_key(json_request['id']):
-					cache.set(json_request['id'],json_request['time'],8)
-				else:
-					cache.delete(json_request['id'])
-					cache.set(json_request['id'],json_request['time'],8)
-				if not cache.has_key("droid_connect"):
-					dCC = DroidConnectionCheck(json_request['id'])
-					_thread.start_new_thread(dCC.start,())
-					cache.set("droid_connect",dCC)
-					audience = {'broadcast': True}
-					redis_publisher = RedisPublisher(facility='viewer',**audience)
-					redis_wbskt=redis_publisher
-					#send to url to websocket
-					response_data = simplejson.dumps({'connected':'connected'})
-					redis_wbskt.publish_message(RedisMessage(response_data))
-
-			if connection_allowed is 0:
-				connection_allowed=-1
-
-				return HttpResponse("NO")
-			elif connection_allowed is 1:
-				connection_allowed=-1
-
-				return HttpResponse("YES")
-			elif connection_allowed is -1:
-				connection_allowed=-1
-
-				return HttpResponse("NOINFO")
-
-
-		#droid is giving a status update
-		elif json_request["status"] == "1":
-			print("Status")
-			if json_request["connected"] == "0":
-
-				connection_status.send(self.__class__)
-				return HttpResponse("Got it")
-
-
 # trigger time
 trigger_time=0
 #smart trigger enabled yes/no
@@ -397,12 +301,17 @@ def accept_trigger_msg(sender,**kwargs):
 	global trigger_time
 	global smart_trigger
 
+
+
 	if kwargs["on"] =="1":
 		trigger_allowed=1
 		trigger_time=kwargs["time"]
 		smart_trigger=kwargs["smart_trigger"]
 	elif kwargs["on"] == "0":
 		trigger_allowed=0
+
+
+
 
 #send time of shutter
 @receiver(trigger_status)
@@ -432,6 +341,25 @@ class TriggerDroid(View):
 
 		#droid is asking to trigger
 		if json_request["trigger"] == "1":
+			'''
+			if 'id' in json_request and 'time' in json_request:
+				if not cache.has_key(json_request['id']):
+					cache.set(json_request['id'],json_request['time'],8)
+				else:
+					cache.delete(json_request['id'])
+					cache.set(json_request['id'],json_request['time'],8)
+				if not cache.has_key("droid_connect"):
+					dCC = DroidConnectionCheck(json_request['id'])
+					_thread.start_new_thread(dCC.start,())
+					cache.set("droid_connect",dCC)
+					audience = {'broadcast': True}
+					redis_publisher = RedisPublisher(facility='viewer',**audience)
+					redis_wbskt=redis_publisher
+					#send to url to websocket
+					response_data = simplejson.dumps({'connected':'connected'})
+					redis_wbskt.publish_message(RedisMessage(response_data))
+				'''
+
 
 			if trigger_allowed is 0:
 
@@ -456,10 +384,15 @@ class TriggerDroid(View):
 class TriggerGCS(View):
 	def post(self,request):
 		if request.is_ajax():
-			pdb.set_trace()
-			if int(request.POST["time"]) < 0:
+
+
+			if request.POST["trigger"] is not "0" and (request.POST["time"] is "0" or not request.POST["time"]):
+				return  HttpResponse(simplejson.dumps({"nothing":"nothing"}),'application/json')
+
+			if  request.POST["time"] and int(request.POST["time"]) < 0:
 				return HttpResponse(simplejson.dumps({"failure":"invalid time interval"}),'application/json')
-			elif int(request.POST["time"]) == 0:
-				return HttpResponse(simplejson.dumps({"nothing":"nothing"}))
+
 			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
-			return HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
+			return  HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
+		else:
+			return HttpResponseForbidden()

@@ -26,6 +26,10 @@
         float:left;
         overflow-y: scroll;
     }
+    #targets{
+      overflow-y: scroll
+    }
+
     img {
       vertical-align: middle;
     }
