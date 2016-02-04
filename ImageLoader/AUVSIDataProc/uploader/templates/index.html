@@ -27,6 +27,7 @@
     tar_list_counter= 0;
     loading=1
     offset = 0
+    img_properties = new Array()
 
     crop = {};
 
@@ -48,7 +49,7 @@
 
             });
 
-            document.img_properties = new Array()
+
 
         }
     )
@@ -134,6 +135,7 @@
                                 image.width=100;//so all the targets are shown as thumbnails
                                 image.addEventListener("click", function() {
                                   showTargetData(this);
+
                                   curr_target = this.id
                                   return false;
                                 })
@@ -208,7 +210,7 @@
             if (counter%numcols==0) {
                 grid.append(document.createElement("tr"));//adding a row
             }
-            counter++;
+
             //finding the last row in the grid
             var rows = grid.find($("tr"));
             var row = rows[rows.length-1];
@@ -219,18 +221,19 @@
             //crab the image url
 
             var img_fields = picture.fields
-            if(counter == 1){
-              off_set=parseInt(picture.pk);
+            if(counter == 0){
+              offset=parseInt(picture.pk);
 
 
             }
             img.src= img_fields.fileName
-            img.id=parseInt(picture.pk)-off_set
+            img.id=parseInt(picture.pk)
 
 
             console.log(counter)
 
-            document.img_properties[counter]= img_fields
+            img_properties[counter]= img_fields
+            counter++;
 
 
             img.width=imgwidth;//scale the images so that they all have the same width
@@ -326,20 +329,20 @@
 
     //set the focusedImage to the given image, also changing the pic_curr, and initializes the canvas
     function setFocusedImage(image) {
-        document.focusedImage.src=image.src
-        document.focusedImage.length = 400
-        document.focusedImage.width =400
-        pic_curr=image.id;
+        document.focusedImage.src=image.src;
+        document.focusedImage.style.height = 400+'px';
+        document.focusedImage.style.width='auto';
+        pic_curr=parseInt(image.id);
         canvasinit();//to resize the canvas and start a new crop
         //getting targets using the pk of the current image
-
-        console.log(pic_curr)
-        if(pic_curr>= document.img_properties.length){
+        console.log(offset)
+        console.log("id "+image.id+" "+pic_curr)
+        if(pic_curr-offset>= img_properties.length){
             console.log("pic index too big")
         }
         else{
           console.log("pic"+pic_curr)
-          var pic_curr_props = document.img_properties[pic_curr]
+          var pic_curr_props = img_properties[pic_curr-offset]
           document.getElementById('picture-data').value=""
           document.getElementById("picture-data").value+="Latitude: "+pic_curr_props.lat+"\n"
           document.getElementById("picture-data").value+="Longitude: "+pic_curr_props.lon+"\n"

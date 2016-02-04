@@ -100,14 +100,16 @@ class Target(models.Model):
 
 		#read in that image
 		original_image = cv2.imread(file_name)
-		original_image = cv2.resize(original_image,(400,400))
+		#original_image = cv2.resize(original_image,(400,400))
 
 		#convert strange json format to integers
-		x = int(x)
-		y= int(y)
+		x = int(int(x)*1020/400)
+		y= int(int(y)*1020/400)
+		width = int(int(width[0])*1020/400)
+		height = int(int(height[0])*1020/400)
 
 		#crop the image
-		cropped_image = original_image[x:(x+int(width[0])),y:(y+int(height[0])),]
+		cropped_image = original_image[x:(x+width),y:(y+height),]
 
 
 		#convert numpy array to image
