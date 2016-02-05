@@ -412,8 +412,7 @@
         dataType: "json",
         data: {"pk": pk},
         success: function(json) {
-          document.getElementById('current-target').value+=""
-          $("#current-target").text("")
+          document.getElementById('current-target').value=""
           document.getElementById("current-target").value+="Color: "+json.color+"\n"
           document.getElementById("current-target").value+="Letter Color: "+json.lcolor+"\n"
           document.getElementById("current-target").value+="Orientation: "+json.orientation+"\n"
