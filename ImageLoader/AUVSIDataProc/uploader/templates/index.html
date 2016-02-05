@@ -500,7 +500,7 @@
         });
         canvas.addEventListener("mousemove", function drawBox(event) {
             if (cropinit) {
-                p2=[event.clientX-xOff, event.clientY-yOff]
+                p2=[event.clientX-xOff, event.clientY-yOff];
                 setBox();
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 ctx.fillRect(corner[0],corner[1],boxW,boxH);
@@ -509,10 +509,11 @@
         canvas.addEventListener("mouseup", function finishBox(event) {
             p2=[event.clientX-xOff, event.clientY-yOff];
             setBox();
+            console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
             ctx.clearRect(0,0,canvas.width,canvas.height);
             ctx.fillRect(corner[0],corner[1],boxW,boxH);
             cropinit=false;
-            curr_target=-1
+            curr_target=-1;
         });
     }
 

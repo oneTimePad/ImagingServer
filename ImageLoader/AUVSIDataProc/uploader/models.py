@@ -99,27 +99,30 @@ class Target(models.Model):
 		file_name  =str(parent_pic.photo.file)
 
 		#read in that image
-		original_image = cv2.imread(file_name)
+		#original_image = cv2.imread(file_name)
 		#original_image = cv2.resize(original_image,(400,400))
+		original_image = Image.open(file_name)
 
 		#convert strange json format to integers
-		x = int(int(x)*1020/400)
-		y= int(int(y)*1020/400)
-		width = int(int(width[0])*1020/400)
-		height = int(int(height[0])*1020/400)
+		orig_height = 960 #1020 for AUVSI camera
+		view_height = 400
+		x = int(int(x)*orig_height/view_height)
+		y= int(int(y)*orig_height/view_height)
+		width = int(int(width[0])*orig_height/view_height)
+		height = int(int(height[0])*orig_height/view_height)
 
 		#crop the image
-		cropped_image = original_image[x:(x+width),y:(y+height),]
-
+		#cropped_image = original_image[y:(y+height),x:(x+width)]
+		cropped_image = original_image.crop((x,y,x+width,y+height))
 
 		#convert numpy array to image
-		image_cropped_image = Image.fromarray(cropped_image,mode='RGB')
+		#image_cropped_image = Image.fromarray(cropped_image,mode='RGB')
 
 		#string as file
 		image_io = BytesIO()
 
 		#save image to stringIO file as JPEG
-		image_cropped_image.save(image_io,format='JPEG')
+		cropped_image.save(image_io,format='JPEG')
 
 
 		#convert image to django recognized format
