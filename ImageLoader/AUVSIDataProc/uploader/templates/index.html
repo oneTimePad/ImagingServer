@@ -5,529 +5,415 @@
 <title>Picture Viewer</title>
 <script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-
-
-
 <script src='{{STATIC_URL}}js/spectrum.js'></script>
 <script src='{{STATIC_URL}}js/ajaxsetup.js'></script>
 
 <link rel='stylesheet' href='{{STATIC_URL}}css/spectrum.css' />
 <link rel='stylesheet' href='{{STATIC_URL}}css/loader.css' />
 
-
 <script>
+  numcols=0;//set when the window loads
+  imgwidth=200;
+  imgheight=200;
+  counter=0;//counts the number of images added so far
+  pic_curr=0;//the id of the image in focus
+  curr_target=-1;
+  num_targets_of_cur_pic=0;
+  tar_list_counter= 0;
+  loading=1
+  offset = 0
+  img_properties = new Array()
+  crop = {};
 
-    numcols=0;//set when the window loads
-    imgwidth=200;
-    imgheight=200;
-    counter=0;//counts the number of images added so far
-    pic_curr=0;//the id of the image in focus
-    curr_target=-1;
-    num_targets_of_cur_pic=0;
-    tar_list_counter= 0;
-    loading=1
-    offset = 0
-    img_properties = new Array()
+  $(function connect_websocket_pic(){
+      //create websocket
+      var web_socket = WS4Redis({
+      uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
+      //triggered when msg from server is sent
+      receive_message: parseWebSkt,
+      heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+      });
+    }
+  )
 
-    crop = {};
-
-    $(function(){
-      console.log("empty")
-      $("#imagegrid").empty();
-    })
-
-
-
-    $(function connect_websocket_pic(){
-
-            //create websocket
-            var web_socket = WS4Redis({
-            uri:'{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo',
-            //triggered when msg from server is sent
-            receive_message: parseWebSkt,
-            heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
-
-            });
-
-
-
+  //sets up form submission
+  $(function form_submit_setup() {
+      //on user submit
+      $('#submit').on('click',
+      function(event) {
+        //allow for ajax
+        event.preventDefault();
+        //get all form attributes
+        var inputs = $('#attr_form').find(':input');
+        //array of user inputs
+        var input_array = {}
+        //put each one in an array
+        inputs.each(function() {
+          input_array[this.name]=$(this).val()
+        })
+        var color
+        if($("#palette").val()=="") {
+          color ="0,0,0"
         }
-    )
-
-    //sets up form submission
-    $(function form_submit_setup(){
-
-        //on user submit
-        $('#submit').on('click',
-            function(event){
-
-                  //allow for ajax
-               event.preventDefault()
-
-
-                //get all form attributes
-               var inputs = $('#attr_form').find(':input')
-
-
-               //array of user inputs
-               var input_array = {}
-
-               //put each one in an array
-               inputs.each(function(){
-
-
-                    input_array[this.name]=$(this).val()
-
-               })
-
-               var color
-               if($("#palette").val()==""){
-                 color ="0,0,0"
-               }
-               else{
-                 color = $("#palette").val().substring($("#palette").val().indexOf("(")+1,$("#palette").val().indexOf(")"))
-               }
-
-               var lcolor
-               if($("#lpalette").val()==""){
-                 lcolor ="0,0,0"
-               }
-               else{
-                 lcolor = $("#lpalette").val().substring($("#lpalette").val().indexOf("(")+1,$("#lpalette").val().indexOf(")"))
-               }
-
-               if(curr_target==-1){
-                  //if there attributes, send them
-
-                  if(input_array){
-                    $.ajax({
-                          url: "{% url 'attrform'%}",
-                          type: "POST",
-                          data: {"pk":pic_curr,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
-                          success: function(json){
-                            console.log(json.pk)
-                            $.ajax({
-                              url: "{% url 'gettarget'%}",
-                              type: "POST",
-                              dataType: "json",
-                              data: {"pk": parseInt(json.pk)},
-                              success: function(json) {
-
-                                var grid= $("#targetsgrid");
-
-
-                                if (num_targets_of_cur_pic%numcols==0) {
-                                   grid.append(document.createElement("tr"));//adding a row
-                                }
-                                num_targets_of_cur_pic++
-                                //finding the last row in the grid
-                                var rows = grid.find($("tr"))
-
-                                var row = rows[rows.length-1];
-
-                                //adding a column and the thumbnail
-                                var col = document.createElement("td");
-                                image = document.createElement("img");
-
-                                image.src=json.image;
-                                image.id=json.pk
-                                image.height=100
-                                image.width=100;//so all the targets are shown as thumbnails
-                                image.addEventListener("click", function() {
-                                  showTargetData(this);
-
-                                  curr_target = this.id
-                                  return false;
-                                })
-                                col.appendChild(image);
-                                row.appendChild(col);
-
-
-                              }
-                            })
-                          }
-
+        else {
+          color = $("#palette").val().substring($("#palette").val().indexOf("(")+1,$("#palette").val().indexOf(")"))
+        }
+        var lcolor
+        if($("#lpalette").val()=="") {
+          lcolor ="0,0,0"
+        }
+        else {
+          lcolor = $("#lpalette").val().substring($("#lpalette").val().indexOf("(")+1,$("#lpalette").val().indexOf(")"))
+        }
+        if(curr_target==-1) {
+          //if there attributes, send them
+          if(input_array) {
+            $.ajax({
+              url: "{% url 'attrform'%}",
+              type: "POST",
+              data: {"pk":pic_curr,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
+              success: function(json){
+                console.log(json.pk)
+                $.ajax({
+                  url: "{% url 'gettarget'%}",
+                  type: "POST",
+                  dataType: "json",
+                  data: {"pk": parseInt(json.pk)},
+                  success: function(json) {
+                    var grid= $("#targetsgrid");
+                    if (num_targets_of_cur_pic%numcols==0) {
+                       grid.append(document.createElement("tr"));//adding a row
+                    }
+                    num_targets_of_cur_pic++
+                    //finding the last row in the grid
+                    var rows = grid.find($("tr"))
+                    var row = rows[rows.length-1];
+                    //adding a column and the thumbnail
+                    var col = document.createElement("td");
+                    image = document.createElement("img");
+                    image.src=json.image;
+                    image.id=json.pk
+                    image.height=100
+                    image.width=100;//so all the targets are shown as thumbnails
+                    image.addEventListener("click", function() {
+                      showTargetData(this);
+                      curr_target = this.id
+                      return false;
                     })
-
-
-
+                    col.appendChild(image);
+                    row.appendChild(col);
                   }
+                })
               }
-              else{
-                if(input_array){
-                  $.ajax({
-                        url: "{% url 'targetedit'%}",
-                        type: "POST",
-                        data: {"pk":curr_target,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
-
-                        }
-                    )
-                  }
-
-              }
-
-            }
-        )
-
-    })
-
-
-
-
-    //handles picture received from websocket
-    function parseWebSkt(response){
-        //parse json server response
-
-         var json_response = JSON.parse(response);
-
-
-        if(json_response.hasOwnProperty("disconnected") == true){
-            alert("Android Device Disconnected")
-        }
-        else if(json_response.hasOwnProperty("connected") == true){
-            alert("Android Device Connected")
-        }
-
-        else if(json_response.hasOwnProperty("time") == true)
-        {
-
-                var text = document.getElementById("triggerLogs")
-
-              text.value = json_response.time+"\n"+text.value
-        }
-
-        else if(json_response.hasOwnProperty("type") == true){
-          if(loading==1){
-            loading=0;
-            return;
-          }
-          if(json_response['type']== "picture"){
-
-            var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf(']')))
-
-            var grid =$('#imagegrid');
-
-            if (counter%numcols==0) {
-                grid.append(document.createElement("tr"));//adding a row
-            }
-
-            //finding the last row in the grid
-            var rows = grid.find($("tr"));
-            var row = rows[rows.length-1];
-            //adding a column and the thumbnail
-            var col = document.createElement("td");
-            var img = document.createElement("img");
-
-            //crab the image url
-
-            var img_fields = picture.fields
-            if(counter == 0){
-              offset=parseInt(picture.pk);
-
-
-            }
-            img.src= img_fields.fileName
-            img.id=parseInt(picture.pk)
-
-
-            console.log(counter)
-
-            img_properties[counter]= img_fields
-            counter++;
-
-
-            img.width=imgwidth;//scale the images so that they all have the same width
-            img.height=imgheight
-            img.addEventListener("click", function() {
-                setFocusedImage(this);
-                return false;
-            });
-
-            col.appendChild(img);
-            row.appendChild(col);
+            })
           }
         }
-    }
-
-    window.onload = function(){
-
-        $("#imagegrid").empty()
-
-        //making the grid and viewer panels the height of the window
-        //if the window height changes, the page has to be reloaded
-        //when the window cannot fit the grid vertically, we can scroll through them
-        var height = window.innerHeight;
-        document.getElementById("left-panel").style.maxHeight=height+'px';
-        document.getElementById("right-panel").style.maxHeight=height+'px';
-        //calculating the number of columns in the grid based on the sizes of panels and thumbnails
-        var width = document.getElementById("right-panel").clientWidth;
-        imgwidth = 200;
-        var colwidth=imgwidth+2*5//image width + padding on both sides (hardcoded)
-        numcols=Math.trunc(width/colwidth);
-        if (numcols==0) numcols++;
-
-        //event listener for entire window (for keys)
-        document.addEventListener("keyup", function(key){
-            var space=32;
-            var leftarrow = 37;
-            var rightarrow = 39;
-
-            //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
-            switch (key.keyCode) {
-                case leftarrow:
-                    //need to find the index of the current focused image, based on the id pic_curr
-                    var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
-                    var currimage = document.getElementById(pic_curr);
-                    var index = $.inArray(currimage, gallery);
-                    index--;
-                    if (index<0) break;//do nothing if there are no images before
-                    currimage = gallery[index];//the new image
-                    setFocusedImage(currimage);
-                    break;
-                case rightarrow:
-                    //need to find the index of the current focused image, based on the id pic_curr
-                    var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
-                    var currimage = document.getElementById(pic_curr);
-                    var index = $.inArray(currimage, gallery);
-                    index++;
-                    if (index>=gallery.length) break;//do nothing if there are no images after
-                    currimage = gallery[index];//the new image
-                    setFocusedImage(currimage);
-                    break;
-                //deletes imagesz
-
-            }
-        });
-        document.addEventListener("keyup",function(key){
-          var deletearrow = 46
-
-          //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
-          switch (key.keyCode) {
-              case deletearrow:
-                  //ajax request to server to delete image with
-                  //pic_curr as the picture object pk
-                  $.ajax({
-                      url:"{% url 'deletepic'%}",
-                      type:"POST",
-                      data: {"pk":pic_curr},
-                  })
-                  document.focusedImage.src=0
-
-
-                  $("#targets").empty()
-                  $("#"+pic_curr).remove()
-                  break
-
-                default:
-                    return;
-            }
-        })
-
-
-        //document.focusedImage.onload = canvasinit();
-    }
-
-    //set the focusedImage to the given image, also changing the pic_curr, and initializes the canvas
-    function setFocusedImage(image) {
-        document.focusedImage.src=image.src;
-        document.focusedImage.style.height = 400+'px';
-        document.focusedImage.style.width='auto';
-        pic_curr=parseInt(image.id);
-        canvasinit();//to resize the canvas and start a new crop
-        //getting targets using the pk of the current image
-        console.log(offset)
-        console.log("id "+image.id+" "+pic_curr)
-        if(pic_curr-offset>= img_properties.length){
-            console.log("pic index too big")
-        }
-        else{
-          console.log("pic"+pic_curr)
-          var pic_curr_props = img_properties[pic_curr-offset]
-          document.getElementById('picture-data').value=""
-          document.getElementById("picture-data").value+="Latitude: "+pic_curr_props.lat+"\n"
-          document.getElementById("picture-data").value+="Longitude: "+pic_curr_props.lon+"\n"
-          document.getElementById("picture-data").value+="Altitude:"+pic_curr_props.alt+"\n"
-          document.getElementById("picture-data").value+="Azimuth:"+pic_curr_props.azimuth+"\n"
-          document.getElementById("picture-data").value+="Pitch:"+pic_curr_props.pitch+"\n"
-          document.getElementById("picture-data").value+="Roll:"+pic_curr_props.roll+"\n"
-
-          //this hasn't been calculated yet
-          //td.append("<p>Orientation: "+json_response.orientation+"</p>")
-        }
-
-
-        $.ajax({
-          url: "{% url 'gettargets'%}",
-          type: "POST",
-          dataType: "json",
-          data: {"pk": image.id},
-          success: function(json) {
-            console.log(json)
-            num_targets_of_cur_pic = 0
-            if(json.hasOwnProperty("NoTargets")==true){
-              console.log("no targets found")
-              return;
-            }
-            var grid= $("#targetsgrid");
-            grid.empty()
-
-            //finding the last row in the grid
-            var rows = grid.find($("tr"));
-            var row = rows[rows.length-1];
-            //adding a column and the thumbnail
-
-            num_targets_of_cur_pic = json.length
-            for (i in json) {
-              var targetProps = json[i]
-              image=document.createElement("img");
-              image.src=targetProps.image;
-              image.id=targetProps.pk;
-              image.width=100;
-              image.height=100;//so all the targets are shown as thumbnails
-              image.addEventListener("click", function() {
-                showTargetData(this);
-                curr_target = this.id
-                return false;
-              })
-
-              var col = document.createElement("td");
-              if (num_targets_of_cur_pic%numcols==0) {
-                 grid.append(document.createElement("tr"));//adding a row
-              }
-              num_targets_of_cur_pic++
-              col.append(image);
-              row.append(col);
-
-            }
+        else {
+          if(input_array){
+            $.ajax({
+              url: "{% url 'targetedit'%}",
+              type: "POST",
+              data: {"pk":curr_target,"attr":input_array,'color':color,'lcolor':lcolor,'crop':crop},
+            })
           }
-        })
-    }
-
-    function showTargetData(image) {
-      pk = image.id;
-
-      $.ajax({
-        url: "{% url 'gettargetdata'%}",
-        type: "POST",
-        dataType: "json",
-        data: {"pk": pk},
-        success: function(json) {
-          document.getElementById('current-target').value=""
-          document.getElementById("current-target").value+="Color: "+json.color+"\n"
-          document.getElementById("current-target").value+="Letter Color: "+json.lcolor+"\n"
-          document.getElementById("current-target").value+="Orientation: "+json.orientation+"\n"
-          document.getElementById("current-target").value+="Shape: "+json.shape+"\n"
-          document.getElementById("current-target").value+="Letter: "+json.letter+"\n"
-          document.getElementById("current-target").value+="Lat: "+json.lat+"\n"
-          document.getElementById("current-target").value+="Lon: "+json.lon+"\n"
-
-          $("#lpalette").val(json.lcolor)
-          $("#palette").val(json.color)
-          $("#orientation").val(json.orientation)
-          $("#shape").val(json.shape)
-          $("#letter").val(json.letter)
-
-
         }
       })
+  })
+
+  //handles picture received from websocket
+  function parseWebSkt(response){
+    //parse json server response
+    var json_response = JSON.parse(response);
+    if(json_response.hasOwnProperty("disconnected")) {
+      alert("Android Device Disconnected")
     }
-
-    //sets the canvas width and height and allows it to listen for cropping
-    function canvasinit() {
-        var p1;
-        var p2;
-
-        var cropinit;
-        var corner=new Array();
-        var boxW;
-        var boxH;
-        var xOff;
-        var yOff;
-
-        //finding the coordinates of the top left corner of the image, which must be subtracted from the coordinates of the mouse events to find the coordinates within the image
-        var image_position = document.focusedImage.getBoundingClientRect();
-        xOff=image_position.top;
-        yOff=image_position.left;
-
-        //set canvas to image params
-        var canvas = $('#selector')[0];
-        canvas.width=document.focusedImage.width;
-        canvas.height=document.focusedImage.height;
-
-        var ctx = canvas.getContext("2d");
-        ctx.fillStyle="rgba(210,220,255,0.6)";
-
-        //whether the cropping is taking place
-        var cropinit=false;
-
-        function setBox() {
-            boxW=p1[0]-p2[0];
-            boxH=p1[1]-p2[1];
-            //finding the top left corner
-
-            if (boxW<0) {
-                corner[0]=p1[0];
-                boxW=-boxW;
-            }
-            else {
-                corner[0]=p2[0];
-            }
-            if (boxH<0) {
-                corner[1]=p1[1];
-                boxH=-boxH;
-            }
-            else {
-                corner[1]=p2[1];
-            }
-
-            crop.corner = corner;
-            crop.width = boxW;
-            crop.height = boxH;
+    else if(json_response.hasOwnProperty("connected")) {
+      alert("Android Device Connected")
+    }
+    else if(json_response.hasOwnProperty("time")) {
+      var text = document.getElementById("triggerLogs")
+      text.value = json_response.time+"\n"+text.value
+    }
+    else if(json_response.hasOwnProperty("type")) {
+      if (loading==1) {
+        loading=0;
+        return;
+      }
+      if (json_response['type']== "picture") {
+        var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf(']')))
+        var grid =$('#imagegrid');
+        if (counter%numcols==0) {
+          grid.append(document.createElement("tr"));//adding a row
         }
-
-        //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
-        canvas.addEventListener("mousedown", function setP1(event) {
-            //allows you to find the height and width by imagining a rectangle around it
-            //get bounding selector parameters
-            p1=[event.clientX-xOff, event.clientY-yOff];
-            cropinit=true;
+        //finding the last row in the grid
+        var rows = grid.find($("tr"));
+        var row = rows[rows.length-1];
+        //adding a column and the thumbnail
+        var col = document.createElement("td");
+        var img = document.createElement("img");
+        var img_fields = picture.fields
+        if(counter == 0){
+          offset=parseInt(picture.pk);
+        }
+        img.src= img_fields.fileName
+        img.id=parseInt(picture.pk)
+        console.log(counter)
+        img_properties[counter]= img_fields
+        counter++;
+        img.width=imgwidth;//scale the images so that they all have the same width
+        img.height=imgheight
+        img.addEventListener("click", function() {
+          setFocusedImage(this);
+          return false;
         });
-
-        //so that if the user releases the mouse after it leaves the canvas, the crop completes
-        canvas.addEventListener("mouseleave", function() {
-            cropinit=false;
-        });
-        canvas.addEventListener("mousemove", function drawBox(event) {
-            if (cropinit) {
-                p2=[event.clientX-xOff, event.clientY-yOff];
-                setBox();
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                ctx.fillRect(corner[0],corner[1],boxW,boxH);
-            }
-        });
-        canvas.addEventListener("mouseup", function finishBox(event) {
-            p2=[event.clientX-xOff, event.clientY-yOff];
-            setBox();
-            console.log(corner[0]+" "+corner[1]+" "+boxW+" "+boxH);
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.fillRect(corner[0],corner[1],boxW,boxH);
-            cropinit=false;
-            curr_target=-1;
-        });
+        col.appendChild(img);
+        row.appendChild(col);
+      }
     }
+  }
 
+  window.onload = function() {
+    $("#imagegrid").empty()
+    //making the grid and viewer panels the height of the window
+    //if the window height changes, the page has to be reloaded
+    //when the window cannot fit the grid vertically, we can scroll through them
+    var height = window.innerHeight;
+    document.getElementById("left-panel").style.maxHeight=height+'px';
+    document.getElementById("right-panel").style.maxHeight=height+'px';
+    //calculating the number of columns in the grid based on the sizes of panels and thumbnails
+    var width = document.getElementById("right-panel").clientWidth;
+    imgwidth = 200;
+    var colwidth=imgwidth+2*5//image width + padding on both sides (hardcoded)
+    numcols=Math.trunc(width/colwidth);
+    if (numcols==0) numcols++;
+    //event listener for entire window (for keys)
+    document.addEventListener("keyup", function(key) {
+      var space=32;
+      var leftarrow = 37;
+      var rightarrow = 39;
+      //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
+      switch (key.keyCode) {
+        case leftarrow:
+          //need to find the index of the current focused image, based on the id pic_curr
+          var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
+          var currimage = document.getElementById(pic_curr);
+          var index = $.inArray(currimage, gallery);
+          index--;
+          if (index<0) {
+            break;//do nothing if there are no images before
+          }
+          currimage = gallery[index];//the new image
+          setFocusedImage(currimage);
+          break;
+        case rightarrow:
+          //need to find the index of the current focused image, based on the id pic_curr
+          var gallery = document.getElementById("imagegrid").getElementsByTagName("img");
+          var currimage = document.getElementById(pic_curr);
+          var index = $.inArray(currimage, gallery);
+          index++;
+          if (index>=gallery.length) {
+            break;//do nothing if there are no images after
+          }
+          currimage = gallery[index];//the new image
+          setFocusedImage(currimage);
+          break;
+      }
+    });
+    document.addEventListener("keyup",function(key){
+      var deletearrow = 46
+      //http://stackoverflow.com/questions/2876275/what-are-the-ascii-values-of-up-down-left-right
+      switch (key.keyCode) {
+        case deletearrow:
+          //ajax request to server to delete image with
+          //pic_curr as the picture object pk
+          $.ajax({
+            url:"{% url 'deletepic'%}",
+            type:"POST",
+            data: {"pk":pic_curr},
+          })
+          document.focusedImage.src=0
+          $("#targets").empty()
+          $("#"+pic_curr).remove()
+          break
+        default:
+          return;
+      }
+    })
+  }
+
+  //set the focusedImage to the given image, also changing the pic_curr, and initializes the canvas
+  function setFocusedImage(image) {
+    document.focusedImage.src=image.src;
+    document.focusedImage.style.height = 400+'px';
+    document.focusedImage.style.width='auto';
+    pic_curr=parseInt(image.id);
+    canvasinit();//to resize the canvas and start a new crop
+    //getting targets using the pk of the current image
+    console.log(offset);
+    console.log("id "+image.id+" "+pic_curr);
+    if (pic_curr-offset>= img_properties.length) {
+        console.log("pic index too big");
+    }
+    else{
+      console.log("pic"+pic_curr)
+      var pic_curr_props = img_properties[pic_curr-offset];
+      document.getElementById('picture-data').value="";
+      document.getElementById("picture-data").value+="Latitude: "+pic_curr_props.lat+"\n";
+      document.getElementById("picture-data").value+="Longitude: "+pic_curr_props.lon+"\n";
+      document.getElementById("picture-data").value+="Altitude:"+pic_curr_props.alt+"\n";
+      document.getElementById("picture-data").value+="Azimuth:"+pic_curr_props.azimuth+"\n";
+      document.getElementById("picture-data").value+="Pitch:"+pic_curr_props.pitch+"\n";
+      document.getElementById("picture-data").value+="Roll:"+pic_curr_props.roll+"\n";
+      //this hasn't been calculated yet
+      //td.append("<p>Orientation: "+json_response.orientation+"</p>");
+    }
+    $.ajax({
+      url: "{% url 'gettargets'%}",
+      type: "POST",
+      dataType: "json",
+      data: {"pk": image.id},
+      success: function(json) {
+        console.log(json)
+        num_targets_of_cur_pic = 0
+        if (json.hasOwnProperty("NoTargets")) {
+          console.log("no targets found");
+          return;
+        }
+        var grid= $("#targetsgrid");
+        grid.empty();
+        //finding the last row in the grid
+        var rows = grid.find($("tr"));
+        var row = rows[rows.length-1];
+        //adding a column and the thumbnail
+        num_targets_of_cur_pic = json.length;
+        console.log(num_targets_of_cur_pic+" targets");
+        for (i in json) {
+          var targetProps = json[i];
+          image=document.createElement("img");
+          image.src=targetProps.image;
+          image.id=targetProps.pk;
+          image.width=100;
+          image.height=100;//so all the targets are shown as thumbnails
+          image.addEventListener("click", function() {
+            showTargetData(this);
+            curr_target = this.id;
+            return false;
+          })
+          var col = document.createElement("td");
+          if (num_targets_of_cur_pic%numcols==0) {
+             grid.append(document.createElement("tr"));//adding a row
+          }
+          num_targets_of_cur_pic++;
+          col.append(image);
+          row.append(col);
+        }
+      }
+    })
+  }
+
+  function showTargetData(image) {
+    pk = image.id;
+    $.ajax({
+      url: "{% url 'gettargetdata'%}",
+      type: "POST",
+      dataType: "json",
+      data: {"pk": pk},
+      success: function(json) {
+        document.getElementById('current-target').value=""
+        $("#current-target").text("")
+        document.getElementById("current-target").value+="Color: "+json.color+"\n"
+        document.getElementById("current-target").value+="Letter Color: "+json.lcolor+"\n"
+        document.getElementById("current-target").value+="Orientation: "+json.orientation+"\n"
+        document.getElementById("current-target").value+="Shape: "+json.shape+"\n"
+        document.getElementById("current-target").value+="Letter: "+json.letter+"\n"
+        document.getElementById("current-target").value+="Lat: "+json.lat+"\n"
+        document.getElementById("current-target").value+="Lon: "+json.lon+"\n"
+        $("#lpalette").val(json.lcolor)
+        $("#palette").val(json.color)
+        $("#orientation").val(json.orientation)
+        $("#shape").val(json.shape)
+        $("#letter").val(json.letter)
+      }
+    })
+  }
+
+  //sets the canvas width and height and allows it to listen for cropping
+  function canvasinit() {
+    var p1;
+    var p2;
+    var cropinit;
+    var corner=new Array();
+    var boxW;
+    var boxH;
+    //set canvas to image params
+    var canvas = $('#selector')[0];
+    canvas.width=document.focusedImage.width;
+    canvas.height=document.focusedImage.height;
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle="rgba(210,220,255,0.6)";
+    //whether the cropping is taking place
+    var cropinit=false;
+    function setBox() {
+      boxW=p1[0]-p2[0];
+      boxH=p1[1]-p2[1];
+      //finding the top left corner
+      if (boxW<0) {
+        corner[0]=p1[0];
+        boxW=-boxW;
+      }
+      else {
+        corner[0]=p2[0];
+      }
+      if (boxH<0) {
+        corner[1]=p1[1];
+        boxH=-boxH;
+      }
+      else {
+        corner[1]=p2[1];
+      }
+      crop.corner = corner;
+      crop.width = boxW;
+      crop.height = boxH;
+    }
+    //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+    canvas.addEventListener("mousedown", function setP1(event) {
+      //allows you to find the height and width by imagining a rectangle around it
+      //get bounding selector parameters
+      p1=[event.layerX, event.layerY];
+      cropinit=true;
+    });
+    //so that if the user releases the mouse after it leaves the canvas, the crop completes
+    canvas.addEventListener("mouseleave", function() {
+      cropinit=false;
+    });
+    canvas.addEventListener("mousemove", function drawBox(event) {
+      if (cropinit) {
+        p2=[event.layerX, event.layerY];
+        setBox();
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillRect(corner[0],corner[1],boxW,boxH);
+      }
+    });
+    canvas.addEventListener("mouseup", function finishBox(event) {
+      p2=[event.layerX, event.layerY];
+      setBox();
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillRect(corner[0],corner[1],boxW,boxH);
+      cropinit=false;
+      curr_target=-1;
+    });
+  }
 </script>
 </head>
 
 <body>
     <div id="left-panel">
         <div id="container" style="cursor: crosshair;">
-            <canvas id="selector" style="position: absolute; z-index: 1;"></canvas>
-            <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
+          <canvas id="selector" style="position: absolute; z-index: 1;"></canvas>
+          <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
         </div>
         <textarea id="triggerLogs" cols=30>
         </textarea>
-        <p id="descr">This is where image and target data could be displayed</p>
         <div class="data">
           <div class="datarow">
             <div class="datacol">
@@ -540,11 +426,9 @@
             </div>
           </div>
         </div>
-
-
-            <div id="targets">
-            <table id="targetsgrid"></table>
-          </div>
+        <div id="targets">
+          <table id="targetsgrid"></table>
+        </div>
 
         {%csrf_token%}
         <form id="attr_form">
@@ -553,9 +437,6 @@
             {{form.as_p}}
             <button type="button" id="submit"/>Submit</button>
         </form>
-
-
-
      </div>
      <div id="bottom">
          <form id="trigger_on_form">
@@ -563,111 +444,76 @@
             <button onclick ="trigger();" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
         <form/>
         <button onclick="set_smart_trigger();" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
-
-
     </div>
-
-
-
-
     <div id="right-panel">
         <table id="imagegrid"></table>
-        <!--Change this from a table to a list of images w/ automatic wrapping so that images can be easily deleted-->
-
     </div>
 </body>
-
 </html>
 
 <script>
-
 $(document).ready(function(){
-//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
-    $("#palette").spectrum({
-        showPaletteOnly: true,
-        showPalette:true,
-        color: 'black',
-        palette: [
-            ['black', 'white', 'gray', 'red', 'blue'],
-            ['green', 'yellow', 'purple', 'brown', 'orange']
-        ]
-    });
-
+  //Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
+  $("#palette").spectrum({
+    showPaletteOnly: true,
+    showPalette:true,
+    color: 'black',
+    palette: [
+        ['black', 'white', 'gray', 'red', 'blue'],
+        ['green', 'yellow', 'purple', 'brown', 'orange']
+    ]
+  });
 });
 
 $(document).ready(function(){
-//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
-    $("#lpalette").spectrum({
-        showPaletteOnly: true,
-        showPalette:true,
-        color: 'black',
-        palette: [
-            ['black', 'white', 'gray', 'red', 'blue'],
-            ['green', 'yellow', 'purple', 'brown', 'orange']
-        ]
-    });
-
+  $("#lpalette").spectrum({
+    showPaletteOnly: true,
+    showPalette:true,
+    color: 'black',
+    palette: [
+      ['black', 'white', 'gray', 'red', 'blue'],
+      ['green', 'yellow', 'purple', 'brown', 'orange']
+    ]
+  });
 });
-
 
 function set_smart_trigger(){
-
-
-    var smart_trigger= document.getElementById("smart_trigger")
-
-    $("#smart_trigger").val(Math.abs(smart_trigger.value-1))
-
-    if(smart_trigger.value==false){
-        $("#smart_trigger").html("Smart Triggering On")
-    }
-    else {
-         $("#smart_trigger").html("Smart Triggering Off")
-    }
-
+  var smart_trigger= document.getElementById("smart_trigger")
+  $("#smart_trigger").val(Math.abs(smart_trigger.value-1))
+  if(smart_trigger.value==false){
+    $("#smart_trigger").html("Smart Triggering On")
+  }
+  else {
+    $("#smart_trigger").html("Smart Triggering Off")
+  }
 }
 
-
-function trigger(){
-    console.log()
-    $.ajax({
-
-        url:"{%url 'gcstrigger' %}",
-        type:'POST',
-        dataType:'JSON',
-        data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
-        success: function(json){
-
-
-            if(json.hasOwnProperty("failure")==true){
-                alert("Invalid Time Interval")
-                return;
-            }
-
-            if(json.hasOwnProperty("nothing") == true){
-              return;
-            }
-
-
-            var time_int = document.getElementById("time_interval")
-            time_int.value=0
-            var trigger_on = document.getElementById("trigger_on")
-
-            $("#trigger_on").val(Math.abs(trigger_on.value-1))
-
-            if(trigger_on.value==0){
-                $("#trigger_on").html("Stop Triggering")
-            }
-            else{
-                $("#trigger_on").html("Start Triggering")
-            }
-
-        }
-
-    })
-
-
-
-
+function trigger() {
+  console.log()
+  $.ajax({
+    url:"{%url 'gcstrigger' %}",
+    type:'POST',
+    dataType:'JSON',
+    data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+    success: function(json) {
+      if (json.hasOwnProperty("failure")) {
+        alert("Invalid Time Interval")
+        return;
+      }
+      if (json.hasOwnProperty("nothing")) {
+        return;
+      }
+      var time_int = document.getElementById("time_interval");
+      time_int.value=0;
+      var trigger_on = document.getElementById("trigger_on");
+      $("#trigger_on").val(Math.abs(trigger_on.value-1));
+      if (trigger_on.value==0) {
+        $("#trigger_on").html("Stop Triggering");
+      }
+      else {
+        $("#trigger_on").html("Start Triggering");
+      }
+    }
+  })
 }
-
 </script>
