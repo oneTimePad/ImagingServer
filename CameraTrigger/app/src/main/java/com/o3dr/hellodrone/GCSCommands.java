@@ -397,6 +397,7 @@ public class GCSCommands{
                 json.put("status", "1");
                 json.put("dateTime",dateTime);
 
+
                 OutputStream out = con.getOutputStream();
 
                 OutputStreamWriter outW = new OutputStreamWriter(out);
@@ -463,6 +464,8 @@ public class GCSCommands{
 
                                 json.put("trigger", "1");
                                 json.put("status","0");
+                                json.put("id",android_id);
+                                json.put("time",getTime());
                             }
                             catch( JSONException e){
 

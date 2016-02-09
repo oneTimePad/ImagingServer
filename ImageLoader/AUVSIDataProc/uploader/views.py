@@ -31,7 +31,7 @@ class Upload(View):
 
 		picture = Picture.objects.create()
 		picture.photo = request.FILES["Picture"]
-		pdb.set_trace()
+
 		picture.fileName = IMAGE_STORAGE+"/"+(str(picture.photo).replace(' ','_').replace(',','').replace(':',''))
 
 
@@ -330,8 +330,10 @@ class TriggerDroid(View):
 
 		#droid is asking to trigger
 		if json_request["trigger"] == "1":
-			'''
+
 			if 'id' in json_request and 'time' in json_request:
+				
+
 				if not cache.has_key(json_request['id']):
 					cache.set(json_request['id'],json_request['time'],8)
 				else:
@@ -347,7 +349,7 @@ class TriggerDroid(View):
 					#send to url to websocket
 					response_data = simplejson.dumps({'connected':'connected'})
 					redis_wbskt.publish_message(RedisMessage(response_data))
-				'''
+
 
 
 			if trigger_allowed is 0:
@@ -378,7 +380,7 @@ class TriggerGCS(View):
 			if request.POST["trigger"] is not "0" and (request.POST["time"] is "0" or not request.POST["time"]):
 				return  HttpResponse(simplejson.dumps({"nothing":"nothing"}),'application/json')
 
-			if  request.POST["time"] and int(request.POST["time"]) < 0:
+			if  request.POST["time"] and float(request.POST["time"]) < 0:
 				return HttpResponse(simplejson.dumps({"failure":"invalid time interval"}),'application/json')
 
 			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
