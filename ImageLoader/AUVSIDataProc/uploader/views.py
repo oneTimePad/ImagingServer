@@ -27,34 +27,23 @@ class Upload(View):
 
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
-		#convert to json
-		json_request = simplejson.loads((request.body).decode('utf-8'))
-		#make memory img
-		image = Image.open(BytesIO(base64.b64decode(json_request['file'])))
 
-		#string as file
-		image_io = BytesIO()
-		image_io.seek(0)
 
-		#save image to stringIO file as JPEG
-		image.save(image_io,format='JPEG')
-		#create picture
 		picture = Picture.objects.create()
+		picture.photo = request.FILES["Picture"]
+		pdb.set_trace()
+		picture.fileName = IMAGE_STORAGE+"/"+(str(picture.photo).replace(' ','_').replace(',','').replace(':',''))
 
-		#convert image to django recognized format
-		django_image = InMemoryUploadedFile(image_io,None,IMAGE_STORAGE+"/Picture"+str(picture.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
 
-		#set pic name
-		picture.fileName = IMAGE_STORAGE+"/Picture"+str(picture.pk).zfill(4)+'.jpeg'
-		#set Image
-		picture.photo=django_image
+		json_request = simplejson.loads(str(request.POST['jsonData'].rpartition('}')[0])+"}")
 
 		picture.azimuth = Decimal(json_request['Azimuth'])
 		picture.pitch = Decimal(json_request['Pitch'])
 		picture.roll= Decimal(json_request['Roll'])
 
-		if "PPM" in json_request.keys():
-			picture.ppm = Decimal(json_request['PPM'])
+
+		#if "PPM" in json_request.keys():
+		#	picture.ppm = Decimal(json_request['PPM'])
 		# set latLonAlt
 		if "GPS" in json_request.keys():
 			latLonAlt = simplejson.loads(json_request['GPS'])
@@ -90,7 +79,7 @@ class Upload(View):
 @receiver(image_done)
 def send_pic(num_pic,**kwargs):
 	#create pic
-	
+
 	picture = Picture.objects.get(pk=num_pic)
 
 	#Serialize pathname

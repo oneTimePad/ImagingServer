@@ -170,7 +170,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
         }
         return optimalSize;
     }
-
+    /*
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         if(mCamera != null && mPreviewSize != null) {
             Camera.Parameters parameters = mCamera.getParameters();
@@ -180,8 +180,18 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
             mCamera.setParameters(parameters);
             mCamera.startPreview();
         }
-    }
+    }*/
 
+    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+        Camera.Parameters parameters = mCamera.getParameters();
+        List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
+
+        // You need to choose the most appropriate previewSize for your app
+        Camera.Size previewSize = previewSizes.get(0);
+        parameters.setPreviewSize(previewSize.width, previewSize.height);
+        mCamera.setParameters(parameters);
+        mCamera.startPreview();
+    }
 }
 
 

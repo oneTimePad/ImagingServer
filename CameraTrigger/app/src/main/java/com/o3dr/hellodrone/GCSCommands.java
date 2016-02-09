@@ -11,10 +11,15 @@ import android.widget.Toast;
 import com.o3dr.android.client.Drone;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.LineNumberReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -282,7 +287,7 @@ public class GCSCommands{
     }
     */
 
-    public void sendPicture(JSONObject request_data) throws IOException {
+    public void sendPicture(JSONObject request_data, File image,String fileName) throws IOException {
         Log.d("posting","posting");
         URL url = new URL("http://" +URL+"/droid/upload");
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
@@ -291,7 +296,59 @@ public class GCSCommands{
         String csrf_token_string = "sss";
         //sets the csrf token cookie
         //con.setRequestProperty("Cookie", "csrftoken=" + csrf_token_string);
-        con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+
+        String jsonDisp = "Content-Disposition: form-data; name=\"jsonData\"";
+        String jsonType = "Content-Type: application/json; charset=UTF-8";
+
+        String fileDisp = "Content-Disposition: form-data; name=\"Picture\"; filename=\""+fileName+"\"";
+        String fileType = "Content-Type: image/jpeg";
+
+        String LINE_FEED = "\r\n";
+
+        String boundary = "==="+System.currentTimeMillis() +"===";
+        con.setRequestProperty("Content-Type", "multipart/form-data; boundary="+boundary);
+        con.setRequestProperty("ENCTYPE", "multipart/form-data");
+        Log.e("lol",fileName);
+        con.setRequestProperty("image",fileName);
+        con.setRequestProperty("Connection","Keep-Aive");
+
+        con.setDoOutput(true);
+        con.connect();
+
+        OutputStream out = con.getOutputStream();
+
+        PrintWriter wrt = new PrintWriter(new OutputStreamWriter(out), true);
+
+        wrt.append("--"+boundary).append(LINE_FEED);
+        wrt.append(fileDisp).append(LINE_FEED);
+        wrt.append(fileType).append(LINE_FEED);
+        //wrt.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
+        wrt.append(LINE_FEED);
+        wrt.flush();
+        FileInputStream str = new FileInputStream(image);
+        byte fileContent[] = new byte[(int)image.length()];
+        int bytesRead = -1;
+        while((bytesRead=str.read(fileContent))!=-1){
+            out.write(fileContent,0,bytesRead);
+        }
+        out.flush();
+        str.close();
+
+        wrt.append(LINE_FEED);
+        wrt.flush();
+
+
+
+        wrt.append("--"+boundary).append(LINE_FEED);
+        wrt.append(jsonDisp).append(LINE_FEED);
+        wrt.append(jsonType).append(LINE_FEED);
+        wrt.append(LINE_FEED);
+        wrt.append(request_data.toString());
+        wrt.append(LINE_FEED);
+        wrt.flush();
+
+
+
         /*try {
             request_data.put("csrfmiddlewaretoken", csrf_token_string);
         }
@@ -299,15 +356,9 @@ public class GCSCommands{
             Log.e("csrf","csrf");
         }*/
         //set doOutput to true so that we can write bytes to the body of the http post request
-        con.setDoOutput(true);
-        con.connect();
-        //initialize the output stream that will write to the body of the http post request
-        OutputStream out = con.getOutputStream();
 
-        OutputStreamWriter outW = new OutputStreamWriter(out);
-        outW.write(request_data.toString());
-        outW.flush();
-        outW.close();
+        //initialize the output stream that will write to the body of the http post request
+
 
         switch(con.getResponseCode()){
             case 200:

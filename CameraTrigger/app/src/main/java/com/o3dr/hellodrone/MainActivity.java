@@ -1058,10 +1058,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 outStream.close();
 
                 FileInputStream fin = new FileInputStream(outFile);
-                DataInputStream dis = new DataInputStream(fin);
+                //DataInputStream dis = new DataInputStream(fin);
 
-                byte fileContent[] = new byte[(int)outFile.length()];
-                dis.readFully(fileContent);
+                //byte fileContent[] = new byte[(int)outFile.length()];
+                //dis.readFully(fileContent);
 
 
 
@@ -1074,7 +1074,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     try {
                         request.put("file_name", fileName);
                         Log.e("data",""+data.length);
-                        request.put("file", Base64.encodeToString(fileContent, Base64.DEFAULT).toString());
+                        //request.put("file", Base64.encodeToString(fileContent, Base64.DEFAULT).toString());
                         request.put("PicNum", picNum);
                         if (dataForPic != null) {
                             request.put("Azimuth", dataForPic.getAzimuth());
@@ -1095,13 +1095,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                                 }
                             }
-                            request.put("PPM", pixelPerMeter);
+                            //request.put("PPM", pixelPerMeter);
                         }
                     } catch (JSONException e) {
 
                     }
                     synchronized (gcs){
-                        gcs.sendPicture(request);
+                        gcs.sendPicture(request,outFile,fileName);
                     }
                 }
             }
