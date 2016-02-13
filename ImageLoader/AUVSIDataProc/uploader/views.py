@@ -50,6 +50,7 @@ class Upload(View):
 			picture.lat = latLonAlt['lat']
 			picture.lon = latLonAlt['lon']
 			picture.alt = latLonAlt['alt']
+
 		#set FourCorners
 		if "FourCorners" in json_request.keys():
 
@@ -112,7 +113,7 @@ class DroidConnectionCheck:
 				response_data = simplejson.dumps({'disconnected':'disconnected'})
 				redis_wbskt.publish_message(RedisMessage(response_data))
 				break
-			time.sleep(8)
+			time.sleep(12)
 
 
 
@@ -332,7 +333,7 @@ class TriggerDroid(View):
 		if json_request["trigger"] == "1":
 
 			if 'id' in json_request and 'time' in json_request:
-				
+
 
 				if not cache.has_key(json_request['id']):
 					cache.set(json_request['id'],json_request['time'],8)

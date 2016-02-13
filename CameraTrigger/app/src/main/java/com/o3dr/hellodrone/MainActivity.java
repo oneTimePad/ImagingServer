@@ -1,5 +1,6 @@
 package com.o3dr.hellodrone;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.File;
@@ -32,6 +33,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 
+import android.view.SurfaceHolder;
 import android.view.inputmethod.InputMethodManager;
 
 import android.widget.Button;
@@ -65,12 +67,22 @@ import android.view.ViewGroup.LayoutParams;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 
 
 import java.util.HashMap;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+
 
 public class MainActivity extends ActionBarActivity implements DroneListener,TowerListener {
 
@@ -89,27 +101,20 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private File logFile;
     //current picture
     private int picNum;
-    //gcs
-    GCSCommands gcs;
 
     //camera
     Camera mCamera;
 
     Double pixelPerMeter = 0.0;
+    boolean connectLoop = false;
 
     //continue take pics?
     public static boolean on =false;
 
-    //camera thread
-    private CameraHandlerThread mThread = null;
     //upload thread
-    private CameraUpload uThread = null;
+    private ServerContactThread uThread = null;
     //camera trigger thread
     private CameraTakerThread tThread = null;
-    //3dr pixhawk connect thread
-    private ConnectThread cThread = null;
-    //photomography thread
-    private LocationThread lThread = null;
 
     public String URL = null;
 
@@ -117,33 +122,31 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     FileWriter wrt =null;
     BufferedWriter logOut = null;
 
-    //for previewing the pic
-    Preview preview;
-    //this activity
-    private static Activity act;
-    //current context
-    Context ctx;
-
     File picDir;
 
+    private static boolean stop = false;
 
     //baud rate
-    private final int DEFAULT_USB_BAUD_RATE = 57600;
+    private final static int DEFAULT_USB_BAUD_RATE = 57600;
 
     private String android_id;
 
     //PowerManager.WakeLock wl;
 
+    //surface view and holder
+    SurfaceView sf;
+    SurfaceHolder sH;
+
+
+   static CameraHandlerThread handlerCamerathread = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
 
-        //do some window stuff
-        ctx = this;
-        act = this;
+      ;
         //not important
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
@@ -176,10 +179,11 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         try {
             //if directory doesn't exist, make it
             if (!picDir.exists()) {
-                picDir.mkdirs();
+                if(!picDir.mkdirs()){
+                    alertUser("Storage creation Failed. Exiting");
+                    System.exit(1);
+                }
             }
-
-
             StoragePic = picDir;
 
         } catch (SecurityException e) {
@@ -212,28 +216,11 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         //photomography object
         mSensor = new SensorTracker(getApplicationContext());
-        mSensor.startSensors();
+
 
         //3dr control tower
         controlTower = new ControlTower(getApplicationContext());
-        /*
-        EditText time = (EditText)findViewById(R.id.time);
-        final EditText time_f = time;
-        //make keyboard disappear at enter
-        time.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                //on enter
-                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
-                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    //hide the keyboard
-                    mgr.hideSoftInputFromWindow(time_f.getWindowToken(), 0);
-                    return true;
-                }
-                return false;
-            }
-        });
-        */
+
         final EditText ipText = (EditText)findViewById(R.id.URL);
         //make keyboard disappear at enter
         ipText.setOnKeyListener(new View.OnKeyListener() {
@@ -249,30 +236,60 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 return false;
             }
         });
-        /*
-        final EditText ppm = (EditText) findViewById(R.id.ppm);
-        ppm.setOnKeyListener(new View.OnKeyListener() {
+
+        handlerCamerathread = new CameraHandlerThread();
+        sf = (SurfaceView)findViewById(R.id.surfaceView);
+        //get surface holder
+        sH = sf.getHolder();
+        sH.setKeepScreenOn(true);
+
+        sH.addCallback(new SurfaceHolder.Callback() {
             @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                //on enter
-                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
-                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    //hide the keyboard
-                    mgr.hideSoftInputFromWindow(time_f.getWindowToken(), 0);
-                    return true;
+            public void surfaceCreated(SurfaceHolder holder) {
+                synchronized (handlerCamerathread) {
+                    handlerCamerathread.openCamera();
                 }
-                return false;
+
+                try{
+                    if(mCamera!=null){
+                        mCamera.setPreviewDisplay(holder);
+                        mCamera.startPreview();
+                    }
+
+                }
+                catch(IOException e){
+                    Log.e("surfaceCreate",e.toString());
+                }
+
             }
-        });*/
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                //nothing
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+                handlerCamerathread.closeCamera();
+            }
+        });
 
     }
 
 
 
-    @Override
-    public void onStart() {
 
-        super.onStart();
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        //create the uploader thread
+        newUploaderThread();
+        //create lThread
+
+
+        //create pic taker thread
+        tThread = new CameraTakerThread();
         //connect to tower
         this.controlTower.connect(this);
         //for maeking interval input keyboard dissapear
@@ -283,66 +300,35 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             wrt = new FileWriter(logFile);
         }
         catch(IOException e){
-
+            Log.e("onResume","FileWriter failed");
         }
+
         logOut = new BufferedWriter(wrt);
 
-
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        //open camera
-        newOpenCamera();
-        //create the uploader thread
-        newUploaderThread();
-        //create lThread
-        newPhotoMogThread();
-        //create the camera preview
-        preview = new Preview(this, (SurfaceView) findViewById(R.id.surfaceView));
-
-        preview.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-        ((FrameLayout) findViewById(R.id.layout)).addView(preview);
-        preview.setKeepScreenOn(true);
-        preview.setCamera(mCamera);
-
-        //create connectThread
-        cThread = new ConnectThread();
-        //create pic taker thread
-        tThread = new CameraTakerThread();
-
-
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        //only stop camera when screen goes out of focus
-        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-
-        if (powerManager.isScreenOn()){
-
-            return;
-        }
-        //tell thread to stop taking pics
-
-        on = false;
-
-        if(mCamera != null) {   
-            preview.stopPreviewAndFreeCamera();
-
-
+        if(mSensor!=null) {
+            mSensor.startSensors();
         }
 
     }
+
+
 
     @Override
     public void onStop() {
         super.onStop();
+
+        on = false;
+        stop = false;
+
+
+
+
+        connectLoop = false;
+
         try {
-            logOut.close();
+            if(logOut!=null){
+                logOut.close();
+            }
         }
         catch(IOException e){
 
@@ -354,27 +340,32 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             updateConnectedButton(false);
         }
         //tell it to stop taking pics
-        on=false;
         if(mSensor!=null){
             mSensor.stopSensors();
         }
 
     }
 
+    @Override
+    public void onDestroy(){
+        Log.i("Destroyed","Destroyed");
+        super.onDestroy();
+        //gcs.release();
+    }
+
+
     //3dr tower connection
     @Override
     public void onTowerConnected() {
         alertUser("3DR Services Connected");
-        this.controlTower.registerDrone(this.drone, this.handler);
-        this.drone.registerDroneListener(this);
+        this.controlTower.registerDrone(drone, this.handler);
+        drone.registerDroneListener(this);
     }
     //disconnection for 3dr tower
     @Override
     public void onTowerDisconnected() {
         alertUser("3DR Service Interrupted");
     }
-
-
 
     //drone connection error handling
     @Override
@@ -386,6 +377,591 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     public void onDroneServiceInterrupted(String errorMsg) {
 
         alertUser(errorMsg);
+
+    }
+
+
+    //thread for opening camera and running callbacks
+    private class CameraHandlerThread extends HandlerThread {
+        Handler  mHandler =  null;
+        String curTime;
+        Data imageData;
+
+        CameraHandlerThread(){
+            super("CamerHandlerThread");
+            start();
+            mHandler = new Handler(getLooper());
+
+        }
+        //notfy when camera has been opened
+        synchronized void notifyCameraReady(){
+            notify();
+        }
+
+        synchronized void  setPictureData(String curTime,Data imageData){
+            this.curTime = curTime;
+            this.imageData=imageData;
+        }
+        synchronized  String getPictureTime(){
+            return curTime;
+        }
+
+        synchronized  Data getPictureData(){
+            return imageData;
+        }
+
+
+        void closeCamera(){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if(mCamera!=null){
+                        try {
+                            mCamera.release();
+                        }
+                        catch(RuntimeException e){
+                            Log.e("CameraHandler","Fail on camera release");
+                        }
+                    }
+                }
+            });
+
+
+        }
+
+        void openCamera(){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try{
+
+
+
+                        mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
+                        Camera.Parameters params = mCamera.getParameters();
+                        params.setPictureSize(300,300);
+                        params.setRotation(90);
+                    }catch(RuntimeException e){
+                        alertUser("Failed to open camera");
+
+                        Log.e("Camera Failed", "failed to open back camera", e);
+                    }
+                    notifyCameraReady();
+                }
+            });
+            //wait for camera to be opened
+            try{
+                synchronized (handlerCamerathread) {
+                    handlerCamerathread.wait();
+                }
+            }
+            catch(InterruptedException e){
+                Log.w("Wait Failed", "wait was interupted");
+
+            }
+
+        }
+
+    }
+
+
+    //Thread for triggering camera
+    public class CameraTakerThread extends HandlerThread{
+        Handler mHandler = null;
+        double captureTime =0.0;
+
+
+        CameraTakerThread(){
+            super("CamerTakerThread");
+            start();
+            mHandler = new Handler(getLooper());
+        }
+
+
+        void setCapture(double time){
+            captureTime = time;
+        }
+        void smartTrigger(){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    //smart Trigger code
+
+                }
+            });
+
+        }
+
+        void capture(){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+
+                    Double timeNum = captureTime;
+
+                    //continue taking pics
+                    on = true;
+
+                    while (on) {
+                        Log.e("TIME",System.currentTimeMillis()+"");
+
+
+                        /*
+                        while(Math.abs(mSensor.getPitch())>30 || Math.abs(mSensor.getRoll())>30){
+                            try {
+                                Thread.sleep(1000);
+                            }
+                            catch(InterruptedException e){
+
+                            }
+                        }*/
+                        if (mCamera != null) {
+                            //take pics
+
+                            mCamera.startPreview();
+
+                            mCamera.takePicture(onShutter, null, onPicTake);
+                        }
+                        //wait given time interval
+                        try {
+
+                            synchronized (handlerCamerathread) {
+                                handlerCamerathread.wait();
+                                //Log.e("HERE", "HERE");
+
+                            }
+                            /*synchronized (uThread){
+                                uThread.wait();
+                            }*/
+                            Thread.sleep((long) (timeNum * 1000));
+                        } catch (InterruptedException e) {
+                            Log.e("CameraHandler",e.toString());
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+
+    private class ServerContactThread extends HandlerThread{
+
+        Handler mHandler = null;
+
+
+        ServerContactThread(){
+            super("ServerContact");
+            start();
+            mHandler = new Handler(getLooper());
+        }
+
+        private void refreshGallery(File file) {
+            Intent mediaScanIntent = new Intent( Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+            mediaScanIntent.setData(Uri.fromFile(file));
+            sendBroadcast(mediaScanIntent);
+        }
+
+        void sendPicture(final byte[]data,final File dir, final int picNum,final String curTime,final Data imageData){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+
+                    try {
+
+                        if(stop){
+                            mHandler.removeCallbacksAndMessages(null);
+                        }
+
+                        String fileName = String.format(curTime + "%04d.jpg", picNum);
+
+                        //write image to disk
+                        File outFile = new File(dir, fileName);
+                        FileOutputStream outStream = new FileOutputStream(outFile);
+                        outStream.write(data);
+                        outStream.close();
+                        refreshGallery(outFile);
+
+                        JSONObject requestData = new JSONObject();
+                        requestData.put("fileName", fileName);
+
+                        if (imageData != null) {
+                            requestData.put("Azimuth", imageData.getAzimuth());
+                            requestData.put("Pitch", imageData.getPitch());
+                            requestData.put("Roll", imageData.getRoll());
+                            requestData.put("GPS", imageData.getLatLonAltJSON());
+                        }
+
+
+                        URL url = new URL("http://" + URL + "/droid/upload");
+                        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                        con.setRequestMethod("POST");
+
+
+                        String jsonDisp = "Content-Disposition: form-data; name=\"jsonData\"";
+                        String jsonType = "Content-Type: application/json; charset=UTF-8";
+
+                        String fileDisp = "Content-Disposition: form-data; name=\"Picture\"; filename=\"" + fileName + "\"";
+                        String fileType = "Content-Type: image/jpeg";
+
+                        String LINE_FEED = "\r\n";
+
+                        String boundary = "===" + System.currentTimeMillis() + "===";
+                        con.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+                        con.setRequestProperty("ENCTYPE", "multipart/form-data");
+
+                        con.setRequestProperty("image", fileName);
+                        con.setRequestProperty("Connection", "Keep-Aive");
+
+                        con.setDoOutput(true);
+                        con.connect();
+
+                        OutputStream out = con.getOutputStream();
+
+                        PrintWriter wrt = new PrintWriter(new OutputStreamWriter(out), true);
+
+                        wrt.append("--" + boundary).append(LINE_FEED);
+                        wrt.append(fileDisp).append(LINE_FEED);
+                        wrt.append(fileType).append(LINE_FEED);
+
+                        wrt.append(LINE_FEED);
+                        wrt.flush();
+
+                        out.write(data);
+                        out.flush();
+
+                        wrt.append(LINE_FEED);
+                        wrt.flush();
+
+
+                        wrt.append("--" + boundary).append(LINE_FEED);
+                        wrt.append(jsonDisp).append(LINE_FEED);
+                        wrt.append(jsonType).append(LINE_FEED);
+                        wrt.append(LINE_FEED);
+                        wrt.append(requestData.toString());
+                        wrt.append(LINE_FEED);
+                        wrt.flush();
+
+
+                        switch (con.getResponseCode()) {
+                            case 200:
+                                Log.d("200", "Success");
+
+                                Log.i("gcsstop", System.currentTimeMillis() + "");
+                                break;
+                            case 500:
+                                Log.e("500", "Internal Server error");
+                                break;
+                            case 403:
+                                Log.e("403", "Forbidden");
+                                break;
+                            default:
+                                Log.e("#", "Something else");
+                        }
+                    } catch (MalformedURLException e) {
+                        Log.e("UploadThreadURL", e.toString());
+                    } catch (JSONException e) {
+                        Log.e("UploadThreadJSON", e.toString());
+                    } catch (IOException e) {
+                        Log.e("UploadThread", e.toString());
+                    }
+
+
+                }
+
+            });
+        }
+
+
+
+        void heartbeat(){
+            mHandler.post(new Runnable() {
+
+                public void run() {
+
+
+                    try {
+                        //ask server what to do
+                        URL url = new URL("http://" + URL + "/droid/droidtrigger");
+                        Log.d("url", URL);
+                        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+
+                        con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                        con.setDoOutput(true);
+                        con.setUseCaches(false);
+                        con.setRequestMethod("POST");
+                        con.connect();
+                        //send json that we are asking should we connect drone
+                        //not a status update
+                        JSONObject json = new JSONObject();
+                        try {
+
+                            json.put("trigger", "1");
+                            json.put("status", "0");
+                            json.put("id", android_id);
+                            json.put("time", getTime());
+                        } catch (JSONException e) {
+
+                        }
+                        OutputStream osC = con.getOutputStream();
+                        OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
+                        osW.write(json.toString());
+                        osW.flush();
+                        osW.close();
+
+                        int status = con.getResponseCode();
+
+                        switch (status) {
+
+
+                            case 200:
+                                BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                                StringBuilder sb = new StringBuilder();
+                                String line;
+                                while ((line = br.readLine()) != null) {
+                                    sb.append(line);
+                                }
+                                br.close();
+                                //stop triggering
+                                if (sb.toString().equals("NO")) {
+
+                                    MainActivity.on = false;
+                                    con.disconnect();
+                                }
+                                //no command
+                                else if (sb.toString().equals("NOINFO")) {
+                                    con.disconnect();
+                                }
+                                //trigger
+                                else {
+
+                                    JSONObject json_response = null;
+                                    try {
+
+                                        json_response = new JSONObject(sb.toString());
+
+
+                                        //interval
+                                        String timeInterval = json_response.get("time").toString();
+
+                                        //or smartTrigger
+                                        String smartTrigger = json_response.get("smart_trigger").toString();
+                                        if (smartTrigger.equals("0")) {
+                                            tThread.setCapture(Double.parseDouble(timeInterval));
+                                            //start triggering
+                                            MainActivity.on = true;
+                                            Log.d("Triggering", "now");
+                                            tThread.capture();
+                                        } else if (smartTrigger.equals("1")) {
+                                            //start smart Trigger
+                                            tThread.smartTrigger();
+                                        }
+
+                                        con.disconnect();
+
+
+                                    } catch (JSONException e) {
+                                    }
+                                }
+
+
+                        }
+                        /*
+                        try {
+                            Thread.sleep(4000);
+                        } catch (InterruptedException e) {
+                            Log.e("Error", "error");
+
+                        }*/
+
+
+                    } catch (IOException e) {
+
+                    }
+
+
+                }
+
+
+            });
+
+        }
+
+
+
+    }
+
+
+    //for holding image data
+    private class Data{
+        private float azimuth;
+        private float pitch;
+        private float roll;
+        private LatLongAlt gpsData = null;
+
+
+
+        Data(){
+            this.azimuth =mSensor.getAzimuth();
+            this.pitch = -1*mSensor.getPitch();
+            this.roll = -1*mSensor.getRoll();
+            this.gpsData = getLatLonAlt();
+
+        }
+
+        float getAzimuth(){
+            return azimuth;
+        }
+        float getPitch(){
+            return pitch;
+        }
+        float getRoll(){
+            return roll;
+        }
+
+        LatLongAlt retLatLonAlt(){
+            return gpsData;
+        }
+
+        JSONObject getLatLonAltJSON(){
+            if(gpsData !=null) {
+                try {
+                    return new JSONObject().put("lat", gpsData.getLatitude()).put("lon", gpsData.getLongitude()).put("alt", gpsData.getAltitude());
+                } catch (JSONException e) {
+                    Log.e("Dataholder",e.toString());
+                }
+
+            }
+
+            return null;
+        }
+
+    }
+
+    //shutter callback
+    Camera.ShutterCallback onShutter=new Camera.ShutterCallback()
+
+    {
+        @Override
+        public void onShutter () {
+
+            //make shutter sound
+            AudioManager mgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
+
+            Data dataHolder = new Data();
+            String time = getTime();
+            synchronized (handlerCamerathread) {
+                handlerCamerathread.setPictureData(time, dataHolder);
+            }
+            //create log file
+            try {
+                String logData;
+                if(dataHolder.retLatLonAlt()!=null) {
+                    logData = time+picNum + " GPS:" + dataHolder.retLatLonAlt().toString()+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
+
+                }
+                else{
+                    logData = time+picNum+" "+"GPS NOT CONNECTED"+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
+                }
+                logOut.write(logData);
+                logOut.newLine();
+            }
+            catch (FileNotFoundException e){
+                Log.e("ShutterFile",e.toString());
+
+            }
+            catch (IOException e){
+                Log.e("Shutter",e.toString());
+
+            }
+
+            final double pitch = dataHolder.getPitch();
+            final double roll  = dataHolder.getRoll();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    TextView pitche = (TextView) findViewById(R.id.pitche);
+                    TextView rolle = (TextView) findViewById(R.id.rolle);
+
+//                    pitche.setText(String.format("%.2f",pitch));
+                    rolle.setText(String.format("%.2f", roll));
+
+
+                }
+            });
+
+
+        }
+    };
+
+    //callback for saved jpeg
+    PictureCallback onPicTake=new PictureCallback() {
+
+
+        @Override
+        public void onPictureTaken ( byte[] bytes, Camera camera) {
+
+
+            Log.d("data size", "" + bytes.length);
+
+            synchronized (uThread) {
+                uThread.sendPicture(bytes, StoragePic, picNum++, handlerCamerathread.curTime, handlerCamerathread.imageData);
+            }
+
+            synchronized (handlerCamerathread) {
+                handlerCamerathread.notify();
+            }
+        }
+
+
+
+
+    };
+
+
+    //update connect button upon drone connection
+    protected void updateConnectedButton(Boolean isConnected) {
+
+        Button connectButton = (Button)findViewById(R.id.btnconnect);
+
+        connectButton.setText(isConnected ? "AP Disconnect" : "AP Connect");
+
+    }
+
+    //connect to drone
+    public void onBtnConnectTap(View view) {
+
+        Thread connect= new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (drone.isConnected()) {
+                    drone.disconnect();
+                } else {
+                    Bundle extraParams = new Bundle();
+                    extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, DEFAULT_USB_BAUD_RATE); // Set default baud rate to 57600
+                    //connect with usb
+                    ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
+                    drone.connect(connectionParams);
+
+                }
+                this.notify();
+            }
+        });
+
+        connect.start();
+
+        try{
+            synchronized (connect) {
+                connect.wait();
+                connect = null;
+            }
+        }
+        catch (InterruptedException e){
+            Log.e("Drone Conection", "error on wait");
+        }
+        ;
+        updateConnectedButton(drone.isConnected());
 
     }
 
@@ -404,95 +980,42 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
         //start remote connections
         //create uploader
+      new Thread(new Runnable() {
+          @Override
+          public void run() {
+              connectLoop=true;
+              if(uThread!=null){
+
+                  while(connectLoop){
+                      synchronized (uThread) {
+                          uThread.heartbeat();
+                      }
+                      try {
+                          Thread.sleep(7000);
+                      }
+                      catch (InterruptedException e){
+                          Log.e("HeartBeatLoop",e.toString());
+                      }
 
 
-        try {
+                  }
+              }
 
-            gcs = new GCSCommands(URL, cThread, tThread,android_id);
-            //gcs.droneConnect();
-            gcs.droidTrigger();
-
-        } catch (IllegalAccessException e) {
-            alertUser("NO GCS Selected");
-            return;
-        }
-
-    }
-
-    //update connect button upon drone connection
-    protected void updateConnectedButton(Boolean isConnected) {
-
-        Button connectButton = (Button)findViewById(R.id.btnconnect);
-
-        connectButton.setText(isConnected ? "AP Disconnect" : "AP Connect");
-
-    }
+          }
+      }).start();
 
 
-    //connect to drone
-    public void onBtnConnectTap(View view) {
-
-        //call on connection thread
-        cThread.connect();
 
     }
-    /*
-    //start taking pics
-    public void onBtnTakePic(View view){
 
-        //start taking pics
-        tThread.capture();
-
-    }
-    //tell pic thread to stop taking pics
-    public void onBtnStopPic(View view){
-        on=false;
-    }
-    */
-
-
-    //create thread that will run camera callbacks
-    private void newOpenCamera(){
-        if(mThread == null){
-            mThread = new CameraHandlerThread();
-        }
-
-        synchronized (mThread){
-            mThread.openCamera();
-        }
-    }
     //create upload thread
     private void newUploaderThread(){
         if(uThread == null){
-            uThread = new CameraUpload();
+            uThread = new ServerContactThread();
         }
 
     }
-    //create lThread the photomogr thread
-    private void newPhotoMogThread(){
-        if(lThread==null){
-            //create photomography thread
-            lThread = new LocationThread(new Handler());
-        }
-    }
 
-    //open the back camera
-    private void oldOpenCamera(){
-        try{
-            //alertUser("Attempt to open camera");
-            //open camera
-            mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
-            Camera.Parameters params = mCamera.getParameters();
-            params.setPictureSize(300,300);
-            params.setRotation(90);
-            alertUser("Camera set");
-        }catch(RuntimeException e){
-            alertUser("Failed to open camera");
-            Log.e("Camera Failed", "failed to open back camera", e);
-        }
-
-
-    }
 
     //get lat/lon/alt of image
     @Nullable
@@ -551,589 +1074,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
 
-    //callback for saved jpeg
-    PictureCallback onPicTake=new PictureCallback() {
-        @Override
-        public void onPictureTaken ( byte[] bytes, Camera camera){
-            Log.d("data size", "" + bytes.length);
-            Log.d("taken", "taken");
-            synchronized (uThread) {
-                //send image to ground
-                uThread.sendPic(bytes,StoragePic,picNum++);
-            }
 
-
-
-
-
-        }
-    };
-    //shutter callback
-    Camera.ShutterCallback onShutter=new Camera.ShutterCallback()
-
-    {
-        @Override
-        public void onShutter () {
-            //make shutter sound
-            AudioManager mgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
-
-            synchronized (gcs) {
-                if (gcs != null) {
-                    Calendar cal = Calendar.getInstance(TimeZone.getDefault());
-                    String dateTime = cal.getTime().toLocaleString();
-                    gcs.sendPicSignal(dateTime);
-
-                }
-            }
-
-            //for holding image data
-            Data dataHolder= null;
-            lThread.setLocked(true);
-            lThread.run();
-            //perform photomography and lat/lon/alt collection
-            while(lThread.isLocked()){
-
-                try {
-
-                    lThread.sleep(1000);
-                }
-                catch(InterruptedException e){
-
-                }
-            }
-
-           dataHolder = lThread.dataHolder;
-
-
-
-
-
-
-            //create log file
-            try {
-                String logData;
-                if(dataHolder!=null&& dataHolder.getLatLonAlt()!=null) {
-                    logData = picNum + " GPS:" + dataHolder.getLatLonAlt().toString()+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
-
-                }
-                else{
-                    logData = picNum+" "+"GPS NOT CONNECTED"+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
-                }
-                logOut.write(logData);
-                logOut.newLine();
-            }
-            catch (FileNotFoundException e){
-
-            }
-            catch (IOException e){
-
-            }
-            //send geo data to upload thread
-            synchronized (uThread) {
-                if(dataHolder!=null) {
-
-                    uThread.setDataForPic(dataHolder);
-
-                    final FourCorners fc= dataHolder.getFourCorners();
-
-                    final double pitch = dataHolder.getPitch();
-                    final double roll  = dataHolder.getRoll();
-
-
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-
-
-                            //update viewer with values
-                            TextView tle = (TextView) findViewById(R.id.tle);
-                            TextView tre = (TextView) findViewById(R.id.tre);
-                            TextView ble = (TextView) findViewById(R.id.ble);
-                            TextView bre = (TextView) findViewById(R.id.bre);
-                            TextView pitche = (TextView) findViewById(R.id.pitche);
-                            TextView rolle = (TextView) findViewById(R.id.rolle);
-                            if(fc!=null) {
-                                tle.setText(fc.TopLeft.toString());
-                                tre.setText(fc.TopRight.toString());
-                                ble.setText(fc.BottomLeft.toString());
-                                bre.setText(fc.BottomRight.toString());
-                            }
-
-                            pitche.setText(String.format("%.2f",pitch));
-                            rolle.setText(String.format("%.2f", roll));
-
-
-                        }
-                    });
-                }
-
-            }
-
-
-        }
-    };
-
-
-    //for connection to drone
-    public class ConnectThread extends HandlerThread{
-
-        Handler mHandler = null;
-        public boolean done = false;
-        ConnectThread(){
-            super("ConnectThread");
-            start();
-            mHandler = new Handler(getLooper());
-        }
-
-        void connect(){
-            mHandler.post(new Runnable(){
-                public void run(){
-                    synchronized (this) {
-                        //connect to drone
-                        if (drone.isConnected()) {
-
-                            drone.disconnect();
-                        } else {
-                            Bundle extraParams = new Bundle();
-                            extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, DEFAULT_USB_BAUD_RATE); // Set default baud rate to 57600
-                            //connect with usb
-                            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
-                            //ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_BLUETOOTH,extraParams,null);
-                            drone.connect(connectionParams);
-
-
-                        }
-                        done = true;
-                        this.notify();
-
-
-                    }
-                        //update connect button
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                updateConnectedButton(drone.isConnected());
-                            }
-                        });
-
-
-
-
-
-
-
-
-                }
-            });
-        }
-    }
-
-
-    //Thread for triggering camera
-    public class CameraTakerThread extends HandlerThread{
-        Handler mHandler = null;
-        double captureTime =0.0;
-        CameraTakerThread(){
-            super("CamerTakerThread");
-            start();
-            mHandler = new Handler(getLooper());
-        }
-        void setCapture(double time){
-            captureTime = time;
-
-        }
-
-        void smartTrigger(){
-            mHandler.post(new Runnable(){
-                @Override
-                public void run() {
-                    //smart Trigger code
-
-                }
-            });
-
-        }
-
-        void capture(){
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    //get PPM
-                    //EditText ppm = (EditText) findViewById(R.id.ppm);
-                    /*try {
-                        pixelPerMeter = Double.parseDouble(ppm.getText().toString());
-                    }
-                    catch(NumberFormatException e){
-                        pixelPerMeter = 0.0;
-                    }*/
-                    //get interval input
-                    //EditText time = (EditText) findViewById(R.id.time);
-                    /*
-                    Double timeNum;
-
-
-
-                    try {
-                        //parse to double
-                        timeNum = Double.parseDouble(time.getText().toString());
-                        if (timeNum < .65) {
-                            alertUser("Invalid Time Interval");
-                            return;
-                        }
-                    } catch (NumberFormatException e) {
-                        alertUser("Invalid Time Interval");
-                        timeNum = captureTime;
-                    }
-                    */
-                    Double timeNum = captureTime;
-
-
-                    //continue taking pics
-                    on = true;
-
-                    while (on) {
-
-                        while(Math.abs(mSensor.getPitch())>30 || Math.abs(mSensor.getRoll())>30){
-                            try {
-                                Thread.sleep(1000);
-                            }
-                            catch(InterruptedException e){
-
-                            }
-                        }
-
-                        mCamera.startPreview();
-                        if (mCamera != null) {
-                            //take pics
-                            mCamera.takePicture(onShutter, null, onPicTake);
-
-
-
-                        }
-                        //wait given time interval
-                        try {
-                            Thread.sleep((long)(timeNum * 1000));
-                        } catch (InterruptedException e) {
-
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-
-    //thread for opening camera and running callbacks
-    private class CameraHandlerThread extends HandlerThread {
-        Handler mHandler =  null;
-
-
-        CameraHandlerThread(){
-            super("CamerHandlerThread");
-            start();
-            mHandler = new Handler(getLooper());
-
-        }
-        //notfy when camera has been opened
-        synchronized void notifyCameraReady(){
-            notify();
-        }
-
-
-        void openCamera(){
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    //open camera
-                    oldOpenCamera();
-                    notifyCameraReady();
-
-
-
-                }
-            });
-            //wait for camera to be opened
-            try{
-               wait();
-            }
-            catch(InterruptedException e){
-                Log.w("Wait Failed","wait was interuppted");
-
-            }
-
-        }
-
-    }
-
-    //class for holder image four corners geo Locations
-    private class FourCorners{
-        public LatLong TopLeft, TopRight, BottomLeft, BottomRight;
-
-
-        FourCorners(LatLong tl,LatLong tr,LatLong bl,LatLong br){
-            TopLeft=tl;
-            TopRight=tr;
-            BottomLeft=bl;
-            BottomRight=br;
-
-        }
-
-        public String toString(){
-            return "{TL:"+TopLeft.toString()+"TR:"+TopRight.toString()+"BL:"+BottomLeft.toString()+"BR:"+BottomRight.toString()+"}";
-        }
-
-        public JSONObject toJSON(){
-            try {
-                JSONObject tl = new JSONObject().put("X",TopLeft.getLatitude()).put("Y",TopLeft.getLongitude());
-
-                JSONObject tr = new JSONObject().put("X",TopRight.getLatitude()).put("Y",TopRight.getLongitude());
-
-                JSONObject bl = new JSONObject().put("X",BottomLeft.getLatitude()).put("Y",BottomLeft.getLongitude());
-
-                JSONObject br = new JSONObject().put("X",BottomRight.getLatitude()).put("Y",BottomRight.getLongitude());
-
-                return new JSONObject().put("TL", tl).put("TR", tr).put("BL", bl).put("BR", br);
-            }
-            catch(JSONException e){
-                return null;
-            }
-
-        }
-    }
-
-
-    //for holding image data
-    private class Data{
-        private float azimuth;
-        private float pitch;
-        private float roll;
-        private LatLongAlt gpsData = null;
-        private FourCorners fourC = null;
-
-
-        Data(LatLongAlt gpsData, float azimuth, float pitch, float roll){
-            this.azimuth =azimuth;
-            this.pitch = pitch;
-            this.roll = roll;
-
-            this.gpsData = gpsData;
-
-        }
-
-        float getAzimuth(){
-            return azimuth;
-        }
-        float getPitch(){
-            return pitch;
-        }
-        float getRoll(){
-            return roll;
-        }
-
-        LatLongAlt getLatLonAlt(){
-
-
-            return gpsData;
-        }
-        JSONObject getLatLonAltJSON(){
-            if(gpsData !=null) {
-                try {
-                    return new JSONObject().put("lat", gpsData.getLatitude()).put("lon", gpsData.getLongitude()).put("alt", gpsData.getAltitude());
-                } catch (JSONException e) {
-
-                }
-            }
-            return null;
-        }
-
-        void setFourCorners(FourCorners fc){
-            this.fourC = fc;
-        }
-
-        FourCorners getFourCorners(){
-            return fourC;
-        }
-    }
-
-   //Thread for performing Photomography operations
-    class LocationThread extends Thread implements Runnable {
-        private final Handler mHandler;
-        public Data dataHolder;
-        public boolean locked;
-        LocationThread(Handler handler) {
-            mHandler = handler;
-        }
-
-        void setDataHolder(){
-
-
-            //get gps data
-            LatLongAlt lla = getLatLonAlt();
-
-            //create image data holder
-            dataHolder = new Data(lla, mSensor.getAzimuth(), -1 * mSensor.getPitch(), mSensor.getRoll());
-
-            if(lla!=null) {
-                //get four corner geo locations
-                GeotagActivity gT = new GeotagActivity(dataHolder.getLatLonAlt(), dataHolder.getAzimuth(), dataHolder.getPitch(), dataHolder.getRoll());
-                //create four corners holder
-                FourCorners fc = new FourCorners(gT.getTopLeft(), gT.getTopRight(), gT.getBottomLeft(), gT.getBottomRight());
-                //set four corners
-                dataHolder.setFourCorners(fc);
-            }
-
-            setLocked(false);
-
-
-
-
-
-        }
-
-
-       public synchronized boolean isLocked(){
-            return locked;
-        }
-
-       public  synchronized void setLocked(boolean locked){
-           this.locked = locked;
-       }
-
-        @Override
-        public void run() {
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        setDataHolder();
-                    }
-                });;
-        }
-    }
-
-    //for uploading camera datato ground station
-    private class CameraUpload extends HandlerThread{
-
-        Handler mHandler = null;
-        //image data
-        Data dataForPic;
-
-
-        CameraUpload(){
-            super("CameraUpload");
-            start();
-            mHandler = new Handler(getLooper());
-        }
-
-        private void refreshGallery(File file) {
-            Intent mediaScanIntent = new Intent( Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-            mediaScanIntent.setData(Uri.fromFile(file));
-            sendBroadcast(mediaScanIntent);
-        }
-        //give thread image data
-        void setDataForPic(Data imageData){
-            dataForPic = imageData;
-        }
-
-        //post to gcs
-        synchronized void post(byte[]data, File dir, int picNum) {
-
-            FileOutputStream outStream = null;
-
-            // Write to SD Card
-            try {
-
-                //time image was saved
-                Calendar cal = Calendar.getInstance(TimeZone.getDefault());
-                String dateTime = cal.getTime().toLocaleString();
-
-                //image name
-                String fileName = String.format(dateTime+"%04d.jpg", picNum);
-
-                //write image to disk
-                File outFile = new File(dir, fileName);
-                outStream = new FileOutputStream(outFile);
-                outStream.write(data);
-                outStream.close();
-
-                FileInputStream fin = new FileInputStream(outFile);
-                //DataInputStream dis = new DataInputStream(fin);
-
-                //byte fileContent[] = new byte[(int)outFile.length()];
-                //dis.readFully(fileContent);
-
-
-
-
-
-                refreshGallery(outFile);
-                if(URL!=null) {
-                    Log.d("attemping","attemping to send");
-                    JSONObject request = new JSONObject();
-                    try {
-                        request.put("file_name", fileName);
-                        Log.e("data",""+data.length);
-                        //request.put("file", Base64.encodeToString(fileContent, Base64.DEFAULT).toString());
-                        request.put("PicNum", picNum);
-                        if (dataForPic != null) {
-                            request.put("Azimuth", dataForPic.getAzimuth());
-                            request.put("Roll", dataForPic.getRoll());
-                            request.put("Pitch", dataForPic.getPitch());
-                            if (dataForPic.getLatLonAlt() != null) {
-                                request.put("GPS", dataForPic.getLatLonAltJSON());
-
-                            } else {
-                                request.put("GPS", null);
-                            }
-
-                            if (dataForPic.getFourCorners() != null) {
-
-                                try {
-                                    request.put("FourCorners", dataForPic.getFourCorners().toJSON());
-                                } catch (JSONException e) {
-
-                                }
-                            }
-                            //request.put("PPM", pixelPerMeter);
-                        }
-                    } catch (JSONException e) {
-
-                    }
-                    synchronized (gcs){
-                        gcs.sendPicture(request,outFile,fileName);
-                    }
-                }
-            }
-            catch(FileNotFoundException e){
-                e.printStackTrace();
-            }
-            catch( IOException e){
-
-            }
-
-
-
-
-
-        }
-
-        synchronized void notifyOnSuccess   (){
-            notify();
-        }
-        //call to tell thread to send pic
-        void sendPic(final byte[]data_f,final File dir_f,final int pic_num){
-
-            mHandler.post(new Runnable(){
-                @Override
-                public void run() {
-
-                    post(data_f,dir_f,pic_num);
-                    notifyOnSuccess();
-                }
-            });
-        }
-
+    private String getTime(){
+        long millis =System.currentTimeMillis();
+        String hms = String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)),
+                TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+        return  hms;
     }
 
     //used for aleting user of messages
