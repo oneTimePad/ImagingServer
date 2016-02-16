@@ -76,10 +76,12 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 
 import java.util.HashMap;
+import java.util.Queue;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -87,6 +89,8 @@ import java.util.concurrent.TimeUnit;
 public class MainActivity extends ActionBarActivity implements DroneListener,TowerListener {
 
     private SensorTracker mSensor;
+    static ArrayList<String> pictureQueue = new ArrayList<>();
+    static ArrayList<Data>  pictureData = new ArrayList<>();
 
     //for drone communication
     public static Drone drone;
@@ -402,13 +406,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             this.curTime = curTime;
             this.imageData=imageData;
         }
-        synchronized  String getPictureTime(){
-            return curTime;
-        }
 
-        synchronized  Data getPictureData(){
-            return imageData;
-        }
 
 
         void closeCamera(){
@@ -506,7 +504,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         Log.e("TIME",System.currentTimeMillis()+"");
 
 
-                        /*
+
                         while(Math.abs(mSensor.getPitch())>30 || Math.abs(mSensor.getRoll())>30){
                             try {
                                 Thread.sleep(1000);
@@ -514,7 +512,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             catch(InterruptedException e){
 
                             }
-                        }*/
+                        }
                         if (mCamera != null) {
                             //take pics
 
@@ -555,13 +553,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler = new Handler(getLooper());
         }
 
-        private void refreshGallery(File file) {
-            Intent mediaScanIntent = new Intent( Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-            mediaScanIntent.setData(Uri.fromFile(file));
-            sendBroadcast(mediaScanIntent);
-        }
 
-        void sendPicture(final byte[]data,final File dir, final int picNum,final String curTime,final Data imageData){
+
+        void sendPicture(final String fileName, final Data imageData){
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -571,15 +565,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         if(stop){
                             mHandler.removeCallbacksAndMessages(null);
                         }
+                        File outFile = new File(StoragePic,fileName);
+                        FileInputStream fin = new FileInputStream(outFile);
+                        DataInputStream dis = new DataInputStream(fin);
 
-                        String fileName = String.format(curTime + "%04d.jpg", picNum);
+                        byte fileContent[] = new byte[(int)outFile.length()];
+                        dis.readFully(fileContent);
 
-                        //write image to disk
-                        File outFile = new File(dir, fileName);
-                        FileOutputStream outStream = new FileOutputStream(outFile);
-                        outStream.write(data);
-                        outStream.close();
-                        refreshGallery(outFile);
+
 
                         JSONObject requestData = new JSONObject();
                         requestData.put("fileName", fileName);
@@ -626,7 +619,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         wrt.append(LINE_FEED);
                         wrt.flush();
 
-                        out.write(data);
+                        out.write(fileContent);
                         out.flush();
 
                         wrt.append(LINE_FEED);
@@ -645,6 +638,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         switch (con.getResponseCode()) {
                             case 200:
                                 Log.d("200", "Success");
+                                Log.i("pictake","2");
 
                                 Log.i("gcsstop", System.currentTimeMillis() + "");
                                 break;
@@ -657,6 +651,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             default:
                                 Log.e("#", "Something else");
                         }
+                        con = null;
+                        requestData = null;
+
                     } catch (MalformedURLException e) {
                         Log.e("UploadThreadURL", e.toString());
                     } catch (JSONException e) {
@@ -757,6 +754,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                                         }
 
                                         con.disconnect();
+                                        con = null;
 
 
                                     } catch (JSONException e) {
@@ -895,23 +893,52 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
     };
 
+
+    private void refreshGallery(File file) {
+        Intent mediaScanIntent = new Intent( Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        mediaScanIntent.setData(Uri.fromFile(file));
+        sendBroadcast(mediaScanIntent);
+    }
+
     //callback for saved jpeg
     PictureCallback onPicTake=new PictureCallback() {
 
 
         @Override
         public void onPictureTaken ( byte[] bytes, Camera camera) {
+            Log.i("thread",""+Thread.currentThread().getId());
 
+            //Log.d("data size", "" + bytes.length);
 
-            Log.d("data size", "" + bytes.length);
-
-            synchronized (uThread) {
-                uThread.sendPicture(bytes, StoragePic, picNum++, handlerCamerathread.curTime, handlerCamerathread.imageData);
+            String fileName;
+            synchronized (handlerCamerathread) {
+               fileName= String.format(handlerCamerathread.curTime + "%04d.jpg", ++picNum);
+                synchronized (pictureData) {
+                    pictureData.add(handlerCamerathread.imageData);
+                    handlerCamerathread.imageData = null;
+                }
             }
+            try{
+            //write image to disk
+            File outFile = new File(StoragePic, fileName);
+            FileOutputStream outStream = new FileOutputStream(outFile);
+            outStream.write(bytes);
+            outStream.close();
+            refreshGallery(outFile);
+            }
+            catch (IOException e){
+                Log.e("pictake",e.toString());
+            }
+            synchronized (pictureQueue) {
+                pictureQueue.add(fileName);
+            }
+
 
             synchronized (handlerCamerathread) {
                 handlerCamerathread.notify();
             }
+
+            bytes = null;
         }
 
 
@@ -945,7 +972,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     drone.connect(connectionParams);
 
                 }
-                this.notify();
+                synchronized (this) {
+                    this.notify();
+                }
             }
         });
 
@@ -991,10 +1020,31 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                           uThread.heartbeat();
                       }
                       try {
-                          Thread.sleep(7000);
+                          Thread.sleep(3000);
                       }
+
                       catch (InterruptedException e){
                           Log.e("HeartBeatLoop",e.toString());
+                      }
+
+                      try{
+                          Data data;
+                          String image;
+                          synchronized (pictureData) {
+                              data = pictureData.remove(0);
+                          }
+                          synchronized (pictureQueue) {
+                              image = pictureQueue.remove(0);
+                          }
+
+                          synchronized (uThread){
+                              Log.i("send","sent");
+                              uThread.sendPicture(image,data);
+                          }
+                      }
+                      catch (IndexOutOfBoundsException e){
+                          Log.i("Here","Here");
+                          continue;
                       }
 
 

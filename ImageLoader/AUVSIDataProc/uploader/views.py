@@ -23,13 +23,47 @@ IMAGE_STORAGE = "http://localhost:80/PHOTOS"
 TARGET_STORAGE = "http://localhost:80/TARGETS"
 
 image_done = Signal(providing_args=["num_pic"])
+
+
+class PictureSender:
+
+
+	def start(self):
+		while(True):
+
+			try:
+				picture = Picture.objects.latest('pk')
+			except Picture.DoesNotExist:
+				continue
+
+			#Serialize pathname
+			serPic = serializers.serialize("json",[picture])
+			#create json response
+			response_data = simplejson.dumps({'type':'picture','image':serPic})
+
+			audience = {'broadcast': True}
+			redis_publisher = RedisPublisher(facility='viewer',**audience)
+			redis_wbskt=redis_publisher
+			#send to url to websocket
+			redis_wbskt.publish_message(RedisMessage(response_data))
+
+			time.sleep(7)
+
+started = False
+def startLoop():
+	global started
+	if not started:
+		_thread.start_new_thread(PictureSender().start,())
+		started =True
+
 class Upload(View):
 
 	#post request to create pictures
 	def post(self,request,*args,**kwargs):
 
 
-		picture = Picture.objects.create()
+		startLoop()
+		picture = Picture()
 		picture.photo = request.FILES["Picture"]
 
 		picture.fileName = IMAGE_STORAGE+"/"+(str(picture.photo).replace(' ','_').replace(',','').replace(':',''))
@@ -72,11 +106,12 @@ class Upload(View):
 		picture.save()
 
 		#trigger signal
-		image_done.send(sender=self.__class__,num_pic=picture.pk)
+		#image_done.send(sender=self.__class__,num_pic=picture.pk)
 		#return success
 		return HttpResponse("success")
 
 #triggered when image object created
+'''
 @receiver(image_done)
 def send_pic(num_pic,**kwargs):
 	#create pic
@@ -93,6 +128,13 @@ def send_pic(num_pic,**kwargs):
 	redis_wbskt=redis_publisher
 	#send to url to websocket
 	redis_wbskt.publish_message(RedisMessage(response_data))
+	'''
+
+
+
+
+
+
 
 
 class DroidConnectionCheck:
@@ -113,7 +155,7 @@ class DroidConnectionCheck:
 				response_data = simplejson.dumps({'disconnected':'disconnected'})
 				redis_wbskt.publish_message(RedisMessage(response_data))
 				break
-			time.sleep(12)
+			time.sleep(20)
 
 
 
@@ -131,6 +173,9 @@ class Index(View,TemplateResponseMixin,ContextMixin):
 		return context
 
 	def get(self,request):
+
+
+
 		return self.render_to_response(self.get_context_data())
 
 class DeletePicture(View):
@@ -317,7 +362,6 @@ def status_trigger_msg(sender,**kwargs):
 	#send to url to websocket
 	redis_publisher.publish_message(RedisMessage(response_data))
 
-
 #ask should start taking pic
 class TriggerDroid(View):
 	def post(self,request):
@@ -325,6 +369,7 @@ class TriggerDroid(View):
 		global trigger_allowed
 		global trigger_time
 		global smart_trigger
+		global started
 		json_request = simplejson.loads((request.body).decode('utf-8'))
 
 
