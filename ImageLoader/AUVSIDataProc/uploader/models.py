@@ -86,14 +86,15 @@ class Target(models.Model):
 	#crop target from image
 	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app
 
-
-
 		self.picture=parent_pic
 
-
 		#unpackage crop data
-		x,y,height,width = size_data
-
+		x,y,height,width,scale_width = size_data
+		x = int(x)
+		y = int(y)
+		height = int(height[0])
+		width = int(width[0])
+		scale_width = int(scale_width[0])
 
 		#get the file name of pic=pk
 		file_name  =str(parent_pic.photo.file)
@@ -104,19 +105,13 @@ class Target(models.Model):
 		original_image = Image.open(file_name)
 
 		#convert strange json format to integers
-		orig_height = 960 #1020 for AUVSI camera
-		view_height = 400
-		x = int(int(x)*orig_height/view_height)
-		y= int(int(y)*orig_height/view_height)
-		width = int(int(width[0])*orig_height/view_height)
-		height = int(int(height[0])*orig_height/view_height)
+		orig_width,_ = original_image.size #1020 for AUVSI camera
+		x = int(x*orig_width/scale_width)
+		y = int(y*orig_width/scale_width)
+		width = int(width*orig_width/scale_width)
+		height = int(height*orig_width/scale_width)
 
-		#crop the image
-		#cropped_image = original_image[y:(y+height),x:(x+width)]
 		cropped_image = original_image.crop((x,y,x+width,y+height))
-
-		#convert numpy array to image
-		#image_cropped_image = Image.fromarray(cropped_image,mode='RGB')
 
 		#string as file
 		image_io = BytesIO()

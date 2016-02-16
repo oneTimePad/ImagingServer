@@ -229,22 +229,23 @@ class AttributeFormCheck(View):
 			target = Target.objects.create(picture=parent_pic)
 
 			#package crop data to tuple
-			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'])
+			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'],post_vars['crop[scaleWidth]'])
 
 
 			#crop target
 
 			target.crop(size_data=size_data,parent_pic=parent_pic)
 
-			target.letter=post_vars['attr[letter]']
-			target.color = post_vars['color']
-			target.lcolor = post_vars['lcolor']
+			target.letter = post_vars['attr[letter]']
+			target.color = post_vars['attr[color]']
+			target.lcolor = post_vars['attr[lcolor]']
 			shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
 			target.shape = str(shapeChoices[post_vars['attr[shape]'][0]])
 			target.orientation = post_vars['attr[orientation]'][0]
 			target.save()
 
-			return HttpResponse(simplejson.dumps({'pk':target.pk}),'application/json')
+			return HttpResponse(simplejson.dumps({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'}),'application/json')
+
 
 class TargetEdit(View):
 	def post(self,request):
