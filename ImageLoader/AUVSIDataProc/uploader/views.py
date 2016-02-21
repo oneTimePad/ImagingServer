@@ -195,6 +195,19 @@ class DeletePicture(View):
 
 			return HttpResponse("success")
 
+class DeleteTarget(View):
+
+	def post(self,request):
+
+		if request.is_ajax():
+			target_id = request.POST['pk']
+			target = Target.objects.get(pk=target_id)
+			photo_path = target.target_pic.path
+			os.remove(photo_path)
+			target.delete()
+
+			return HttpResponse("success")
+
 class GetTarget(View):
 
 	def post(self,request):
@@ -307,8 +320,8 @@ class TargetEdit(View):
 			target = Target.objects.get(pk=post_vars['pk'][0])
 
 			target.letter=post_vars['attr[letter]']
-			target.color = post_vars['color']
-			target.lcolor = post_vars['lcolor']
+			target.color = post_vars['attr[color]']
+			target.lcolor = post_vars['attr[lcolor]']
 			shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
 			target.shape = str(shapeChoices[post_vars['attr[shape]'][0]])
 			target.orientation = post_vars['attr[orientation]'][0]

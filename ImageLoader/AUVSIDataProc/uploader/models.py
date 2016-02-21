@@ -99,9 +99,6 @@ class Target(models.Model):
 		#get the file name of pic=pk
 		file_name  =str(parent_pic.photo.file)
 
-		#read in that image
-		#original_image = cv2.imread(file_name)
-		#original_image = cv2.resize(original_image,(400,400))
 		original_image = Image.open(file_name)
 
 		#convert strange json format to integers

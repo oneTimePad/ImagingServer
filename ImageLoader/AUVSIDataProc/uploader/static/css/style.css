@@ -22,6 +22,7 @@ img {
 }
 .thumbnail {
   max-width: 150px;
+  max-height: 200px;
   height: auto;
 }
 #left-panel {        
@@ -29,6 +30,11 @@ img {
     display: inline-block;
     float:left;
     margin:10px;
+}
+#focused {
+  max-width:400px;
+  max-height:400px;
+  height:auto;
 }
 #pictures {
   display: inline-block;

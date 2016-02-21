@@ -13,15 +13,10 @@
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/style.css" />
 
 <script>
-  focusedwidth = 400;
-  counter = 0;//counts the number of images added so far
-  pic_curr = 0;//the id of the image in focus
-  curr_target = -1;
-  num_targets_of_cur_pic = 0;
-  tar_list_counter = 0;
+  curr = 0; //the id of the picture/target in focus
+  picview = true;//true when a picture is in view, false when a target is in view
   loading = 1;
-  offset = 0;
-  img_properties = new Array();
+  img_properties = {}; //now using an object as a map since the images are not sent down in order
   crop = {};
 
   $(function connect_websocket_pic(){
@@ -37,39 +32,37 @@
 
   //sets up form submission
   $(function form_submit_setup() {
-      //on user submit
-      $("#submit").on("click",
-      function(event) {
-        //allow for ajax
-        event.preventDefault();
-        //get all form attributes
-        var inputs = $("#form").find(":input");
-        //array of user inputs
-        var input_array = {};
-        //put each one in an array
-        console.log(inputs.length)
-        inputs.each(function() {
-          if (this.name=="color" || this.name=="lcolor") {
-            if (this.value=="") {
-              input_array[this.name] = "0, 0, 0";
-            }
-            else {
-              input_array[this.name] = this.value.substring(this.value.indexOf("(")+1,this.value.indexOf(")"));
-            }
+    //on user submit
+    $("#submit").on("click", function(event) {
+      //allow for ajax
+      event.preventDefault();
+      //get all form attributes
+      var inputs = $("#form").find(":input");
+      //array of user inputs
+      var input_array = {};
+      //put each one in an array
+      inputs.each(function() {
+        if (this.name=="color" || this.name=="lcolor") {
+          if (this.value=="") {
+            input_array[this.name] = "0, 0, 0";
           }
           else {
-            input_array[this.name] = this.value;
+            input_array[this.name] = this.value.substring(this.value.indexOf("(")+1,this.value.indexOf(")"));
           }
-          console.log(this.name+" "+input_array[this.name]);
-        })
-          //if there attributes, send them
-        if(input_array) {
+        }
+        else {
+          input_array[this.name] = this.value;
+        }
+      })
+        //if there attributes, send them
+      if(input_array) {
+        if (picview) {
+          //creating a new target
           $.ajax({
             url: "{% url 'attrform'%}",
             type: "POST",
-            data: {"pk":pic_curr,"attr":input_array,"crop":crop},
+            data: {"pk":curr,"attr":input_array,"crop":crop},
             success: function(json){
-              console.log("target creation: "+json.pk)
               //adding the target image
               var div = document.createElement("div");
               div.className = "thumb-div";
@@ -78,16 +71,28 @@
               image.src = json.image;
               image.id = json.pk;
               image.addEventListener("click", function() {
-                showTargetData(this);
-                curr_target = this.id
+                picview = false;
+                setFocusedImage(this);
                 return false;
               })
               div.appendChild(image);
               $("#targets").append(div);
             }
+          });
+        }
+        else {
+          //editing the shown target
+          $.ajax({
+            url: "{% url 'targetedit'%}",
+            type: "POST",
+            data: {"pk":curr,"attr":input_array},
+            success: function(json){
+              showTargetData($("#"+curr)[0]);
+            }
           })
         }
-      })
+      }
+    })
   })
 
   //handles picture received from websocket
@@ -100,10 +105,6 @@
     else if (json_response.hasOwnProperty("connected")) {
       alert("Android Device Connected");
     }
-    // else if (json_response.hasOwnProperty("time")) {
-    //   var text = document.getElementById("triggerLogs")
-    //   text.value = json_response.time+"\n"+text.value
-    // }
     else if (json_response.hasOwnProperty("type")) {
       if (loading==1) {
         loading = 0;
@@ -116,14 +117,11 @@
         var img = document.createElement("img");
         img.className = "thumbnail";
         var img_fields = picture.fields
-        if (counter == 0){
-          offset=parseInt(picture.pk);
-        }
         img.src= img_fields.fileName
         img.id=parseInt(picture.pk)
-        img_properties[counter]= img_fields
-        counter++;
+        img_properties[img.id]= img_fields
         img.addEventListener("click", function() {
+          picview = true;
           setFocusedImage(this);
           return false;
         });
@@ -141,7 +139,6 @@
     $("#pictures").css("max-height", height + "px");
     $("#targets").css("max-height", height + "px");
     var width = Math.trunc($(window).width());
-    console.log("HEIGHT "+height + "WIDTH "+width);
     $("#left-panel").css("max-width", "500px");
     $("#pictures").css("max-width", (width - 500 - 170 - 100) + "px");
     $("#targets").css("max-width", "170px");
@@ -153,28 +150,36 @@
       var del = 46;
       switch (key.keyCode) {
         case leftarrow:
-          var previmage = $("#"+pic_curr).parent().prev().children()[0];
+          var previmage = $("#"+curr).parent().prev().children()[0];
           if (previmage!=null) {
             setFocusedImage(previmage);
           }
           break;
         case rightarrow:
-          var nextimage = $("#"+pic_curr).parent().next().children()[0];
+          var nextimage = $("#"+curr).parent().next().children()[0];
           if (nextimage!=null) {
             setFocusedImage(nextimage);
           }
           break;
         case del:
-          //ajax request to server to delete image with
-          //pic_curr as the picture object pk
-          $.ajax({
-            url:"{% url 'deletepic'%}",
-            type:"POST",
-            data: {"pk":pic_curr},
-          })
+          //ajax request to server to delete image with curr as the picture/target object pk
+          if (picview) {
+            $.ajax({
+              url:"{% url 'deletepic'%}",
+              type:"POST",
+              data: {"pk":curr},
+            })
+          }
+          else {
+            $.ajax({
+              url:"{% url 'deletetarget'%}",
+              type:"POST",
+              data: {"pk":curr},
+            })
+          }
           //document.focusedImage.src = 0;
-          var nextimage = $("#"+pic_curr).parent().next().children()[0];
-          $("#"+pic_curr).parent().remove();
+          var nextimage = $("#"+curr).parent().next().children()[0];
+          $("#"+curr).parent().remove();
           if (nextimage!=null) {
             setFocusedImage(nextimage);
           }
@@ -183,40 +188,47 @@
     });
   }
 
-  //set the focusedImage to the given image, also changing the pic_curr, and initializes the canvas
+  //set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
   function setFocusedImage(image) {
-    document.focusedImage.src=image.src;
-    document.focusedImage.style.width = focusedwidth+"px";
-    document.focusedImage.style.height = "auto";
-    pic_curr=parseInt(image.id);
-    canvasinit();//to resize the canvas and start a new crop
-    //getting targets using the pk of the current image
-    if (pic_curr-offset>= img_properties.length) {
-        console.log("pic index too big");
-    }
-    else {
-      console.log(pic_curr + " - "+offset+", "+img_properties.length+" properties")
-      var pic_curr_props = img_properties[pic_curr-offset];
-      $("#picture-data").empty()
+    if (picview) {
+      document.focusedImage.src=image.src;
+      //document.focusedImage.style.width = focusedwidth+"px";
+      //document.focusedImage.style.height = "auto";
+      curr=parseInt(image.id);
+      canvasinit();//to resize the canvas and start a new crop
+      //getting targets using the pk of the current image
+      $("#focus-type").text("Picture Data");
+      pic_curr_props = img_properties[image.id];//using the string id to access the data in the map
+      $("#focus-data").empty()
         .append("<tr><td>Latitude</td><td>"+pic_curr_props.lat+"</td></tr>")
         .append("<tr><td>Longitude</td><td>"+pic_curr_props.lon+"</td></tr>")
         .append("<tr><td>Altitude</td><td>"+pic_curr_props.alt+"</td></tr>")
         .append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
         .append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
         .append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>");
-      //Add orientation
+        //Add orientation
     }
+    else {
+      document.focusedImage.src=image.src;
+      //document.focusedImage.style.width = focusedwidth+"px";
+      //document.focusedImage.style.height = "auto";
+      curr=parseInt(image.id);
+      $("#selector").css("display","none");
+      $("#focus-type").text("Target Data");
+      showTargetData(image);
+    }
+
   }
 
   function showTargetData(image) {
-    pk = image.id;
+    pk = parseInt(image.id);
     $.ajax({
       url: "{% url 'gettargetdata'%}",
       type: "POST",
       dataType: "json",
       data: {"pk": pk},
       success: function(json) {
-        $("#target-data").empty()
+        $("#focus-data").empty()
           .append("<tr><td>Color</td><td>"+json.color+"</td></tr>")
           .append("<tr><td>Letter Color</td><td>"+json.lcolor+"</td></tr>")
           .append("<tr><td>Orientation</td><td>"+json.orientation+"</td></tr>")
@@ -234,7 +246,6 @@
   }
 
   //sets the canvas width and height and allows it to listen for cropping
-  //TODO make the cropping send the width of the focused image, so django can scale the crop using the width of the original image
   function canvasinit() {
     var p1;
     var p2;
@@ -246,6 +257,7 @@
     var canvas = document.getElementById("selector");
     canvas.width = document.focusedImage.width;
     canvas.height = document.focusedImage.height;
+    canvas.style.display = "block";
     var ctx = canvas.getContext("2d");
     ctx.fillStyle="rgba(210,220,255,0.6)";
     //whether the cropping is taking place
@@ -298,7 +310,6 @@
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.fillRect(corner[0],corner[1],boxW,boxH);
       cropinit = false;
-      curr_target = -1;
     });
   }
 </script>
@@ -313,8 +324,8 @@
     <button onclick="set_smart_trigger();" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
   </div>
   <div id="left-panel">
-    <div id="container" style="cursor: crosshair;">
-      <canvas id="selector" style="position: absolute; z-index: 1;"></canvas>
+    <div id="container">
+      <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
       <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
     </div>
     <div id="form">
@@ -327,10 +338,8 @@
       </form>
     </div>
     <div id="data">
-      <table id="picture-data">
-
-      </table>
-      <table id="target-data">
+      <h3 id="focus-type">Picture Data</h3>
+      <table id="focus-data">
 
       </table>
     </div>
