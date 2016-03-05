@@ -1,6 +1,6 @@
 # DataProcessing
 
-@RUAutonomous/DataProcessing
+@RUAutonomous/data-processing
 
 #Autonomous Drone Imaging System:
 
