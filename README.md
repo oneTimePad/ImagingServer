@@ -17,12 +17,19 @@
 		
 		-Still has some operational bugs, i.e. this is things like freezing
 		
-		-Doesn'twork FLAWLESSLY
+		-Doesn'twork FLAWLESSLYg
 		
+	Integrate Normal Geotagging
+		
+		- to ground station
+	
 	Overall Imaging:
 	
 		-***Not fit to competition specifics***
 		
 	-> remember the above two things, you shouldn't have to thing twice about
+	
+	
+
 
 
