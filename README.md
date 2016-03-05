@@ -3,7 +3,8 @@
 Autonomous Drone Imaging System:
 
 
-Fixing: 
+	Fixing: 
+	
 	Django Image Server has some of  the following problems:
 	
 		-phone sometimes disconnects due to connection check delay
