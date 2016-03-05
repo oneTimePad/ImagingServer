@@ -1,6 +1,6 @@
 # DataProcessing
 
-Autonomous Drone Imaging System:
+#Autonomous Drone Imaging System:
 
 
 	Fixing: 
