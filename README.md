@@ -1,36 +1,18 @@
 # DataProcessing
 
-Please review. This has been edited.
-Current Assignments:
-	
-	1) ImageView:
-		Completed with:
-			drone posting
-			view past images through gal.
-			crop images and notify changes to server
-			view image attributes	
-		
-	
-	***After Friday's meeting is the new due Date***
-	Submission:
-		pushed to git in same folder we currently have it in
-			1)code COMMENTED!!!
-			2)contributors.txt
-			Most important part
-			3)readme.txt
-				1.algorithm(idea of program at least)
-				2.research all urls
-				3.struggles
-	Due to how much we got done: This has been move up to be due on Friday
-	
-	Future assignments:
-	Add more functionality to webpage gui
-		1)ability to view past images via scrolling
-		2)via picture attributes
-		suggested research:
-			HTML5 and javascript
+Autonomous Drone Imaging System:
 
-	Next Meetings:
-		Thursday 29th 10:00PM
-		Friday 30th 5:00PM
+
+Fixing: 
+	Django Image Server has some of  the following problems:
+		-phone sometimes disconnects due to connection check delay
+		-Doesn't work FLAWLESSLY
+	Android Camera App:
+		-haven't chosen an ideal heartbeat rate, related to point one in the django list above
+		-Still has some operational bugs, i.e. this is things like freezing
+		-Doesn'twork FLAWLESSLY
+	Overall Imaging:
+		-***Not fit to competition specifics***
+	-> remember the above two things, you shouldn't have to thing twice about
+
 
