@@ -1,0 +1,5 @@
+--------->
+	make sure that time entered into web app is the correct time triggering
+	determine if you can make triggering faster
+	fix all bugs and crashes
+	
