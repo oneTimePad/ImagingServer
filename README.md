@@ -1,6 +1,6 @@
 # DataProcessing
 
-Members( Pooja, Ethan, Eli, Rupesh, Jenny)
+@RUAutonomous/data-processing
 
 #Autonomous Drone Imaging System:
 
