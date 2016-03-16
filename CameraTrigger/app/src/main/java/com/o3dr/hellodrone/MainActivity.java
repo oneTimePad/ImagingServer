@@ -134,6 +134,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //for handling camera callbacks
     private static CameraHandlerThread handlerCamerathread = null;
 
+    private boolean didPause = false;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -207,6 +210,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         //initialize sensor controller
         mSensor = new SensorTracker(getApplicationContext());
+        mSensor.startSensors();
 
 
         //3dr control tower
@@ -240,22 +244,23 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         sH.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
-                //open camera lock on it
-                synchronized (handlerCamerathread) {
-                    handlerCamerathread.openCamera();
-                }
-                //start up camera viewers
-                try{
-                    if(mCamera!=null){
-                        mCamera.setPreviewDisplay(holder);
-                        mCamera.startPreview();
+
+                if(!didPause) {
+                    //open camera lock on it
+                    synchronized (handlerCamerathread) {
+                        handlerCamerathread.openCamera();
                     }
+                    //start up camera viewers
+                    try {
+                        if (mCamera != null) {
+                            mCamera.setPreviewDisplay(holder);
+                            mCamera.startPreview();
+                        }
 
+                    } catch (IOException e) {
+                        Log.e("surfaceCreate", e.toString());
+                    }
                 }
-                catch(IOException e){
-                    Log.e("surfaceCreate",e.toString());
-                }
-
             }
 
             @Override
@@ -265,10 +270,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-                //close camera
-                synchronized (handlerCamerathread) {
-                    handlerCamerathread.closeCamera();
-                }
+                didPause = true;
             }
         });
 
@@ -280,51 +282,61 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     @Override
     protected void onResume() {
         super.onResume();
-
+        //app was zoomed out. Can't recover from this...just start over
+        //in practice this will never happen as long as phone is sleeping
+        if(didPause){ alertUser("App was paused. Please close and restart");}
+        //connect to tower
+        this.controlTower.connect(this);
         //create the uploader thread
         if(uThread == null){
             uThread = new ServerContactThread();
         }
-
-
-        //create pic taker thread
-        tThread = new CameraTakerThread();
-        //connect to tower
-        this.controlTower.connect(this);
-        //for maeking interval input keyboard dissapear
-
-
-        //for writing to the log file
-        try {
-            wrt = new FileWriter(logFile);
+        if(tThread == null){
+            //create pic taker thread
+            tThread = new CameraTakerThread();
         }
-        catch(IOException e){
-            Log.e("onResume","FileWriter failed");
+        if(wrt==null) {
+            //for writing to the log file
+            try {
+                wrt = new FileWriter(logFile);
+            } catch (IOException e) {
+                Log.e("onResume", "FileWriter failed");
+            }
+
+            logOut = new BufferedWriter(wrt);
         }
 
-        logOut = new BufferedWriter(wrt);
-
-        if(mSensor!=null) {
-            mSensor.startSensors();
-        }
 
     }
 
+    @Override
+    public void onPause(){
+        super.onPause();
 
+        //Nothing...phone might have went to sleep...
+    }
 
     @Override
     public void onStop() {
         super.onStop();
 
+        //Nothing...phone might have went to sleep...
+
+
+    }
+
+    //app stopped
+    @Override
+    public void onDestroy(){
+        Log.i("Destroyed","Destroyed");
+        super.onDestroy();
+
+        //stop loops and clean up
+
         on = false;
         stop = false;
 
-
-
-
         connectLoop = false;
-
-
         try {
             if(logOut!=null){
                 logOut.close();
@@ -332,6 +344,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
         catch(IOException e){
 
+        }
+        //close camera
+        synchronized (handlerCamerathread) {
+            handlerCamerathread.closeCamera();
         }
         //stop drone connection
         this.controlTower.disconnect();
@@ -344,13 +360,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mSensor.stopSensors();
         }
 
-    }
 
-    @Override
-    public void onDestroy(){
-        Log.i("Destroyed","Destroyed");
-        super.onDestroy();
-        //gcs.release();
     }
 
 
@@ -509,6 +519,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                             }
                         }
+
                         if (mCamera != null) {
                             //take pics
 
@@ -529,8 +540,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             Log.i("BOTTLEKNECK",time2-time+"");
                             Log.i("BOTTLEKNECK+Delta",timeDelta+"");
                             //compute the correct time
-                            Thread.sleep((long) (timeDelta));
-
+                            if(timeDelta>=0) {
+                                Thread.sleep((long) (timeDelta));
+                            }
+                            else{
+                                Thread.sleep((long)(500));
+                            }
                             Log.i("BOTTLEKNECK+Delay", System.currentTimeMillis() - time + "");
                         } catch (InterruptedException e) {
                             Log.e("CameraHandler",e.toString());
@@ -991,7 +1006,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         //new RemoteThread().startThread();
         EditText ed = (EditText) findViewById(R.id.URL);
-        URL = ed.getText().toString();
+        URL = ed.getText().toString()+":2000";
 
         if(URL.equals("")){
             URL = "192.168.2.1:2000";
@@ -1034,7 +1049,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                           }
                       }
                       catch (IndexOutOfBoundsException e){
-                          Log.i("Here","Here");
+
                           continue;
                       }
 

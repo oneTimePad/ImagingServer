@@ -70,7 +70,9 @@ class Upload(View):
 
 		startLoop()
 		picture = Picture()
+		#may need to catch this no picture exception...
 		picture.photo = request.FILES["Picture"]
+
 
 		picture.fileName = IMAGE_STORAGE+"/"+(str(picture.photo).replace(' ','_').replace(',','').replace(':',''))
 
