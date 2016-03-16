@@ -18,18 +18,24 @@ from django.core.cache import cache
 import time
 import _thread
 
-#hard coded
-IMAGE_STORAGE = "http://localhost:80/PHOTOS"
-TARGET_STORAGE = "http://localhost:80/TARGETS"
+#get inputs from env vars
+IMAGE_STORAGE = os.getenv("IMAGE_STORAGE","http://localhost:80/PHOTOS")
+TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 
-image_done = Signal(providing_args=["num_pic"])
+#important time constants
+PICTURE_SEND_DELAY = 7
+DRONE_DISCONNECT_TIMEOUT = 20
+
+
+#image_done = Signal(providing_args=["num_pic"])
 
 
 class PictureSender:
 
 
 	def start(self):
-		while(True):
+		global PICTURE_SEND_DELAY
+		while True:
 
 			try:
 				picture = Picture.objects.latest('pk')
@@ -47,7 +53,7 @@ class PictureSender:
 			#send to url to websocket
 			redis_wbskt.publish_message(RedisMessage(response_data))
 
-			time.sleep(7)
+			time.sleep(PICTURE_SEND_DELAY)
 
 started = False
 def startLoop():
@@ -84,7 +90,7 @@ class Upload(View):
 			picture.lat = latLonAlt['lat']
 			picture.lon = latLonAlt['lon']
 			picture.alt = latLonAlt['alt']
-
+		'''
 		#set FourCorners
 		if "FourCorners" in json_request.keys():
 
@@ -102,6 +108,7 @@ class Upload(View):
 			picture.bottomLeftY = bl['Y']
 			picture.bottomRightX = br['X']
 			picture.bottomRightY = br['Y']
+		'''
 
 		picture.save()
 
@@ -144,6 +151,7 @@ class DroidConnectionCheck:
 		self.id = id
 
 	def start(self):
+		global DRONE_DISCONNECT_TIMEOUT
 		while True:
 			if not cache.has_key(self.id):
 
@@ -155,7 +163,7 @@ class DroidConnectionCheck:
 				response_data = simplejson.dumps({'disconnected':'disconnected'})
 				redis_wbskt.publish_message(RedisMessage(response_data))
 				break
-			time.sleep(20)
+			time.sleep(DRONE_DISCONNECT_TIMEOUT)
 
 
 
@@ -173,9 +181,6 @@ class Index(View,TemplateResponseMixin,ContextMixin):
 		return context
 
 	def get(self,request):
-
-
-
 		return self.render_to_response(self.get_context_data())
 
 class DeletePicture(View):

@@ -111,22 +111,28 @@
         return;
       }
       if (json_response["type"]== "picture") {
-        var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf("]")))
-        var div = document.createElement("div");
-        div.className = "thumb-div";
-        var img = document.createElement("img");
-        img.className = "thumbnail";
-        var img_fields = picture.fields
-        img.src= img_fields.fileName
-        img.id=parseInt(picture.pk)
-        img_properties[img.id]= img_fields
-        img.addEventListener("click", function() {
-          picview = true;
-          setFocusedImage(this);
-          return false;
+
+       Promise.resolve().then(function(){
+          var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf("]")))
+          var div = document.createElement("div");
+          div.className = "thumb-div";
+          var img = document.createElement("img");
+          img.className = "thumbnail";
+          var img_fields = picture.fields
+          img.src= img_fields.fileName
+          img.id=parseInt(picture.pk)
+          img_properties[img.id]= img_fields
+          img.addEventListener("click", function() {
+            picview = true;
+            setFocusedImage(this);
+            return false;
+          });
+          div.appendChild(img);
+
+          $("#pictures").append(div);
+
         });
-        div.appendChild(img);
-        $("#pictures").append(div);
+
       }
     }
   }

@@ -88,13 +88,14 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends ActionBarActivity implements DroneListener,TowerListener {
 
+    //controls phone sensors
     private SensorTracker mSensor;
-    static ArrayList<String> pictureQueue = new ArrayList<>();
-    static ArrayList<Data>  pictureData = new ArrayList<>();
-
+    //queue for pictures to uploader
+    private static ArrayList<String> pictureQueue = new ArrayList<>();
+    //queue for picture data to upload
+    private static ArrayList<Data>  pictureData = new ArrayList<>();
     //for drone communication
-    public static Drone drone;
-
+    private static Drone drone;
     //thread handler
     private final Handler handler = new Handler();
     //for 3dr tower
@@ -105,51 +106,40 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private File logFile;
     //current picture
     private int picNum;
-
     //camera
     Camera mCamera;
-
-    Double pixelPerMeter = 0.0;
-    boolean connectLoop = false;
-
+    private boolean connectLoop = false;
     //continue take pics?
-    public static boolean on =false;
-
+    private static boolean on =false;
     //upload thread
     private ServerContactThread uThread = null;
     //camera trigger thread
     private CameraTakerThread tThread = null;
-
-    public String URL = null;
-
+    //url of server
+    private String URL = null;
     //for writing to log files
-    FileWriter wrt =null;
-    BufferedWriter logOut = null;
-
+    private FileWriter wrt =null;
+    private BufferedWriter logOut = null;
+    //picture directory on phone
     File picDir;
-
+    //continue to send pics?
     private static boolean stop = false;
-
     //baud rate
     private final static int DEFAULT_USB_BAUD_RATE = 57600;
-
+    //id of phone
     private String android_id;
-
-    //PowerManager.WakeLock wl;
-
-    //surface view and holder
-    SurfaceView sf;
-    SurfaceHolder sH;
-
-
-   static CameraHandlerThread handlerCamerathread = null;
+    //for picture surface
+    private SurfaceView sf;
+    private SurfaceHolder sH;
+    //for handling camera callbacks
+    private static CameraHandlerThread handlerCamerathread = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
 
-      ;
-        //not important
+
+        //settings up windows
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -169,15 +159,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         final Context context = getApplicationContext();
         //get the drone
         drone = new Drone(context);
-        //initialize picnum
 
+        //initialize picnum
         picNum = 0;
 
         //get the sd card
         File sdCard = Environment.getExternalStorageDirectory();
         //create the pic storage directory
         picDir = new File(sdCard.toString() + "/picStorage");
-
 
         //create pic storage directory
         try {
@@ -195,6 +184,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             System.exit(1);
 
         }
+
         //used for setting current time log file was made
         Calendar cal = Calendar.getInstance(TimeZone.getDefault());
         String dateTime = cal.getTime().toLocaleString();
@@ -202,23 +192,20 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //create the pic logs directrory
         File logDir = new File(sdCard.toString() + "/PicLogs");
 
-
         try {
 
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }
-
             //create new log file
             logFile = new File(logDir, "logs " + dateTime + ".txt");
 
         } catch (SecurityException e) {
             alertUser("Storage creation failed. Exiting");
             System.exit(1);
-
         }
 
-        //photomography object
+        //initialize sensor controller
         mSensor = new SensorTracker(getApplicationContext());
 
 
@@ -241,19 +228,23 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             }
         });
 
+        //initialize camera callback thread
         handlerCamerathread = new CameraHandlerThread();
+
+        //initialize surface
         sf = (SurfaceView)findViewById(R.id.surfaceView);
         //get surface holder
         sH = sf.getHolder();
         sH.setKeepScreenOn(true);
-
+        //surface control callbacks
         sH.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
+                //open camera lock on it
                 synchronized (handlerCamerathread) {
                     handlerCamerathread.openCamera();
                 }
-
+                //start up camera viewers
                 try{
                     if(mCamera!=null){
                         mCamera.setPreviewDisplay(holder);
@@ -274,7 +265,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-                handlerCamerathread.closeCamera();
+                //close camera
+                synchronized (handlerCamerathread) {
+                    handlerCamerathread.closeCamera();
+                }
             }
         });
 
@@ -288,8 +282,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         super.onResume();
 
         //create the uploader thread
-        newUploaderThread();
-        //create lThread
+        if(uThread == null){
+            uThread = new ServerContactThread();
+        }
 
 
         //create pic taker thread
@@ -328,6 +323,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
         connectLoop = false;
+
 
         try {
             if(logOut!=null){
@@ -501,7 +497,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     on = true;
 
                     while (on) {
-                        Log.e("TIME",System.currentTimeMillis()+"");
+                        long time = System.currentTimeMillis();
 
 
 
@@ -525,13 +521,17 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                             synchronized (handlerCamerathread) {
                                 handlerCamerathread.wait();
-                                //Log.e("HERE", "HERE");
+
 
                             }
-                            /*synchronized (uThread){
-                                uThread.wait();
-                            }*/
-                            Thread.sleep((long) (timeNum * 1000));
+                            long time2 = System.currentTimeMillis();
+                            double timeDelta = (timeNum*1000 - (time2 - time));
+                            Log.i("BOTTLEKNECK",time2-time+"");
+                            Log.i("BOTTLEKNECK+Delta",timeDelta+"");
+                            //compute the correct time
+                            Thread.sleep((long) (timeDelta));
+
+                            Log.i("BOTTLEKNECK+Delay", System.currentTimeMillis() - time + "");
                         } catch (InterruptedException e) {
                             Log.e("CameraHandler",e.toString());
                         }
@@ -638,9 +638,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         switch (con.getResponseCode()) {
                             case 200:
                                 Log.d("200", "Success");
-                                Log.i("pictake","2");
 
-                                Log.i("gcsstop", System.currentTimeMillis() + "");
                                 break;
                             case 500:
                                 Log.e("500", "Internal Server error");
@@ -679,7 +677,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     try {
                         //ask server what to do
                         URL url = new URL("http://" + URL + "/droid/droidtrigger");
-                        Log.d("url", URL);
+
                         HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
                         con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -746,7 +744,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                                             tThread.setCapture(Double.parseDouble(timeInterval));
                                             //start triggering
                                             MainActivity.on = true;
-                                            Log.d("Triggering", "now");
+
                                             tThread.capture();
                                         } else if (smartTrigger.equals("1")) {
                                             //start smart Trigger
@@ -754,26 +752,20 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                                         }
 
                                         con.disconnect();
-                                        con = null;
+                                        //con = null;
 
 
                                     } catch (JSONException e) {
+                                        e.printStackTrace();
                                     }
                                 }
 
 
                         }
-                        /*
-                        try {
-                            Thread.sleep(4000);
-                        } catch (InterruptedException e) {
-                            Log.e("Error", "error");
-
-                        }*/
 
 
                     } catch (IOException e) {
-
+                        e.printStackTrace();
                     }
 
 
@@ -906,9 +898,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         @Override
         public void onPictureTaken ( byte[] bytes, Camera camera) {
-            Log.i("thread",""+Thread.currentThread().getId());
 
-            //Log.d("data size", "" + bytes.length);
+
+
 
             String fileName;
             synchronized (handlerCamerathread) {
@@ -938,7 +930,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 handlerCamerathread.notify();
             }
 
-            bytes = null;
         }
 
 
@@ -983,7 +974,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         try{
             synchronized (connect) {
                 connect.wait();
-                connect = null;
+                //connect = null;
             }
         }
         catch (InterruptedException e){
@@ -1058,13 +1049,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     }
 
-    //create upload thread
-    private void newUploaderThread(){
-        if(uThread == null){
-            uThread = new ServerContactThread();
-        }
-
-    }
 
 
     //get lat/lon/alt of image
@@ -1140,41 +1124,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // Drone Listener
     // ==========================================================
     //does this do anything?
@@ -1201,34 +1150,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
 
     }
-
-
-
-    // UI Events
-    // ==========================================================
-
-
-
-
-
-
-    // UI updating
-    // ==========================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }
