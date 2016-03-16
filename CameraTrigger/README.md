@@ -1,4 +1,1 @@
-DroneKit-Android-Starter
-========================
-
-Hello World app for [DroneKit-Android](http://android.dronekit.io/).
+#Android Application for Drone Time-interval triggering Camera
