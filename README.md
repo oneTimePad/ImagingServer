@@ -4,32 +4,18 @@
 
 #Autonomous Drone Imaging System:
 
+Always make sure you pull before you start working!
 
-	Fixing: 
-	
-	Django Image Server has some of  the following problems:
-	
-		-phone sometimes disconnects due to connection check delay
-		
-		-Doesn't work FLAWLESSLY
-		
-	Android Camera App:
-	
-		-haven't chosen an ideal heartbeat rate, related to point one in the django list above
-		
-		-Still has some operational bugs, i.e. this is things like freezing
-		
-		-Doesn'twork FLAWLESSLYg
-		
-	Integrate Normal Geotagging
-		
-		- to ground station
-	
-	Overall Imaging:
-	
-		-***Not fit to competition specifics***
-		
-	-> remember the above two things, you shouldn't have to thing twice about
+### System to-do list:
+
+- [X] fix app crashes
+- [X] fix input trigger error (trigger time not actual time)
+- [ ] add geotagging
+- [ ] allow for smooth scroll with lot of pics on site ( site freezing)
+- [X] heartbeat problems (i.e. randomly disconnects) : fixed by using Chrome :)
+- [ ] make to fit competition rules: able to fill out target sheet (Ask me if you don't get this)
+- [ ] can still be made even better...always true :)
+
 	
 	
 
