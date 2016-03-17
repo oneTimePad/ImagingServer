@@ -33,20 +33,25 @@ TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 #important time constants
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
+EXPIRATION = 8
+
+
+
+
 
 class DroneConnectionCheck:
 
-    def __init__(self,id,timeout):
-        self.id = id
-        self.timeout = timeout
-    def startLoop(self):
-        while True:
-            if not cache.has_key(self.id):
-                cache.delete("connectLoop")
-                redis_publisher = RedisPublisher(facility="viewer",broadcast=True)
-                redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnnected':'disconnected'})))
-                break
-            time.sleep(self.timeout)
+	def __init__(self,id,timeout):
+		self.id = id
+		self.timeout = timeout
+	def startLoop(self):
+		while True:
+			if not cache.has_key(self.id):
+				cache.delete("connectLoop")
+				redis_publisher = RedisPublisher(facility='viewer',broadcast=True)
+				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
+				break
+			time.sleep(self.timeout)
 class DroneViewset(viewsets.ModelViewSet):
 
     authentication_classes = (JSONWebTokenAuthentication,)
@@ -100,14 +105,14 @@ class DroneViewset(viewsets.ModelViewSet):
                 if cache.get('trigger') == '1':
                     if cache.has_key('time'):
                         #send time to trigger
-                        responseData = simplejson.dumps({'time':cache.get('time')})
+                        responseData = {'time':cache.get('time')}
                         cache.delete('time')
                         return Response(responseData)
                 #stop triggering
                 elif cache.get('trigger') == '0':
-                        return Response(simplejson.dumps({'STOP':'1'}))
+                        return Response({'STOP':'1'})
             #no info to send
-            return Response(simplejson.dumps({'NOINFO':'1'}))
+            return Response({'NOINFO':'1'})
 
 class GCSViewset(viewsets.ModelViewSet):
 
@@ -118,12 +123,13 @@ class GCSViewset(viewsets.ModelViewSet):
             #if attempting to trigger and time is 0 or there is no time
 			if triggerStatus != "0" and (float(request.data['time']) == 0 or not request.data['time']):
                 # don't do anything
-				return Response(simplejson.dumps({'nothing':'nothing'}))
+				return Response({'nothing':'nothing'})
             #if attempting to trigger and time is less than 0
 			if request.data['time'] and float(request.data['time']) < 0:
                 #say invalid
-				return Response(simplejson.dumps({'failure':'invalid time interval'}))
+				return Response({'failure':'invalid time interval'})
             # if attempting to trigger
+			pdb.set_trace()
 			if triggerStatus == '1':
                 #set cache to yes
 				cache.set('trigger',1)
@@ -134,7 +140,7 @@ class GCSViewset(viewsets.ModelViewSet):
                 # set cache
 				cache.set('trigger',0)
             #Success
-			return Response(simplejson.dumps({'Success':'Success'}))
+			return Response({'Success':'Success'})
 
 		@list_route(methods=['post'])
 		def getTarget(self,request,pk=None):
@@ -147,7 +153,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			i = 0
 			targetDict = {'target'+str((lambda j :j+1)(i)): (lambda x:{'pk':x.pk,'image':''.join(TARGET_STORAGE).join('Target').join(str(str(x.pk).zfill(4))).join('.jpeg')})(t) for t in targ }
             #return targets if there are any
-			response = (Response(simplejson.dumps(targetDict)) if len(targetDict)!=0 else Response(simplejson.dumps({'Notargets':'0'})))
+			response = (Response(targetDict) if len(targetDict)!=0 else Response({'Notargets':'0'}))
 			return response
 		@list_route(methods=['post'])
 		def getTargetData(self,request,pk=None):

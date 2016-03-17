@@ -109,8 +109,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //camera
     Camera mCamera;
 
-    //continue take pics?
-    private final Boolean on = new Boolean(false);
+
 
     //upload thread
     private ServerContactThread uThread = null;
@@ -135,8 +134,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private static CameraHandlerThread handlerCamerathread = null;
 
     private boolean didPause = false;
-
-
+    private Thread uploader;
+    private  Thread connect;
     private final long DEFAULT_TRIGGER_TIME = 500;
     private final long CONNECTION_DELAY = 3000;
 
@@ -163,8 +162,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private final BooleanObj connectOn = new BooleanObj(false);
 
     //for testing
-    private String username = "test";
-    private String password = "test";
+    private String username = "pop";
+    private String password = "pop";
     private String token;
     private long expiration =0;
 
@@ -624,7 +623,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             if(expiration-unixTime<=300) {
 
                 try {
-                    URL url = new URL("http://" + URL + "/droid/login");
+                    URL url = new URL("http://" + URL + "/drone/login");
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     con.setRequestMethod("POST");
 
@@ -633,6 +632,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                     con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                     con.setDoOutput(true);
+                    con.setDoInput(true);
                     con.setUseCaches(false);
 
                     OutputStream osC = con.getOutputStream();
@@ -686,7 +686,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 @Override
                 public void run() {
                     try {
-                        URL url = new URL("http://" + URL + "/droid/login");
+                        URL url = new URL("http://" + URL + "/drone/login");
                         HttpURLConnection con = (HttpURLConnection) url.openConnection();
                         con.setRequestMethod("POST");
 
@@ -695,6 +695,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         requestData.put("password",password);
 
                         con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                        con.setDoInput(true);
                         con.setDoOutput(true);
                         con.setUseCaches(false);
 
@@ -717,12 +718,18 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                                 String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
                                 JSONObject payload = new JSONObject(token_decode);
                                 expiration=Long.parseLong(payload.getString("exp"));
+
                                 break;
                             default:
                                 Log.e("Error Response","Status"+status);
                                 break;
                         }
                         con.disconnect();
+                        synchronized (uThread){
+                            uThread.notify();
+                        }
+
+
                     }
                     catch (JSONException e){
                         e.printStackTrace();
@@ -738,6 +745,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     }
 
                 }
+
+
             });
 
         }
@@ -752,16 +761,16 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         //check if refresh is necessary before posting
                         refresh();
                         //open connection to server
-                        URL url = new URL("http://" + URL + "/droid/serverContact");
+                        URL url = new URL("http://" + URL + "/drone/serverContact");
                         HttpURLConnection con = (HttpURLConnection) url.openConnection();
                         con.setRequestMethod("POST");
-                        con.setRequestProperty("Authorization",token);
+                        con.setRequestProperty("Authorization","JWT "+token);
 
                         //build JSON request picture data
                         JSONObject requestData = new JSONObject();
                         //we are asking to trigger
                         requestData.put("id", android_id);
-                        requestData.put("time", getTime());
+                        requestData.put("timeCache", getTime());
                         //attempt to check for an image and send it
                         try{
                             Data imageData;
@@ -849,7 +858,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                             con.setDoOutput(true);
                             con.setUseCaches(false);
-
+                            con.setDoInput(true);
+                            con.connect();
                             OutputStream osC = con.getOutputStream();
                             OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
                             osW.write(requestData.toString());
@@ -1073,7 +1083,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //connect to drone
     public void onBtnConnectTap(View view) {
 
-        Thread connect= new Thread(new Runnable() {
+        connect= new Thread(new Runnable() {
             @Override
             public void run() {
                 if (drone.isConnected()) {
@@ -1123,11 +1133,24 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
         //start remote connections
         //create uploader
-      new Thread(new Runnable() {
+      uploader = new Thread(new Runnable() {
           @Override
           public void run() {
 
               uThread.login();
+
+              synchronized (uThread){
+                  try {
+                      uThread.wait();
+                  }
+                  catch (InterruptedException e){
+                      e.printStackTrace();
+                  }
+              }
+
+              synchronized (connectOn){
+                  connectOn.set(true);
+              }
 
               if(uThread!=null){
 
@@ -1153,7 +1176,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
               }
 
           }
-      }).start();
+      });
+      uploader.start();
 
 
 
