@@ -26,6 +26,8 @@ TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
 
+latest_pk = -1
+
 
 #image_done = Signal(providing_args=["num_pic"])
 
@@ -35,6 +37,7 @@ class PictureSender:
 
 	def start(self):
 		global PICTURE_SEND_DELAY
+		global latest_pk
 		while True:
 
 			try:
@@ -42,16 +45,18 @@ class PictureSender:
 			except Picture.DoesNotExist:
 				continue
 
-			#Serialize pathname
-			serPic = serializers.serialize("json",[picture])
-			#create json response
-			response_data = simplejson.dumps({'type':'picture','image':serPic})
+			if latest_pk != picture.pk:
+				#Serialize pathname
+				serPic = serializers.serialize("json",[picture])
+				#create json response
+				response_data = simplejson.dumps({'type':'picture','image':serPic})
 
-			audience = {'broadcast': True}
-			redis_publisher = RedisPublisher(facility='viewer',**audience)
-			redis_wbskt=redis_publisher
-			#send to url to websocket
-			redis_wbskt.publish_message(RedisMessage(response_data))
+				audience = {'broadcast': True}
+				redis_publisher = RedisPublisher(facility='viewer',**audience)
+				redis_wbskt=redis_publisher
+				#send to url to websocket
+				redis_wbskt.publish_message(RedisMessage(response_data))
+				latest_pk = picture.pk;
 
 			time.sleep(PICTURE_SEND_DELAY)
 
