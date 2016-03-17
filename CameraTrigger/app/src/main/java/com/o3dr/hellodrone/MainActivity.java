@@ -138,6 +138,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
     private final long DEFAULT_TRIGGER_TIME = 500;
+    private final long CONNECTION_DELAY = 3000;
 
     //allows for syncing on boolean's for deciding when to break loops
     private class BooleanObj{
@@ -160,6 +161,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private final BooleanObj triggerOn = new BooleanObj(false);
     //continue connecting?
     private final BooleanObj connectOn = new BooleanObj(false);
+
+    //for testing
+    private String username = "test";
+    private String password = "test";
+    private String token;
+    private long expiration =0;
 
 
     @Override
@@ -610,6 +617,130 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler = new Handler(getLooper());
         }
 
+        private void refresh(){
+
+            long unixTime = System.currentTimeMillis()/1000;
+
+            if(expiration-unixTime<=300) {
+
+                try {
+                    URL url = new URL("http://" + URL + "/droid/login");
+                    HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    con.setRequestMethod("POST");
+
+                    JSONObject requestData = new JSONObject();
+                    requestData.put("token",token);
+
+                    con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                    con.setDoOutput(true);
+                    con.setUseCaches(false);
+
+                    OutputStream osC = con.getOutputStream();
+                    OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
+                    osW.write(requestData.toString());
+                    osW.flush();
+                    osW.close();
+
+
+                    int status = con.getResponseCode();
+
+                    switch (status){
+
+                        case 200:
+                            JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
+
+                            token = response.getString("token");
+
+                            String[] token_split = token.split("\\.");
+
+                            String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                            JSONObject payload = new JSONObject(token_decode);
+                            expiration=Long.parseLong(payload.getString("exp"));
+                            break;
+                        default:
+                            Log.e("Error Response","Status" +status);
+                            break;
+
+                    }
+                    con.disconnect();
+
+
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (ProtocolException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }
+
+
+        void login(){
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        URL url = new URL("http://" + URL + "/droid/login");
+                        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                        con.setRequestMethod("POST");
+
+                        JSONObject requestData = new JSONObject();
+                        requestData.put("username",username);
+                        requestData.put("password",password);
+
+                        con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                        con.setDoOutput(true);
+                        con.setUseCaches(false);
+
+                        OutputStream osC = con.getOutputStream();
+                        OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
+                        osW.write(requestData.toString());
+                        osW.flush();
+                        osW.close();
+
+
+                        int status = con.getResponseCode();
+
+                        switch (status){
+                            case 200:
+                                JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
+                                token = response.getString("token");
+
+                                String[] token_split = token.split("\\.");
+
+                                String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                                JSONObject payload = new JSONObject(token_decode);
+                                expiration=Long.parseLong(payload.getString("exp"));
+                                break;
+                            default:
+                                Log.e("Error Response","Status"+status);
+                                break;
+                        }
+                        con.disconnect();
+                    }
+                    catch (JSONException e){
+                        e.printStackTrace();
+                    }
+                    catch (MalformedURLException e){
+                        e.printStackTrace();
+                    }
+                    catch (ProtocolException e){
+                        e.printStackTrace();
+                    }
+                    catch (IOException e){
+                        e.printStackTrace();
+                    }
+
+                }
+            });
+
+        }
 
 
         void contactLoop(){
@@ -618,10 +749,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                 @Override
                 public void run() {
                     try {
+                        //check if refresh is necessary before posting
+                        refresh();
                         //open connection to server
-                        URL url = new URL("http://" + URL + "/droid/upload");
+                        URL url = new URL("http://" + URL + "/droid/serverContact");
                         HttpURLConnection con = (HttpURLConnection) url.openConnection();
                         con.setRequestMethod("POST");
+                        con.setRequestProperty("Authorization",token);
 
                         //build JSON request picture data
                         JSONObject requestData = new JSONObject();
@@ -993,6 +1127,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
           @Override
           public void run() {
 
+              uThread.login();
+
               if(uThread!=null){
 
                   while(true){
@@ -1006,7 +1142,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                           uThread.contactLoop();
                       }
                       try {
-                          Thread.sleep(3000);
+                          Thread.sleep(CONNECTION_DELAY);
                       }
 
                       catch (InterruptedException e){
