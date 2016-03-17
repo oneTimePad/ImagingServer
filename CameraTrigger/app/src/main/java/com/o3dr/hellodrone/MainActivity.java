@@ -162,8 +162,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     private final BooleanObj connectOn = new BooleanObj(false);
 
     //for testing
-    private String username = "pop";
-    private String password = "pop";
     private String token;
     private long expiration =0;
 
@@ -697,8 +695,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         con.setRequestMethod("POST");
                         //send json username and password
                         JSONObject requestData = new JSONObject();
-                        requestData.put("username",username);
-                        requestData.put("password",password);
+                        requestData.put("username",((EditText)findViewById(R.id.username)).getText().toString());
+                        requestData.put("password",((EditText)findViewById(R.id.password)).getText().toString());
 
                         con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                         con.setDoInput(true);
