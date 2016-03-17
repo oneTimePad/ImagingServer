@@ -12,8 +12,9 @@ from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
 #django-rest
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from .permissions import DroneAuthentication,GCSAuthentication
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework import viewsets
 from rest_framework.decorators import list_route
 from .serializers import *
@@ -48,18 +49,20 @@ class GCSPictureSender:
 
 	def startLoop(self):
 		while True:
+			#get latest picture based on pk
 			try:
 				picture = Picture.objects.latest('pk')
 			except Picture.DoesNotExist:
 				continue
-
+			#serialize pic
 			serPic = PictureSerializer(picture)
+			#picture info
 			responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
 
-
+			#send to gcs
 			redis_publisher = RedisPublisher(facility='viewer',broadcast=True)
 			redis_publisher.publish_message(RedisMessage(responseData))
-
+			#wait delay
 			time.sleep(self.timeout)
 
 
@@ -70,8 +73,12 @@ class DroneConnectionCheck:
 		self.timeout = timeout
 	def startLoop(self):
 		while True:
+			#if drone cache entry is gone
 			if not cache.has_key(self.id):
+				#then drone hasn't connected in a while
+				#delete looper obj
 				cache.delete("connectLoop")
+				#tell gcs drone disconnected
 				redis_publisher = RedisPublisher(facility='viewer',broadcast=True)
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
 				break
@@ -79,7 +86,7 @@ class DroneConnectionCheck:
 class DroneViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (JSONWebTokenAuthentication,)
-	permission_classes = (IsAuthenticated,)
+	permission_classes = (DroneAuthentication,)
 	parser_classes = (JSONParser,MultiPartParser,FormParser)
 
 	@list_route(methods=['post'])
@@ -166,6 +173,9 @@ class DroneViewset(viewsets.ModelViewSet):
 		return Response({'NOINFO':'1'})
 
 class GCSViewset(viewsets.ModelViewSet):
+
+	authentication_classes = (SessionAuthentication,)
+	permission_classes = (GCSAuthentication,)
 
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):
