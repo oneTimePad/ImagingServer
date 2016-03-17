@@ -28,6 +28,9 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+AUTH_USER_MODEL = 'uploader.ImagingUser'
+
+
 WEBSOCKET_URL = '/ws/'
 WS4REDIS_EXPIRE = 0
 WS4REDIS_PREFIX = 'ws'

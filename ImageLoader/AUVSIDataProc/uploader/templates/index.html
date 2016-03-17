@@ -83,7 +83,7 @@
         else {
           //editing the shown target
           $.ajax({
-            url: "{% url 'targetedit'%}",
+            url: "{% url 'gcs-targetEdit'%}",
             type: "POST",
             data: {"pk":curr,"attr":input_array},
             success: function(json){
@@ -171,14 +171,14 @@
           //ajax request to server to delete image with curr as the picture/target object pk
           if (picview) {
             $.ajax({
-              url:"{% url 'deletepic'%}",
+              url:"{% url 'gcs-deletePicture'%}",
               type:"POST",
               data: {"pk":curr},
             })
           }
           else {
             $.ajax({
-              url:"{% url 'deletetarget'%}",
+              url:"{% url 'gcs-deleteTarget'%}",
               type:"POST",
               data: {"pk":curr},
             })
@@ -229,7 +229,7 @@
   function showTargetData(image) {
     pk = parseInt(image.id);
     $.ajax({
-      url: "{% url 'gettargetdata'%}",
+      url: "{% url 'gcs-getTargetData'%}",
       type: "POST",
       dataType: "json",
       data: {"pk": pk},
@@ -394,7 +394,7 @@ function set_smart_trigger(){
 
 function trigger() {
   $.ajax({
-    url:"{%url 'gcstrigger' %}",
+    url:"{%url 'gcs-cameraTrigger' %}",
     type:"POST",
     dataType:"JSON",
     data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
