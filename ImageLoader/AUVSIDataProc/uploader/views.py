@@ -6,6 +6,7 @@ from django.dispatch import *
 from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
 from .forms import AttributeForm
 from .models import *
+from django.utils.datastructures import MultiValueDictKeyError
 #websockets
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
@@ -16,6 +17,7 @@ from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework import viewsets
 from rest_framework.decorators import list_route
 from .serializers import *
+from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
 #general
 import os
 import time
@@ -33,10 +35,32 @@ TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 #important time constants
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
+GCS_SEND_TIMEOUT = 10
 EXPIRATION = 8
 
 
 
+
+class GCSPictureSender:
+
+	def __init__(self,timeout):
+		self.timeout = timeout
+
+	def startLoop(self):
+		while True:
+			try:
+				picture = Picture.objects.latest('pk')
+			except Picture.DoesNotExist:
+				continue
+
+			serPic = PictureSerializer(picture)
+			responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
+
+
+			redis_publisher = RedisPublisher(facility='viewer',broadcast=True)
+			redis_publisher.publish_message(RedisMessage(responseData))
+
+			time.sleep(self.timeout)
 
 
 class DroneConnectionCheck:
@@ -54,153 +78,180 @@ class DroneConnectionCheck:
 			time.sleep(self.timeout)
 class DroneViewset(viewsets.ModelViewSet):
 
-    authentication_classes = (JSONWebTokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+	authentication_classes = (JSONWebTokenAuthentication,)
+	permission_classes = (IsAuthenticated,)
+	parser_classes = (JSONParser,MultiPartParser,FormParser)
 
-    @list_route(methods=['post'])
-    def serverContact(self,request,pk=None):
-            global EXPIRATION
-            #fetch phone client information
-            androidId = request.data['id']
-            requestTime = request.data['timeCache']
-            #determine if drone has contacted before
-            if not cache.has_key(androidId):
-                #if no set its cache entry
-                cache.set(androidId,requestTime,EXPIRATION)
-            else:
-                #else delete the old one
-                cache.delete(androidId)
-                #create a new one
-                cache.set(androidId,requestTime,EXPIRATION)
-            #if drone connection check not started
-            if not cache.has_key('connectLoop'):
-                #create connection check object
-                connectLoop = DroneConnectionCheck(androidId,DRONE_DISCONNECT_TIMEOUT)
-                #save it in cache
-                cache.set('connectLoop',connectLoop)
-                #start loop in new thread
-                _thread.start_new_thread(connectLoop.startLoop,())
-                #tell gcs that drone is connected
-                redis_publisher = RedisPublisher(facility="viewer",broadcast=True)
-                redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
+	@list_route(methods=['post'])
+	def serverContact(self,request,pk=None):
+		global EXPIRATION
+		global DRONE_DISCONNECT_TIMEOUT
+		global GCS_SEND_TIMEOUT
 
-            try:
-                #attempt to make picture model entry
-                picture = request.FILES['Picture']
-                #form image dict
-                imageData = {elmt : Decimal(request.data[elmt]) for elmt in ('azimuth','pitch','roll','lat','lon','alt')}
-                #make obj
-                pictureObj = PictureSerializer(data = imageData)
-                #save img to obj
-                pictureObj.photo = picture
-                pictureObj.fileName = IMAGE_STORAGE+"/"+(str(pictureObj.photo).replace(' ','_').replace(',','').replace(':',''))
-                pictureObj.save()
-            except Exception:
-                #there was no picture sent
-                pass
+		#fetch phone client information
+		dataDict = {}
+		androidId=0
+		try:
+			dataDict = request.data
+			androidId = dataDict['id']
+		except MultiValueDictKeyError:
 
-            #check if drone is allowed to trigger
-            if cache.has_key('trigger'):
-                #start triggering
-                if cache.get('trigger') == '1':
-                    if cache.has_key('time'):
-                        #send time to trigger
-                        responseData = {'time':cache.get('time')}
-                        cache.delete('time')
-                        return Response(responseData)
-                #stop triggering
-                elif cache.get('trigger') == '0':
-                        return Response({'STOP':'1'})
-            #no info to send
-            return Response({'NOINFO':'1'})
+			dataDict =  simplejson.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
+			androidId = dataDict['id']
+
+
+		requestTime = dataDict['timeCache']
+        #determine if drone has contacted before
+		if not cache.has_key(androidId):
+            #if no set its cache entry
+			cache.set(androidId,requestTime,EXPIRATION)
+		else:
+            #else delete the old one
+			cache.delete(androidId)
+            #create a new one
+			cache.set(androidId,requestTime,EXPIRATION)
+        #if drone connection check not started
+		if not cache.has_key('connectLoop'):
+            #create connection check object
+			connectLoop = DroneConnectionCheck(androidId,DRONE_DISCONNECT_TIMEOUT)
+            #save it in cache
+			cache.set('connectLoop',connectLoop)
+            #start loop in new thread
+			_thread.start_new_thread(connectLoop.startLoop,())
+            #tell gcs that drone is connected
+			redis_publisher = RedisPublisher(facility="viewer",broadcast=True)
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
+
+		try:
+            #attempt to make picture model entry
+			picture = request.FILES['Picture']
+            #form image dict
+
+			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt')}
+			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
+
+			#make obj
+			pictureObj = PictureSerializer(data = imageData)
+			if pictureObj.is_valid():
+				pictureObj = pictureObj.deserialize()
+	            #save img to obj
+				pictureObj.photo = picture
+				pictureObj.save()
+			#start gcs picture send loop if not started
+			if not cache.has_key("sendLoop"):
+				#create loop obj and save in cache
+				sendLoop = GCSPictureSender(GCS_SEND_TIMEOUT)
+				cache.set("sendLoop",sendLoop)
+				_thread.start_new_thread(sendLoop.startLoop,())
+
+		except MultiValueDictKeyError:
+            #there was no picture sent
+			pass
+
+        #check if drone is allowed to trigger
+		if cache.has_key('trigger'):
+
+            #start triggering
+			if cache.get('trigger') == 1:
+
+				if cache.has_key('time'):
+                    #send time to trigger
+					responseData = {'time':cache.get('time')}
+					cache.delete('time')
+					return Response(responseData)
+            #stop triggering
+			elif cache.get('trigger') == 0:
+				return Response({'STOP':'1'})
+        #no info to send
+		return Response({'NOINFO':'1'})
 
 class GCSViewset(viewsets.ModelViewSet):
 
-		@list_route(methods=['post'])
-		def cameraTrigger(self,request,pk=None):
-            #attempting to trigger
-			triggerStatus = request.data['trigger']
-            #if attempting to trigger and time is 0 or there is no time
-			if triggerStatus != "0" and (float(request.data['time']) == 0 or not request.data['time']):
-                # don't do anything
-				return Response({'nothing':'nothing'})
-            #if attempting to trigger and time is less than 0
-			if request.data['time'] and float(request.data['time']) < 0:
-                #say invalid
-				return Response({'failure':'invalid time interval'})
-            # if attempting to trigger
-			pdb.set_trace()
-			if triggerStatus == '1':
-                #set cache to yes
-				cache.set('trigger',1)
-                #settime
-				cache.set('time',float(request.data['time']))
-            #if attempting to stop triggering
-			elif triggerStatus == '0':
-                # set cache
-				cache.set('trigger',0)
-            #Success
-			return Response({'Success':'Success'})
+	@list_route(methods=['post'])
+	def cameraTrigger(self,request,pk=None):
+        #attempting to trigger
+		triggerStatus = request.data['trigger']
+        #if attempting to trigger and time is 0 or there is no time
+		if triggerStatus != "0" and (float(request.data['time']) == 0 or not request.data['time']):
+            # don't do anything
+			return Response({'nothing':'nothing'})
+        #if attempting to trigger and time is less than 0
+		if request.data['time'] and float(request.data['time']) < 0:
+            #say invalid
+			return Response({'failure':'invalid time interval'})
+        # if attempting to trigger
 
-		@list_route(methods=['post'])
-		def getTarget(self,request,pk=None):
-			try:
-				picture = Picture.objects.get(pk=request.data['pk'])
-			except Picture.DoesNotExist:
-				return HttpResponseForbidden()
-			targ = picture.target_set.all()
-			#for dictionary of targets
-			i = 0
-			targetDict = {'target'+str((lambda j :j+1)(i)): (lambda x:{'pk':x.pk,'image':''.join(TARGET_STORAGE).join('Target').join(str(str(x.pk).zfill(4))).join('.jpeg')})(t) for t in targ }
-            #return targets if there are any
-			response = (Response(targetDict) if len(targetDict)!=0 else Response({'Notargets':'0'}))
-			return response
-		@list_route(methods=['post'])
-		def getTargetData(self,request,pk=None):
-			try:
-                #return target data dictionary
-				target = Target.objects.get(pk = request.data['pk'])
-				return Response(simplejson.dumps(dict(target)))
-			except Target.DoesNotExist:
-				return HttpResponseForbidden()
+		if triggerStatus == '1':
+            #set cache to yes
+			cache.set('trigger',1)
+            #settime
+			cache.set('time',float(request.data['time']))
+        #if attempting to stop triggering
+		elif triggerStatus == '0':
+            # set cache
+			cache.set('trigger',0)
+        #Success
+		return Response({'Success':'Success'})
 
-		@list_route(methods=['post'])
-		def targetEdit(self,request,pk=None):
-			try:
-                #edit target with new values
-				target = Targets.objects.get(pk=request.data['pk'][0])
-				target.edit(request.data)
-				return HttpResponseForbidden('Success')
-			except Target.DoesNotExist:
-				pass
+	@list_route(methods=['post'])
+	def getTarget(self,request,pk=None):
+		try:
+			picture = Picture.objects.get(pk=request.data['pk'])
+		except Picture.DoesNotExist:
+			return HttpResponseForbidden()
+		targ = picture.target_set.all()
+		#for dictionary of targets
+		i = 0
+		targetDict = {'target'+str((lambda j :j+1)(i)): (lambda x:{'pk':x.pk,'image':''.join(TARGET_STORAGE).join('Target').join(str(str(x.pk).zfill(4))).join('.jpeg')})(t) for t in targ }
+        #return targets if there are any
+		response = (Response(targetDict) if len(targetDict)!=0 else Response({'Notargets':'0'}))
+		return response
+	@list_route(methods=['post'])
+	def getTargetData(self,request,pk=None):
+		try:
+            #return target data dictionary
+			targetData = TargetSerializer(Target.objects.get(pk = request.data['pk']))
+			return Response(targetData.data)
+		except Target.DoesNotExist:
 			return HttpResponseForbidden()
 
-		@list_route(methods=['post'])
-		def deleteTarget(self,request,pk=None):
-			try:
-                #get target photo path and delete it
-				target = Target.objects.get(pk=request.data['pk'])
-				os.remove(target.target_pic.path)
-				return HttpResponse('Success')
-			except Target.DoesNotExist:
-				pass
-			return HttpResponseForbidden()
+	@list_route(methods=['post'])
+	def targetEdit(self,request,pk=None):
+		try:
+            #edit target with new values
+			target = Targets.objects.get(pk=request.data['pk'][0])
+			target.edit(request.data)
+			return HttpResponseForbidden('Success')
+		except Target.DoesNotExist:
+			pass
+		return HttpResponseForbidden()
 
-		@list_route(methods=['post'])
-		def deletePicture(self,request,pk=None):
-			try:
-                #get target photo path and delete it
-				picture = Picture.objects.get(pk=request.data['pk'])
-				os.remove(picture.photo.path)
-                #delete all of the picture's targets
-				for t in picture.target_set.all():
-					os.remove(t.target_pic.path)
-					t.delete()
-				picture.delete()
-				return HttpResponse('Success')
-			except Picture.DoesNotExist:
-				pass
-			return HttpResponseForbidden()
+	@list_route(methods=['post'])
+	def deleteTarget(self,request,pk=None):
+		try:
+            #get target photo path and delete it
+			target = Target.objects.get(pk=request.data['pk'])
+			os.remove(target.target_pic.path)
+			return HttpResponse('Success')
+		except Target.DoesNotExist:
+			pass
+		return HttpResponseForbidden()
+
+	@list_route(methods=['post'])
+	def deletePicture(self,request,pk=None):
+		try:
+            #get target photo path and delete it
+			picture = Picture.objects.get(pk=request.data['pk'])
+			os.remove(picture.photo.path)
+            #delete all of the picture's targets
+			for t in picture.target_set.all():
+				os.remove(t.target_pic.path)
+				t.delete()
+			picture.delete()
+			return HttpResponse('Success')
+		except Picture.DoesNotExist:
+			pass
+		return HttpResponseForbidden()
 
 #manual attribute form
 class AttributeFormCheck(View):

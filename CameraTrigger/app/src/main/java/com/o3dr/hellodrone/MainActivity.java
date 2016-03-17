@@ -421,13 +421,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     @Override
     public void onDroneServiceInterrupted(String errorMsg) {
-
         alertUser(errorMsg);
 
     }
 
 
-    //thread for opening camera and running callbacks
+    /*
+    Thread for opening camera and running camera callbacks
+     */
     private class CameraHandlerThread extends HandlerThread {
         Handler  mHandler =  null;
         String curTime;
@@ -444,17 +445,18 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             notify();
         }
 
+        //allows for communication of picture data between callbacks
         synchronized void  setPictureData(String curTime,Data imageData){
             this.curTime = curTime;
             this.imageData=imageData;
         }
 
-
-
+        //close camera after done
         void closeCamera(){
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    //release camera resources
                     if(mCamera!=null){
                         try {
                             mCamera.release();
@@ -468,15 +470,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
 
         }
-
+        //open up camera for triggering use
         void openCamera(){
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
                     try{
-
-
-
+                        //open camera and set params
                         mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
                         Camera.Parameters params = mCamera.getParameters();
                         params.setPictureSize(300,300);
@@ -486,10 +486,11 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                         Log.e("Camera Failed", "failed to open back camera", e);
                     }
+                    //camera us read to use...notify waiting threads
                     notifyCameraReady();
                 }
             });
-            //wait for camera to be opened
+            //wait for camera to be opened...main thread(UI) is waiting
             try{
                 synchronized (handlerCamerathread) {
                     handlerCamerathread.wait();
@@ -505,7 +506,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     }
 
 
-    //Thread for triggering camera
+    /*
+    Thread for taking pictures in fixed interval
+     */
     public class CameraTakerThread extends HandlerThread{
         Handler mHandler = null;
         double captureTime =0.0;
@@ -517,10 +520,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             mHandler = new Handler(getLooper());
         }
 
-
+        //setter for telling thread what time to take pictures at
         void setCapture(double time){
             captureTime = time;
         }
+
+        //tell thread to use smarttrigger
         void smartTrigger(){
             mHandler.post(new Runnable() {
                 @Override
@@ -531,30 +536,27 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             });
 
         }
-
+        //tell thread to start capturing
         void capture(){
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
 
                     Double timeNum = captureTime;
-
-                    //continue taking pics
-
-
+                    //capture looop
                     while (true) {
-
+                        //if told to stop triggering
                         synchronized (triggerOn){
+                            //break loop
                             if(!triggerOn.get()){
                                 break;
                             }
                         }
                         //time at start of loop
                         long time = System.currentTimeMillis();
-
-
-
+                        //while phon is rotated pas 30 degrees on any access
                         while(Math.abs(mSensor.getPitch())>30 || Math.abs(mSensor.getRoll())>30){
+                            //suspend taking pics
                             try {
                                 Thread.sleep(1000);
                             }
@@ -562,20 +564,18 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                             }
                         }
-
+                        //if camera exists
                         if (mCamera != null) {
                             //take pics
-
                             mCamera.startPreview();
-
                             mCamera.takePicture(onShutter, null, onPicTake);
                         }
                         //wait given time interval
                         try {
-
+                            //wait till callbacks for last taken pic are done
+                            //allows for synchronization among threads
                             synchronized (handlerCamerathread) {
                                 handlerCamerathread.wait();
-
 
                             }
                             //time at end of loop
@@ -584,7 +584,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             double timeDelta = (timeNum*1000 - (time2 - time));
 
                             Log.i("BOTTLEKNECK",time2-time+"");
-                            Log.i("BOTTLEKNECK+Delta",timeDelta+"");
+                            Log.i("BOTTLEKNECK+Delta",timeDelta+(time2-time)+"");
                             //wait the delay
                             if(timeDelta>=0) {
                                 Thread.sleep((long) (timeDelta));
@@ -604,7 +604,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         }
     }
 
-
+    /*
+    Thread that contacts server and parses server responses
+     */
     private class ServerContactThread extends HandlerThread{
 
         Handler mHandler = null;
@@ -615,18 +617,20 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             start();
             mHandler = new Handler(getLooper());
         }
-
+        //allows to obtain new token if old is about to expire
         private void refresh(){
-
+            //get current system time
             long unixTime = System.currentTimeMillis()/1000;
-
-            if(expiration-unixTime<=300) {
+            Log.i("delta",expiration-unixTime+"");
+            //if token expiration is close
+            if(expiration-unixTime<=3560) {
 
                 try {
-                    URL url = new URL("http://" + URL + "/drone/login");
+                    //request a new one
+                    URL url = new URL("http://" + URL + "/drone/refresh");
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     con.setRequestMethod("POST");
-
+                    //send old one
                     JSONObject requestData = new JSONObject();
                     requestData.put("token",token);
 
@@ -647,10 +651,11 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     switch (status){
 
                         case 200:
+                            //obtain response of new token
                             JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
 
                             token = response.getString("token");
-
+                            //parse expiration date out
                             String[] token_split = token.split("\\.");
 
                             String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
@@ -680,16 +685,17 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         }
 
-
+        //login to obtain auth token
         void login(){
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
                     try {
+                        //login to obtain token
                         URL url = new URL("http://" + URL + "/drone/login");
                         HttpURLConnection con = (HttpURLConnection) url.openConnection();
                         con.setRequestMethod("POST");
-
+                        //send json username and password
                         JSONObject requestData = new JSONObject();
                         requestData.put("username",username);
                         requestData.put("password",password);
@@ -710,9 +716,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
                         switch (status){
                             case 200:
+                                //get token response
                                 JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
                                 token = response.getString("token");
-
+                                //parse out expiration
                                 String[] token_split = token.split("\\.");
 
                                 String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
@@ -751,7 +758,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         }
 
-
+        //send heartbeat and if ready, send picture
         void contactLoop(){
 
             mHandler.post(new Runnable() {
@@ -775,20 +782,24 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         try{
                             Data imageData;
                             String fileName;
+                            //get next image data
                             synchronized (pictureData) {
                                 imageData= pictureData.remove(0);
                             }
+                            //get next image file name
                             synchronized (pictureQueue) {
                                 fileName = pictureQueue.remove(0);
                             }
-
+                            //put image data in json
                             if (imageData != null) {
-                                requestData.put("Azimuth", imageData.getAzimuth());
-                                requestData.put("Pitch", imageData.getPitch());
-                                requestData.put("Roll", imageData.getRoll());
-                                requestData.put("GPS", imageData.getLatLonAltJSON());
+                                requestData.put("azimuth", imageData.getAzimuth());
+                                requestData.put("pitch", imageData.getPitch());
+                                requestData.put("roll", imageData.getRoll());
+                                requestData.put("lat",imageData.getLat());
+                                requestData.put("lon",imageData.getLon());
+                                requestData.put("alt",imageData.getAlt());
                             }
-
+                            //fetch image from fs
                             File outFile = new File(StoragePic,fileName);
                             FileInputStream fin = new FileInputStream(outFile);
                             DataInputStream dis = new DataInputStream(fin);
@@ -836,7 +847,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             wrt.append(LINE_FEED);
                             wrt.flush();
 
-
+                            //write json to request
                             wrt.append("--" + boundary).append(LINE_FEED);
                             wrt.append(jsonDisp).append(LINE_FEED);
                             wrt.append(jsonType).append(LINE_FEED);
@@ -855,6 +866,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         }
                         //no image to send, just send heartbeat
                         catch (IndexOutOfBoundsException e){
+
                             con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                             con.setDoOutput(true);
                             con.setUseCaches(false);
@@ -871,10 +883,11 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         switch (status){
 
                             case 200:
+                                //encode response as a jsonobject
                                 JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
-
+                                //if the gcs said to trigger
                                 if(response.has("time")){
-
+                                    //tell capture thread to start triggering at 'time'
                                     synchronized (tThread){
                                         tThread.setCapture(Double.parseDouble(response.get("time").toString()));
                                         //start triggering
@@ -885,11 +898,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                                     }
 
                                 }
+                                //if gcs said to stop triggering
                                 else if(response.has("STOP")){
+                                        //end trigger loop
                                         synchronized (triggerOn){
                                             triggerOn.set(false);
                                         }
                                 }
+                                //just a normal response
                                 else if(response.has("NOINFO")){
                                         //do nothing
                                 }
@@ -930,21 +946,30 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     //for holding image data
     private class Data{
-        private float azimuth;
-        private float pitch;
-        private float roll;
-        private LatLongAlt gpsData = null;
+        private float azimuth=0;
+        private float pitch=0;
+        private float roll=0;
+        private double lat=0;
+        private double lon=0;
+        private double alt=0;
+        //private LatLongAlt gpsData = null;
 
 
 
         Data(){
+            //fetch data from sensors
             this.azimuth =mSensor.getAzimuth();
             this.pitch = -1*mSensor.getPitch();
             this.roll = -1*mSensor.getRoll();
-            this.gpsData = getLatLonAlt();
+            LatLongAlt gps = retLatLonAlt();
+            if(gps!=null){
+                lat = gps.getLatitude();
+                lon = gps.getLongitude();
+                alt = gps.getAltitude();
+            }
 
         }
-
+        //getter methods to obtain data
         float getAzimuth(){
             return azimuth;
         }
@@ -954,23 +979,10 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         float getRoll(){
             return roll;
         }
+        double getLat(){return lat;}
+        double getLon(){return lon;}
+        double getAlt(){return alt;}
 
-        LatLongAlt retLatLonAlt(){
-            return gpsData;
-        }
-
-        JSONObject getLatLonAltJSON(){
-            if(gpsData !=null) {
-                try {
-                    return new JSONObject().put("lat", gpsData.getLatitude()).put("lon", gpsData.getLongitude()).put("alt", gpsData.getAltitude());
-                } catch (JSONException e) {
-                    Log.e("Dataholder",e.toString());
-                }
-
-            }
-
-            return null;
-        }
 
     }
 
@@ -984,22 +996,18 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             //make shutter sound
             AudioManager mgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
-
+            //get image data
             Data dataHolder = new Data();
-
+            //send it so picture callback can get it
             synchronized (handlerCamerathread) {
                 handlerCamerathread.setPictureData(time, dataHolder);
             }
             //create log file
             try {
                 String logData;
-                if(dataHolder.retLatLonAlt()!=null) {
-                    logData = time+picNum + " GPS:" + dataHolder.retLatLonAlt().toString()+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
-
-                }
-                else{
-                    logData = time+picNum+" "+"GPS NOT CONNECTED"+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
-                }
+                //log entry
+                logData = time+picNum + "Lat:"+dataHolder.getLat()+"Lon:"+dataHolder.getLon()+"Alt:"+dataHolder.getAlt()+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
+                //write to log
                 logOut.write(logData);
                 logOut.newLine();
             }
@@ -1032,12 +1040,11 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         @Override
         public void onPictureTaken ( byte[] bytes, Camera camera) {
 
-
-
-
             String fileName;
             synchronized (handlerCamerathread) {
+                //create picture filname
                fileName= String.format(handlerCamerathread.curTime + "%04d.jpg", ++picNum);
+                //add image data to queue
                 synchronized (pictureData) {
                     pictureData.add(handlerCamerathread.imageData);
                     handlerCamerathread.imageData = null;
@@ -1054,11 +1061,13 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             catch (IOException e){
                 Log.e("pictake",e.toString());
             }
+            //image file name to queue
             synchronized (pictureQueue) {
                 pictureQueue.add(fileName);
             }
 
-
+            //tell picture capture thread we are done
+            //it can take the next picture
             synchronized (handlerCamerathread) {
                 handlerCamerathread.notify();
             }
@@ -1187,7 +1196,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     //get lat/lon/alt of image
     @Nullable
-    private LatLongAlt getLatLonAlt() {
+    private LatLongAlt retLatLonAlt() {
         //get altitude
         Altitude droneAltitude = drone.getAttribute(AttributeType.ALTITUDE);
         if(droneAltitude==null){

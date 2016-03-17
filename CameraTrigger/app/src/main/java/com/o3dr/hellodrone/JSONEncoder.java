@@ -13,7 +13,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 /**
- * Created by lie on 12/30/15.
+ * Use to encode input responses from http as json objects
  */
 public class JSONEncoder {
     JSONObject response;
@@ -23,6 +23,7 @@ public class JSONEncoder {
         BufferedReader r = new BufferedReader(new InputStreamReader(iStr));
         StringBuilder result = new StringBuilder();
         String line;
+        //got through response and make long string
         while ((line = r.readLine()) != null) {
             result.append(line);
         }
@@ -30,6 +31,7 @@ public class JSONEncoder {
 
 
         try{
+            //create json object from string
             response = new JSONObject(result.toString());
 
         }
@@ -39,7 +41,7 @@ public class JSONEncoder {
 
 
     }
-
+    //getter for response
     public JSONObject encodeJSON(){
         return response;
     }
