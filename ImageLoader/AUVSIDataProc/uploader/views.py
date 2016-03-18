@@ -44,9 +44,6 @@ DRONE_DISCONNECT_TIMEOUT = 20
 GCS_SEND_TIMEOUT = 10
 EXPIRATION = 8
 
-latest_pk = -1
-
-
 '''
 saves session for logged in gcs user
 '''
@@ -63,21 +60,14 @@ creates a list of the sessions of all logged in gcs users
 def gcsSessions():
 	return [ sess.session_id for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
 
-
 '''
 sends pictures to gcs
 '''
 class GCSPictureSender:
 
-<<<<<<< HEAD
-	def start(self):
-		global PICTURE_SEND_DELAY
-		global latest_pk
-		while True:
-=======
+
 	def __init__(self,timeout):
 		self.timeout = timeout
->>>>>>> restfulSystem
 
 	def startLoop(self):
 		while True:
@@ -91,50 +81,12 @@ class GCSPictureSender:
 			#picture info
 			responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
 
-<<<<<<< HEAD
-			if latest_pk != picture.pk:
-				#Serialize pathname
-				serPic = serializers.serialize("json",[picture])
-				#create json response
-				response_data = simplejson.dumps({'type':'picture','image':serPic})
-
-				audience = {'broadcast': True}
-				redis_publisher = RedisPublisher(facility='viewer',**audience)
-				redis_wbskt=redis_publisher
-				#send to url to websocket
-				redis_wbskt.publish_message(RedisMessage(response_data))
-				latest_pk = picture.pk;
-
-			time.sleep(PICTURE_SEND_DELAY)
-
-started = False
-def startLoop():
-	global started
-	if not started:
-		_thread.start_new_thread(PictureSender().start,())
-		started =True
-
-class Upload(View):
-
-	#post request to create pictures
-	def post(self,request,*args,**kwargs):
-
-
-		startLoop()
-		picture = Picture()
-		#may need to catch this no picture exception...
-		picture.photo = request.FILES["Picture"]
-
-
-		picture.fileName = IMAGE_STORAGE+"/"+(str(picture.photo).replace(' ','_').replace(',','').replace(':',''))
-
-=======
 			#send to gcs
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(responseData))
 			#wait delay
 			time.sleep(self.timeout)
->>>>>>> restfulSystem
+
 
 '''
 used to check if drone is still connected
