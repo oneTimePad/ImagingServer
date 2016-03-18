@@ -31,7 +31,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-AUTH_USER_MODEL = 'uploader.ImagingUser'
+AUTH_USER_MODEL = 'server.ImagingUser'
 
 
 WEBSOCKET_URL = '/ws/'
@@ -60,7 +60,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'uploader',
+    'server',
     'ws4redis',
 )
 '''
@@ -100,13 +100,12 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.security.SecurityMiddleware',
 )
 
-ROOT_URLCONF = 'AUVSIDataProc.urls'
+ROOT_URLCONF = 'ImagingServer.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['/home/lie/Desktop/AUVSI/DataProc/ImageLoader/AUVSIDataProc/uploader/templates',
-                '/home/lie/Desktop/AUVSI/DataProc/ImageLoader/AUVSIDataProc/colorful/static/colorful'],
+        'DIRS': ['/home/lie/Desktop/AUVSI/DataProcessing/ImagingServer/server/templates',],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
