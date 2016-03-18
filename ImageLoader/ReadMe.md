@@ -7,6 +7,14 @@
 #clean database
 - ```./cleandb```
 
+#Dependencies
+- Python3.4
+- (Django-1.9) [https://github.com/django/django]
+- (Django-Rest-Framework) [https://github.com/tomchristie/django-rest-framework]
+- (Django-Rest-Framework-JWT) [https://github.com/GetBlimp/django-rest-framework-jwt]
+- OpenCV3
+	-use .so file in repo. add it to site-packages
+
 ###CheckList:
 
 - [X] drone side authentication
