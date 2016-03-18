@@ -6,7 +6,6 @@ import pdb
 class DroneAuthentication(BasePermission):
 
     def has_permission(self,request,view):
-        pdb.set_trace()
         return request.user and request.user.is_authenticated() and request.user.userType =="drone"
 
 class GCSAuthentication(BasePermission):
