@@ -4,10 +4,13 @@
 <meta charset="utf-8">
 <title>Picture Viewer</title>
 <script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/spectrum.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/spectrum.css" />
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/loader.css" />
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/style.css" />
@@ -22,7 +25,7 @@
   $(function connect_websocket_pic(){
       //create websocket
       var web_socket = WS4Redis({
-      uri:"{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo",
+      uri:"{{WEBSOCKET_URI}}viewer?subscribe-session",
       //triggered when msg from server is sent
       receive_message: parseWebSkt,
       heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
@@ -83,7 +86,7 @@
         else {
           //editing the shown target
           $.ajax({
-            url: "{% url 'targetedit'%}",
+            url: "{% url 'gcs-targetEdit'%}",
             type: "POST",
             data: {"pk":curr,"attr":input_array},
             success: function(json){
@@ -100,10 +103,10 @@
     //parse json server response
     var json_response = JSON.parse(response);
     if (json_response.hasOwnProperty("disconnected")) {
-      alert("Android Device Disconnected");
+      bootbox.alert("Android Device Disconnected");
     }
     else if (json_response.hasOwnProperty("connected")) {
-      alert("Android Device Connected");
+      bootbox.alert("Android Device Connected");
     }
     else if (json_response.hasOwnProperty("type")) {
       if (loading==1) {
@@ -113,15 +116,21 @@
       if (json_response["type"]== "picture") {
 
        Promise.resolve().then(function(){
-          var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf("]")))
+          //var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf("]")))
+          //get image data
+          var image_data = json_response.image
+          //image src
+          var picture = json_response.image['fileName'];
+          //image id
+          var id = json_response['pk']
+          console.log(picture)
           var div = document.createElement("div");
           div.className = "thumb-div";
           var img = document.createElement("img");
           img.className = "thumbnail";
-          var img_fields = picture.fields
-          img.src= img_fields.fileName
-          img.id=parseInt(picture.pk)
-          img_properties[img.id]= img_fields
+          img.src= picture
+          img.id=parseInt(id)
+          img_properties[img.id]= image_data
           img.addEventListener("click", function() {
             picview = true;
             setFocusedImage(this);
@@ -171,14 +180,14 @@
           //ajax request to server to delete image with curr as the picture/target object pk
           if (picview) {
             $.ajax({
-              url:"{% url 'deletepic'%}",
+              url:"{% url 'gcs-deletePicture'%}",
               type:"POST",
               data: {"pk":curr},
             })
           }
           else {
             $.ajax({
-              url:"{% url 'deletetarget'%}",
+              url:"{% url 'gcs-deleteTarget'%}",
               type:"POST",
               data: {"pk":curr},
             })
@@ -229,7 +238,7 @@
   function showTargetData(image) {
     pk = parseInt(image.id);
     $.ajax({
-      url: "{% url 'gettargetdata'%}",
+      url: "{% url 'gcs-getTargetData'%}",
       type: "POST",
       dataType: "json",
       data: {"pk": pk},
@@ -321,7 +330,24 @@
 </script>
 </head>
 
+
+
 <body>
+
+  <nav class="navbar navbar-defaul" role="navigation">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="#">RUAutonomous Imaging System</a>
+    </div>
+    <li class="nav-item-active">
+    <form method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+      {% csrf_token %}
+     <button type="submit" class="bnt bnt-primary">Logout</button>
+    </form>
+  </li>
+  </nav>
+
+
+
   <div id="trigger">
     <form id="trigger_on_form">
       <input id="time_interval" type="text" value="0"/>
@@ -394,13 +420,13 @@ function set_smart_trigger(){
 
 function trigger() {
   $.ajax({
-    url:"{%url 'gcstrigger' %}",
+    url:"{%url 'gcs-cameraTrigger' %}",
     type:"POST",
     dataType:"JSON",
     data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
     success: function(json) {
       if (json.hasOwnProperty("failure")) {
-        alert("Invalid Time Interval")
+        bootbox.alert("Invalid Time Interval")
         return;
       }
       if (json.hasOwnProperty("nothing")) {

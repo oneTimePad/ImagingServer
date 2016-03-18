@@ -1,50 +1,97 @@
-from django.shortcuts import render
-from django.http import HttpResponse,HttpResponseRedirect,HttpResponseForbidden,JsonResponse
-import json as simplejson
-from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
-from .models import *
-from django.db.models.signals import *
+#django
+from django.http import HttpResponse,HttpResponseForbidden
+from django.core import serializers
+from django.core.cache import cache
 from django.dispatch import *
+from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
+from .forms import AttributeForm
+from .models import *
+from django.utils.datastructures import MultiValueDictKeyError
+from django.contrib.auth import authenticate,login,logout,get_user_model
+from django.shortcuts import redirect
+from django.core.urlresolvers import reverse
+from django.contrib.auth.signals import user_logged_in
+#websockets
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
-from .forms import AttributeForm
-from io import BytesIO
-from decimal import Decimal
-import base64
-from django.core import serializers
+#django-rest
+from rest_framework.response import Response
+from .permissions import DroneAuthentication,GCSAuthentication
+from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+from rest_framework.authentication import SessionAuthentication
+from rest_framework import viewsets
+from rest_framework.views import APIView
+from rest_framework.decorators import list_route
+from .serializers import *
+from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
+#general
 import os
-import pdb
-from django.core.cache import cache
 import time
 import _thread
+import json as simplejson
+from decimal import Decimal
+#debug
+import pdb
 
-#get inputs from env vars
+
+#constants from Environment Vars
 IMAGE_STORAGE = os.getenv("IMAGE_STORAGE","http://localhost:80/PHOTOS")
 TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 
 #important time constants
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
+GCS_SEND_TIMEOUT = 10
+EXPIRATION = 8
 
 latest_pk = -1
 
 
-#image_done = Signal(providing_args=["num_pic"])
+'''
+saves session for logged in gcs user
+'''
+def gcs_logged_in_handler(sender,request,user,**kwargs):
+	GCSSession.objects.get_or_create(
+		user=user,
+		session_id = request.session.session_key
+	)
+user_logged_in.connect(gcs_logged_in_handler)
+
+'''
+creates a list of the sessions of all logged in gcs users
+'''
+def gcsSessions():
+	return [ sess.session_id for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
 
 
-class PictureSender:
+'''
+sends pictures to gcs
+'''
+class GCSPictureSender:
 
-
+<<<<<<< HEAD
 	def start(self):
 		global PICTURE_SEND_DELAY
 		global latest_pk
 		while True:
+=======
+	def __init__(self,timeout):
+		self.timeout = timeout
+>>>>>>> restfulSystem
 
+	def startLoop(self):
+		while True:
+			#get latest picture based on pk
 			try:
 				picture = Picture.objects.latest('pk')
 			except Picture.DoesNotExist:
 				continue
+			#serialize pic
+			serPic = PictureSerializer(picture)
+			#picture info
+			responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
 
+<<<<<<< HEAD
 			if latest_pk != picture.pk:
 				#Serialize pathname
 				serPic = serializers.serialize("json",[picture])
@@ -81,381 +128,293 @@ class Upload(View):
 
 		picture.fileName = IMAGE_STORAGE+"/"+(str(picture.photo).replace(' ','_').replace(',','').replace(':',''))
 
+=======
+			#send to gcs
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(responseData))
+			#wait delay
+			time.sleep(self.timeout)
+>>>>>>> restfulSystem
 
-		json_request = simplejson.loads(str(request.POST['jsonData'].rpartition('}')[0])+"}")
-
-		picture.azimuth = Decimal(json_request['Azimuth'])
-		picture.pitch = Decimal(json_request['Pitch'])
-		picture.roll= Decimal(json_request['Roll'])
-
-
-		#if "PPM" in json_request.keys():
-		#	picture.ppm = Decimal(json_request['PPM'])
-		# set latLonAlt
-		if "GPS" in json_request.keys():
-			latLonAlt = simplejson.loads(json_request['GPS'])
-			picture.lat = latLonAlt['lat']
-			picture.lon = latLonAlt['lon']
-			picture.alt = latLonAlt['alt']
-		'''
-		#set FourCorners
-		if "FourCorners" in json_request.keys():
-
-			fourCorners = simplejson.loads(json_request['FourCorners'])
-			tl = simplejson.loads(fourCorners['tl'])
-			tr = simplejson.loads(fourCorners['tr'])
-			bl = simplejson.loads(fourCorners['bl'])
-			br = simplejson.loads(fourCorners['br'])
-
-			picture.topLeftX = tl['X']
-			picture.topLeftY = tl['Y']
-			picture.topRightX = tr['X']
-			picture.topRightY = tr['Y']
-			picture.bottomLeftX = bl['X']
-			picture.bottomLeftY = bl['Y']
-			picture.bottomRightX = br['X']
-			picture.bottomRightY = br['Y']
-		'''
-
-		picture.save()
-
-		#trigger signal
-		#image_done.send(sender=self.__class__,num_pic=picture.pk)
-		#return success
-		return HttpResponse("success")
-
-#triggered when image object created
 '''
-@receiver(image_done)
-def send_pic(num_pic,**kwargs):
-	#create pic
+used to check if drone is still connected
+'''
+class DroneConnectionCheck:
 
-	picture = Picture.objects.get(pk=num_pic)
-
-	#Serialize pathname
-	serPic = serializers.serialize("json",[picture])
-	#create json response
-	response_data = simplejson.dumps({'type':'picture','image':serPic})
-
-	audience = {'broadcast': True}
-	redis_publisher = RedisPublisher(facility='viewer',**audience)
-	redis_wbskt=redis_publisher
-	#send to url to websocket
-	redis_wbskt.publish_message(RedisMessage(response_data))
-	'''
-
-
-
-
-
-
-
-
-class DroidConnectionCheck:
-
-	def __init__(self,id):
-
+	def __init__(self,id,timeout):
 		self.id = id
-
-	def start(self):
-		global DRONE_DISCONNECT_TIMEOUT
+		self.timeout = timeout
+	def startLoop(self):
 		while True:
+			#if drone cache entry is gone
 			if not cache.has_key(self.id):
-
-				cache.delete("droid_connect")
-				audience = {'broadcast': True}
-				redis_publisher = RedisPublisher(facility='viewer',**audience)
-				redis_wbskt=redis_publisher
-				#send to url to websocket
-				response_data = simplejson.dumps({'disconnected':'disconnected'})
-				redis_wbskt.publish_message(RedisMessage(response_data))
+				#then drone hasn't connected in a while
+				#delete looper obj
+				cache.delete("connectLoop")
+				#tell gcs drone disconnected
+				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
 				break
-			time.sleep(DRONE_DISCONNECT_TIMEOUT)
+			time.sleep(self.timeout)
+'''
+used for drone endpoints
+'''
+class DroneViewset(viewsets.ModelViewSet):
+
+	authentication_classes = (JSONWebTokenAuthentication,)
+	permission_classes = (DroneAuthentication,)
+	parser_classes = (JSONParser,MultiPartParser,FormParser)
+
+	@list_route(methods=['post'])
+	def serverContact(self,request,pk=None):
+		global EXPIRATION
+		global DRONE_DISCONNECT_TIMEOUT
+		global GCS_SEND_TIMEOUT
+
+		#fetch phone client information
+		dataDict = {}
+		androidId=0
+		try:
+			dataDict = request.data
+			androidId = dataDict['id']
+		except MultiValueDictKeyError:
+
+			dataDict =  simplejson.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
+			androidId = dataDict['id']
 
 
+		requestTime = dataDict['timeCache']
+        #determine if drone has contacted before
+		if not cache.has_key(androidId):
+            #if no set its cache entry
+			cache.set(androidId,requestTime,EXPIRATION)
+		else:
+            #else delete the old one
+			cache.delete(androidId)
+            #create a new one
+			cache.set(androidId,requestTime,EXPIRATION)
+        #if drone connection check not started
+		if not cache.has_key('connectLoop'):
+            #create connection check object
+			connectLoop = DroneConnectionCheck(androidId,DRONE_DISCONNECT_TIMEOUT)
+            #save it in cache
+			cache.set('connectLoop',connectLoop)
+            #start loop in new thread
+			_thread.start_new_thread(connectLoop.startLoop,())
+            #tell gcs that drone is connected
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
+
+		try:
+            #attempt to make picture model entry
+			picture = request.FILES['Picture']
+            #form image dict
+
+			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt')}
+			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
+
+			#make obj
+			pictureObj = PictureSerializer(data = imageData)
+			if pictureObj.is_valid():
+				pictureObj = pictureObj.deserialize()
+	            #save img to obj
+				pictureObj.photo = picture
+				pictureObj.save()
+			#start gcs picture send loop if not started
+			if not cache.has_key("sendLoop"):
+				#create loop obj and save in cache
+				sendLoop = GCSPictureSender(GCS_SEND_TIMEOUT)
+				cache.set("sendLoop",sendLoop)
+				_thread.start_new_thread(sendLoop.startLoop,())
+
+		except MultiValueDictKeyError:
+            #there was no picture sent
+			pass
+
+        #check if drone is allowed to trigger
+		if cache.has_key('trigger'):
+
+            #start triggering
+			if cache.get('trigger') == 1:
+
+				if cache.has_key('time'):
+                    #send time to trigger
+					responseData = {'time':cache.get('time')}
+					cache.delete('time')
+					return Response(responseData)
+            #stop triggering
+			elif cache.get('trigger') == 0:
+				return Response({'STOP':'1'})
+        #no info to send
+		return Response({'NOINFO':'1'})
+
+'''
+Used for logging in GCS station via session auth
+'''
+class GCSLogin(View,TemplateResponseMixin,ContextMixin):
+
+	template_name = 'loginpage.html'
+	content_type='text/html'
+
+	def post(self,request,format=None):
+		#log ground station in
+		username = request.POST['username']
+		password = request.POST['password']
+		user = authenticate(username=username,password=password)
+		if user is not None:
+			#if user is active log use in and return redirect
+			if user.is_active:
+				login(request,user)
+				#redirect to viewer page
+				return redirect(reverse('index'))
+		#failed to login
+		return HttpResponseForbidden()
+
+	def get(self,request):
+		return self.render_to_response(self.get_context_data())
+
+'''
+used for GCS endpoints
+'''
+class GCSViewset(viewsets.ModelViewSet):
+
+	authentication_classes = (SessionAuthentication,)
+	permission_classes = (GCSAuthentication,)
+
+
+	@list_route(methods=['post'])
+	def logout(self,request):
+		#log user out
+		logout(request)
+		#redirect to login page
+		return redirect(reverse('gcs-login'))
+
+
+	@list_route(methods=['post'])
+	def cameraTrigger(self,request,pk=None):
+        #attempting to trigger
+		triggerStatus = request.data['trigger']
+        #if attempting to trigger and time is 0 or there is no time
+		if triggerStatus != "0" and (float(request.data['time']) == 0 or not request.data['time']):
+            # don't do anything
+			return Response({'nothing':'nothing'})
+        #if attempting to trigger and time is less than 0
+		if request.data['time'] and float(request.data['time']) < 0:
+            #say invalid
+			return Response({'failure':'invalid time interval'})
+        # if attempting to trigger
+
+		if triggerStatus == '1':
+            #set cache to yes
+			cache.set('trigger',1)
+            #settime
+			cache.set('time',float(request.data['time']))
+        #if attempting to stop triggering
+		elif triggerStatus == '0':
+            # set cache
+			cache.set('trigger',0)
+        #Success
+		return Response({'Success':'Success'})
+
+	@list_route(methods=['post'])
+	def getTarget(self,request,pk=None):
+		try:
+			picture = Picture.objects.get(pk=request.data['pk'])
+		except Picture.DoesNotExist:
+			return HttpResponseForbidden()
+		targ = picture.target_set.all()
+		#for dictionary of targets
+		i = 0
+		targetDict = {'target'+str((lambda j :j+1)(i)): (lambda x:{'pk':x.pk,'image':''.join(TARGET_STORAGE).join('Target').join(str(str(x.pk).zfill(4))).join('.jpeg')})(t) for t in targ }
+        #return targets if there are any
+		response = (Response(targetDict) if len(targetDict)!=0 else Response({'Notargets':'0'}))
+		return response
+	@list_route(methods=['post'])
+	def getTargetData(self,request,pk=None):
+		try:
+            #return target data dictionary
+			targetData = TargetSerializer(Target.objects.get(pk = request.data['pk']))
+			return Response(targetData.data)
+		except Target.DoesNotExist:
+			return HttpResponseForbidden()
+
+	@list_route(methods=['post'])
+	def targetEdit(self,request,pk=None):
+		try:
+            #edit target with new values
+			target = Targets.objects.get(pk=request.data['pk'][0])
+			target.edit(request.data)
+			return HttpResponseForbidden('Success')
+		except Target.DoesNotExist:
+			pass
+		return HttpResponseForbidden()
+
+	@list_route(methods=['post'])
+	def deleteTarget(self,request,pk=None):
+		try:
+            #get target photo path and delete it
+			target = Target.objects.get(pk=request.data['pk'])
+			os.remove(target.target_pic.path)
+			return HttpResponse('Success')
+		except Target.DoesNotExist:
+			pass
+		return HttpResponseForbidden()
+
+	@list_route(methods=['post'])
+	def deletePicture(self,request,pk=None):
+		try:
+            #get target photo path and delete it
+			picture = Picture.objects.get(pk=request.data['pk'])
+			os.remove(picture.photo.path)
+            #delete all of the picture's targets
+			for t in picture.target_set.all():
+				os.remove(t.target_pic.path)
+				t.delete()
+			picture.delete()
+			return HttpResponse('Success')
+		except Picture.DoesNotExist:
+			pass
+		return HttpResponseForbidden()
+
+#manual attribute form
+class GCSAttributeFormCheck(APIView):
+
+	authentication_classes = (SessionAuthentication,)
+	permission_classes = (GCSAuthentication,)
+
+	def post(self,request):
+		#post data
+		post_vars= self.request.POST
+		#convert to dict
+		post_vars=dict(post_vars)
+		#get parent image pk
+		parent_image = post_vars['pk']
+		#get parent pic from db
+		parent_pic = Picture.objects.get(pk=parent_image[0])
+		#create target object
+		target = Target.objects.create(picture=parent_pic)
+		#package crop data to tuple
+		size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'],post_vars['crop[scaleWidth]'])
+		#crop target
+		target.crop(size_data=size_data,parent_pic=parent_pic)
+		target.edit(post_vars)
+
+		return HttpResponse(simplejson.dumps({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'}),'application/json')
 
 
 #server webpage
-class Index(View,TemplateResponseMixin,ContextMixin):
-	template_name = 'index.html'
+class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
 
+
+
+	template_name = 'index.html'
 	content_type='text/html'
 
 	def get_context_data(self,**kwargs):
 		#put attrbribute form  in template context
-		context = super(Index,self).get_context_data(**kwargs)
+		context = super(GCSViewer,self).get_context_data(**kwargs)
 		context['form'] = AttributeForm
 		return context
 
 	def get(self,request):
 		return self.render_to_response(self.get_context_data())
-
-class DeletePicture(View):
-
-	def post(self,request):
-
-		if request.is_ajax():
-			pic_id = request.POST['pk']
-			picture = Picture.objects.get(pk=pic_id)
-			photo_path = picture.photo.path
-			os.remove(photo_path)
-			targets = picture.target_set.all()
-			for t in targets:
-				os.remove(t.target_pic.path)
-				t.delete()
-			picture.delete()
-
-			return HttpResponse("success")
-
-class DeleteTarget(View):
-
-	def post(self,request):
-
-		if request.is_ajax():
-			target_id = request.POST['pk']
-			target = Target.objects.get(pk=target_id)
-			photo_path = target.target_pic.path
-			os.remove(photo_path)
-			target.delete()
-
-			return HttpResponse("success")
-
-class GetTarget(View):
-
-	def post(self,request):
-		if request.is_ajax():
-
-			target = Target.objects.get(pk=request.POST['pk'])
-			return HttpResponse(simplejson.dumps({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'}),'application/json')
-
-
-
-class GetTargets(View):
-
-	def post(self,request):
-
-		if request.is_ajax():
-
-			try:
-				picture = Picture.objects.get(pk=request.POST['pk'])
-			except Picture.DoesNotExist:
-				return HttpResponseForbidden()
-			#should get all the related targets using a related manager
-			targets = picture.target_set.all()
-
-			i=0
-			targetDict={}
-			for t in targets:
-				print(t.pk)
-				targetDict["target"+str(i)]={'pk':t.pk,'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg'}
-				i+=1
-			if len(targetDict) != 0:
-				return HttpResponse(simplejson.dumps(targetDict),'application/json')
-			else:
-				return HttpResponse(simplejson.dumps({"NoTargets":"0"}),'application/json')
-
-
-
-class GetTargetData(View):
-
-	def post(self,request):
-		if request.is_ajax():
-
-			target = Target.objects.get(pk=request.POST['pk'])
-			targetData={}
-			targetData["color"]=target.color
-			targetData["lcolor"]=target.lcolor
-			targetData["orientation"]=target.orientation
-			targetData["shape"]=target.shape
-			targetData["letter"]=target.letter
-			targetData['lat']=str(target.lat)
-			targetData['lon']=str(target.lon)
-			return HttpResponse(simplejson.dumps(targetData),'application/json')
-
-
-#manual attribute form
-class AttributeFormCheck(View):
-
-	def post(self,request):
-
-		if request.is_ajax():
-
-			#post data
-			post_vars= self.request.POST
-			#convert to dict
-			post_vars=dict(post_vars)
-
-
-
-
-			#get parent image pk
-			parent_image = post_vars['pk']
-			#get parent pic from db
-
-			parent_pic = Picture.objects.get(pk=parent_image[0])
-
-
-
-			#create target object
-			target = Target.objects.create(picture=parent_pic)
-
-			#package crop data to tuple
-			size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'],post_vars['crop[scaleWidth]'])
-
-
-			#crop target
-
-			target.crop(size_data=size_data,parent_pic=parent_pic)
-
-			target.letter = post_vars['attr[letter]']
-			target.color = post_vars['attr[color]']
-			target.lcolor = post_vars['attr[lcolor]']
-			shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
-			target.shape = str(shapeChoices[post_vars['attr[shape]'][0]])
-			target.orientation = post_vars['attr[orientation]'][0]
-			target.save()
-
-			return HttpResponse(simplejson.dumps({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'}),'application/json')
-
-
-class TargetEdit(View):
-	def post(self,request):
-
-		if request.is_ajax():
-
-			#post data
-			post_vars= self.request.POST
-			#convert to dict
-			post_vars=dict(post_vars)
-
-			#get target
-			target = Target.objects.get(pk=post_vars['pk'][0])
-
-			target.letter=post_vars['attr[letter]']
-			target.color = post_vars['attr[color]']
-			target.lcolor = post_vars['attr[lcolor]']
-			shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
-			target.shape = str(shapeChoices[post_vars['attr[shape]'][0]])
-			target.orientation = post_vars['attr[orientation]'][0]
-			target.save()
-
-			return HttpResponse("success")
-
-
-
-
-
-# trigger time
-trigger_time=0
-#smart trigger enabled yes/no
-smart_trigger=0
-#trigger enabled
-trigger_allowed=-1
-#signal to trigger
-trigger = Signal(providing_args=["on","trigger_time","smart_trigger"])
-#signal status update
-trigger_status = Signal(providing_args=["time"])
-#signal trigger
-@receiver(trigger)
-def accept_trigger_msg(sender,**kwargs):
-	global trigger_allowed
-	global trigger_time
-	global smart_trigger
-
-
-
-	if kwargs["on"] =="1":
-		trigger_allowed=1
-		trigger_time=kwargs["time"]
-		smart_trigger=kwargs["smart_trigger"]
-	elif kwargs["on"] == "0":
-		trigger_allowed=0
-
-
-
-
-#send time of shutter
-@receiver(trigger_status)
-def status_trigger_msg(sender,**kwargs):
-	#tell GCS viewer the status update
-
-	audience = {'broadcast': True}
-	redis_publisher = RedisPublisher(facility='viewer',**audience)
-
-		#Serialize pathname
-	response_data = simplejson.dumps({'time':kwargs["trigger_time"]})
-
-	#send to url to websocket
-	redis_publisher.publish_message(RedisMessage(response_data))
-
-#ask should start taking pic
-class TriggerDroid(View):
-	def post(self,request):
-
-		global trigger_allowed
-		global trigger_time
-		global smart_trigger
-		global started
-		json_request = simplejson.loads((request.body).decode('utf-8'))
-
-
-
-		#droid is asking to trigger
-		if json_request["trigger"] == "1":
-
-			if 'id' in json_request and 'time' in json_request:
-
-
-				if not cache.has_key(json_request['id']):
-					cache.set(json_request['id'],json_request['time'],8)
-				else:
-					cache.delete(json_request['id'])
-					cache.set(json_request['id'],json_request['time'],8)
-				if not cache.has_key("droid_connect"):
-					dCC = DroidConnectionCheck(json_request['id'])
-					_thread.start_new_thread(dCC.start,())
-					cache.set("droid_connect",dCC)
-					audience = {'broadcast': True}
-					redis_publisher = RedisPublisher(facility='viewer',**audience)
-					redis_wbskt=redis_publisher
-					#send to url to websocket
-					response_data = simplejson.dumps({'connected':'connected'})
-					redis_wbskt.publish_message(RedisMessage(response_data))
-
-
-
-			if trigger_allowed is 0:
-
-				trigger_allowed=-1
-				return HttpResponse("NO")
-			elif trigger_allowed is 1:
-
-				trigger_allowed=-1
-
-				return HttpResponse(simplejson.dumps({"time":trigger_time,"smart_trigger":smart_trigger}),'application/json')
-			elif trigger_allowed is -1:
-				trigger_allowed=-1
-				return HttpResponse("NOINFO")
-			#droid is telling time of shutter trigger
-		elif json_request["status"] == "1":
-
-			trigger_status.send(self.__class__,trigger_time=json_request["dateTime"])
-			return HttpResponse("Success")
-
-
-#tell phone to start taking pics
-class TriggerGCS(View):
-	def post(self,request):
-		if request.is_ajax():
-
-
-			if request.POST["trigger"] is not "0" and (request.POST["time"] is "0" or not request.POST["time"]):
-				return  HttpResponse(simplejson.dumps({"nothing":"nothing"}),'application/json')
-
-			if  request.POST["time"] and float(request.POST["time"]) < 0:
-				return HttpResponse(simplejson.dumps({"failure":"invalid time interval"}),'application/json')
-
-			trigger.send(sender=self.__class__,on=request.POST["trigger"],time=request.POST["time"],smart_trigger=request.POST["smart_trigger"])
-			return  HttpResponse(simplejson.dumps({"Success":"Success"}),'application/json')
-		else:
-			return HttpResponseForbidden()

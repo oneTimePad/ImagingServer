@@ -69,3 +69,14 @@
       border: 1px solid
       resize: none;
     }
+    .navbar-header{
+         width: 100%;
+         display: inline-block;
+         text-align: center;
+         padding: 15px;
+         list-style: none;
+         background-color: #f2f2f2;
+         border-bottom: 1px solid #ccc;
+         border-top: 1px solid #ccc;
+         margin-left: 0px;
+    }

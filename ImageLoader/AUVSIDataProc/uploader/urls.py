@@ -1,9 +1,37 @@
 from django.conf.urls import include, url
 from django.contrib import admin
+from django.contrib.auth.decorators import login_required
 
 from .views import *
-from django.views.decorators.csrf import csrf_exempt
+from rest_framework.routers import SimpleRouter
+from rest_framework_jwt.views import obtain_jwt_token,refresh_jwt_token,verify_jwt_token
 
+urlpatterns =[
+    url(r'^gcs/viewer$',login_required(GCSViewer.as_view()),name='index'),
+    url(r'^gcs/attrform$',GCSAttributeFormCheck.as_view(),name='attrform'),
+]
+
+droneauthentication =[
+    url(r'^drone/login$',obtain_jwt_token),
+    url(r'^drone/refresh$',refresh_jwt_token),
+    url(r'^drone/verify$',verify_jwt_token),
+
+]
+
+gcsauthentication = [
+    url(r'^gcs/login$',GCSLogin.as_view(),name="gcs-login"),
+]
+
+urlpatterns+=droneauthentication
+urlpatterns+=gcsauthentication
+router = SimpleRouter(trailing_slash=False)
+router.register(r'drone',DroneViewset,'drone')
+urlpatterns+=router.urls
+router = SimpleRouter(trailing_slash=False)
+router.register(r'gcs',GCSViewset,'gcs')
+urlpatterns+=router.urls
+
+'''
 droidpatterns =[
     #url(r'^droidconnect',csrf_exempt(DroneConnectDroid.as_view()),name="droidconnect"),
     #url(r'^gcsconnect',DroneConnectGCS.as_view(),name='gcsconnect'),
@@ -23,3 +51,4 @@ urlpatterns = [
     url(r'^gettargetdata$',GetTargetData.as_view(),name='gettargetdata'),
     url(r'^droid/',include(droidpatterns)),
 ]
+'''

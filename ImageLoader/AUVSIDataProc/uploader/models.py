@@ -1,20 +1,39 @@
+#general
 from PIL import Image
 from matplotlib import cm
 from io import BytesIO
 import cv2
 import numpy as np
-import pdb
+import os
+
+#django
 from django.db import models
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.storage import FileSystemStorage
-# Create your models here.
+from django.contrib.auth.models import AbstractUser
+from django.contrib.sessions.models import Session
+from django.conf import settings
 
-STORAGE = '/var/www/html/PHOTOS/'
-STORAGE_Target = '/var/www/html/TARGETS/'
+#django-rest
+from rest_framework.authtoken.models import Token
+
+#important storage constants
+STORAGE = os.getenv("PICTURE_STORAGE", '/var/www/html/PHOTOS/')
+STORAGE_Target = os.getenv("TARGET_STORAGE",'/var/www/html/TARGETS/')
 
 #uses django storage, change path to fit yours
 fs = FileSystemStorage(location=STORAGE)
 fs_targets = FileSystemStorage(location=STORAGE_Target)
+
+class ImagingUser(AbstractUser):
+
+	userType = models.CharField(max_length=100,default="none")
+	REQUIRED_FIELDS = ['userType']
+
+class GCSSession(models.Model):
+	user = models.ForeignKey(settings.AUTH_USER_MODEL)
+	session =models.ForeignKey(Session)
+
 
 class Picture(models.Model):
 	#picture object
@@ -33,16 +52,16 @@ class Picture(models.Model):
 	alt = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 
 	#pixels per meter
-	ppm = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#ppm = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 
-	topLeftX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	topLeftY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	topRightX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	topRightY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	bottomLeftX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	bottomLeftY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	bottomRightX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	bottomRightY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#topLeftX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#topLeftY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#topRightX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#topRightY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#bottomLeftX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#bottomLeftY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#bottomRightX = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	#bottomRightY = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 
 class Target(models.Model):
 	ORIENTATION_CHOICES = (
@@ -82,6 +101,31 @@ class Target(models.Model):
 	#latitude and longitude for top left corner of target cropped image
 	lat = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	lon = models.DecimalField(max_digits=9, decimal_places=6, default=0)
+
+
+	def __dir__(self):
+		#form target data dictionary
+		targetData={}
+		targetData["color"]=self.color
+		targetData["lcolor"]=self.lcolor
+		targetData["orientation"]=self.orientation
+		targetData["shape"]=self.shape
+		targetData["letter"]=self.letter
+		targetData['lat']=str(self.lat)
+		targetData['lon']=str(self.lon)
+		return targetData
+
+	def edit(self,edits):
+		self.letter=edits['attr[letter]']
+		self.color = edits['attr[color]']
+		self.lcolor = edits['attr[lcolor]']
+		shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
+		self.shape = str(shapeChoices[edits['attr[shape]'][0]])
+		self.orientation = edits['attr[orientation]'][0]
+		self.save()
+
+
+
 
 	#crop target from image
 	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app

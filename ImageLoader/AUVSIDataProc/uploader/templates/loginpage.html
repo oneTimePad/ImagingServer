@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <script type="text/javascript" src="{{ STATIC_URL}}js/jquery.min.js"></script>
+  <script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
+	<script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
+
+</head>
+
+<style>
+.navbar-header{
+     width: 100%;
+     display: inline-block;
+     text-align: center;
+     padding: 15px;
+     list-style: none;
+     background-color: #f2f2f2;
+     border-bottom: 1px solid #ccc;
+     border-top: 1px solid #ccc;
+     margin-left: 0px;
+
+}
+
+/* centered columns styles */
+.row-centered {
+    text-align:center;
+    vertical-align: middle;
+}
+.col-centered {
+    display:inline-block;
+    float:none;
+    /* reset the text-align */
+    text-align:left;
+    /* inline-block space fix */
+    margin-right:-4px;
+}
+
+.form-group{
+  text-align: center;
+}
+
+.navbar-brand {float:none;}
+
+</style>
+
+
+<body>
+
+<nav class="navbar navbar-defaul" role="navigation">
+  <div class="navbar-header">
+    <a class="navbar-brand" href="#">RUAutonomous Imaging System</a>
+  </div>
+
+</nav>
+
+
+
+  <div class="row row-centered">
+    <div class="col-md-12">
+    <div class="loginform">
+    <form method="post" action="{% url 'gcs-login'%}" autocomplete="on">
+      <div class = "form-group">
+        {%csrf_token%}
+      </div>
+
+      <div class="row">
+      <div class = "form-group"  >
+        <label for="loginuser"> Username</label>
+        <input type="text" class="form-control" id="loginuser" name="username" placeholder="username">
+      </div>
+    </div>
+    <div class="row">
+      <div class = "form-group">
+        <label for="loginpass"> Password </label>
+        <input type="password" class="form-control" id="loginpass" name="password" placeholder="password">
+      </div>
+    </div>
+
+     <button type="submit" class="bnt bnt-primary">Login</button>
+   </form>
+    </div>
+  </div>
+  </div>
+
+
+</body>
+
+
+</html>

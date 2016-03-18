@@ -12,9 +12,12 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import datetime
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+LOGIN_REDIRECT_URL='/gcs/viewer'
+LOGIN_URL='/gcs/login'
 WS4REDIS_HEARTBEAT = '--heartbeat--'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -26,6 +29,9 @@ SECRET_KEY = 'pzkrv55(r^g!$bdc7u4m(_(tu#$^3&&37-m9(-2w@y9k_&9di%'
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+
+AUTH_USER_MODEL = 'uploader.ImagingUser'
 
 
 WEBSOCKET_URL = '/ws/'
@@ -57,6 +63,29 @@ INSTALLED_APPS = (
     'uploader',
     'ws4redis',
 )
+'''
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+    ),
+}
+'''
+
+JWT_AUTH={
+'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds= 3600),
+'JWT_ALLOW_REFRESH':True,
+'JWT_VERIFY_EXPIRATION':True,
+}
+
+
+
+
+
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.cache.UpdateCacheMiddleware',
