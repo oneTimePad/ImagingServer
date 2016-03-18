@@ -4,7 +4,9 @@
 ###CheckList:
 
 - [X] drone side authentication
-- [ ] gui side authentication
+- [X] gui side authentication
 - [ ] tls/ssl added
-- [ ] drone login form
-- [ ] gui login form
+- [X] drone login form
+- [X] gui login form
+- [ ] more css
+- [ ] geotagging
