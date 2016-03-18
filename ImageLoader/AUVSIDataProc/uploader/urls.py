@@ -1,13 +1,14 @@
 from django.conf.urls import include, url
 from django.contrib import admin
+from django.contrib.auth.decorators import login_required
 
 from .views import *
 from rest_framework.routers import SimpleRouter
 from rest_framework_jwt.views import obtain_jwt_token,refresh_jwt_token,verify_jwt_token
 
 urlpatterns =[
-    url(r'^viewer$',Index.as_view(),name='index'),
-    url(r'^attrform$',AttributeFormCheck.as_view(),name='attrform'),
+    url(r'^gcs/viewer$',login_required(GCSViewer.as_view()),name='index'),
+    url(r'^gcs/attrform$',GCSAttributeFormCheck.as_view(),name='attrform'),
 ]
 
 droneauthentication =[
@@ -16,7 +17,13 @@ droneauthentication =[
     url(r'^drone/verify$',verify_jwt_token),
 
 ]
+
+gcsauthentication = [
+    url(r'^gcs/login$',GCSLogin.as_view()),
+]
+
 urlpatterns+=droneauthentication
+urlpatterns+=gcsauthentication
 router = SimpleRouter(trailing_slash=False)
 router.register(r'drone',DroneViewset,'drone')
 urlpatterns+=router.urls

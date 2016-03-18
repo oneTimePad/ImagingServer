@@ -7,6 +7,7 @@ from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
 from .forms import AttributeForm
 from .models import *
 from django.utils.datastructures import MultiValueDictKeyError
+from django.contrib.auth import authenticate,login,logout
 #websockets
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
@@ -16,6 +17,7 @@ from .permissions import DroneAuthentication,GCSAuthentication
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework import viewsets
+from rest_framework.views import APIView
 from rest_framework.decorators import list_route
 from .serializers import *
 from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
@@ -41,7 +43,9 @@ EXPIRATION = 8
 
 
 
-
+'''
+sends pictures to gcs
+'''
 class GCSPictureSender:
 
 	def __init__(self,timeout):
@@ -65,7 +69,9 @@ class GCSPictureSender:
 			#wait delay
 			time.sleep(self.timeout)
 
-
+'''
+used to check if drone is still connected
+'''
 class DroneConnectionCheck:
 
 	def __init__(self,id,timeout):
@@ -83,6 +89,9 @@ class DroneConnectionCheck:
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
 				break
 			time.sleep(self.timeout)
+'''
+used for drone endpoints
+'''
 class DroneViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (JSONWebTokenAuthentication,)
@@ -172,10 +181,46 @@ class DroneViewset(viewsets.ModelViewSet):
         #no info to send
 		return Response({'NOINFO':'1'})
 
+'''
+Used for logging in GCS station via session auth
+'''
+class GCSLogin(APIView,TemplateResponseMixin,ContextMixin):
+
+	template_name = 'loginpage.html'
+	content_type='text/html'
+
+	def post(self,request,format=None):
+		#log ground station in
+		username = request.POST['username']
+		password = request.POST['password']
+		user = authenticate(username=username,password=password)
+		if user is not None:
+			#if user is active log use in and return redirect
+			if user.is_active:
+				login(request,user)
+				return HttpResponse("success")
+
+		return HttpResponseForbidden()
+
+	def get(self,request):
+		return self.render_to_response(self.get_context_data())
+
+'''
+used for GCS endpoints
+'''
 class GCSViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (SessionAuthentication,)
 	permission_classes = (GCSAuthentication,)
+
+
+	@list_route(methods=['post'])
+	def logout(self,request):
+		#log user out
+		logout(request)
+		#redirect to logout page
+		return HttpResponse("success")
+
 
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):
@@ -264,7 +309,10 @@ class GCSViewset(viewsets.ModelViewSet):
 		return HttpResponseForbidden()
 
 #manual attribute form
-class AttributeFormCheck(View):
+class GCSAttributeFormCheck(APIView):
+
+	authentication_classes = (SessionAuthentication,)
+	permission_classes = (GCSAuthentication,)
 
 	def post(self,request):
 		#post data
@@ -287,7 +335,9 @@ class AttributeFormCheck(View):
 
 
 #server webpage
-class Index(View,TemplateResponseMixin,ContextMixin):
+class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
+
+
 
 	template_name = 'index.html'
 	content_type='text/html'

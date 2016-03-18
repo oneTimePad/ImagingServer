@@ -26,6 +26,7 @@ fs_targets = FileSystemStorage(location=STORAGE_Target)
 class ImagingUser(AbstractUser):
 
 	userType = models.CharField(max_length=100,default="none")
+	REQUIRED_FIELDS = ['userType']
 
 class Picture(models.Model):
 	#picture object
