@@ -1,5 +1,5 @@
 #django
-from django.http import HttpResponse
+from django.http import HttpResponse,HttpResponseForbidden
 from django.core import serializers
 from django.core.cache import cache
 from django.dispatch import *
@@ -7,7 +7,10 @@ from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
 from .forms import AttributeForm
 from .models import *
 from django.utils.datastructures import MultiValueDictKeyError
-from django.contrib.auth import authenticate,login,logout
+from django.contrib.auth import authenticate,login,logout,get_user_model
+from django.shortcuts import redirect
+from django.core.urlresolvers import reverse
+from django.contrib.auth.signals import user_logged_in
 #websockets
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
@@ -42,6 +45,22 @@ GCS_SEND_TIMEOUT = 10
 EXPIRATION = 8
 
 
+'''
+saves session for logged in gcs user
+'''
+def gcs_logged_in_handler(sender,request,user,**kwargs):
+	GCSSession.objects.get_or_create(
+		user=user,
+		session_id = request.session.session_key
+	)
+user_logged_in.connect(gcs_logged_in_handler)
+
+'''
+creates a list of the sessions of all logged in gcs users
+'''
+def gcsSessions():
+	return [ sess.session_id for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
+
 
 '''
 sends pictures to gcs
@@ -64,7 +83,7 @@ class GCSPictureSender:
 			responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
 
 			#send to gcs
-			redis_publisher = RedisPublisher(facility='viewer',broadcast=True)
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(responseData))
 			#wait delay
 			time.sleep(self.timeout)
@@ -85,7 +104,7 @@ class DroneConnectionCheck:
 				#delete looper obj
 				cache.delete("connectLoop")
 				#tell gcs drone disconnected
-				redis_publisher = RedisPublisher(facility='viewer',broadcast=True)
+				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
 				break
 			time.sleep(self.timeout)
@@ -135,7 +154,7 @@ class DroneViewset(viewsets.ModelViewSet):
             #start loop in new thread
 			_thread.start_new_thread(connectLoop.startLoop,())
             #tell gcs that drone is connected
-			redis_publisher = RedisPublisher(facility="viewer",broadcast=True)
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
 
 		try:
@@ -184,7 +203,7 @@ class DroneViewset(viewsets.ModelViewSet):
 '''
 Used for logging in GCS station via session auth
 '''
-class GCSLogin(APIView,TemplateResponseMixin,ContextMixin):
+class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 
 	template_name = 'loginpage.html'
 	content_type='text/html'
@@ -198,8 +217,9 @@ class GCSLogin(APIView,TemplateResponseMixin,ContextMixin):
 			#if user is active log use in and return redirect
 			if user.is_active:
 				login(request,user)
-				return HttpResponse("success")
-
+				#redirect to viewer page
+				return redirect(reverse('index'))
+		#failed to login
 		return HttpResponseForbidden()
 
 	def get(self,request):
@@ -218,8 +238,8 @@ class GCSViewset(viewsets.ModelViewSet):
 	def logout(self,request):
 		#log user out
 		logout(request)
-		#redirect to logout page
-		return HttpResponse("success")
+		#redirect to login page
+		return redirect(reverse('gcs-login'))
 
 
 	@list_route(methods=['post'])
@@ -344,7 +364,7 @@ class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
 
 	def get_context_data(self,**kwargs):
 		#put attrbribute form  in template context
-		context = super(Index,self).get_context_data(**kwargs)
+		context = super(GCSViewer,self).get_context_data(**kwargs)
 		context['form'] = AttributeForm
 		return context
 

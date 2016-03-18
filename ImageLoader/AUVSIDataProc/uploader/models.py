@@ -11,6 +11,8 @@ from django.db import models
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.storage import FileSystemStorage
 from django.contrib.auth.models import AbstractUser
+from django.contrib.sessions.models import Session
+from django.conf import settings
 
 #django-rest
 from rest_framework.authtoken.models import Token
@@ -27,6 +29,11 @@ class ImagingUser(AbstractUser):
 
 	userType = models.CharField(max_length=100,default="none")
 	REQUIRED_FIELDS = ['userType']
+
+class GCSSession(models.Model):
+	user = models.ForeignKey(settings.AUTH_USER_MODEL)
+	session =models.ForeignKey(Session)
+
 
 class Picture(models.Model):
 	#picture object

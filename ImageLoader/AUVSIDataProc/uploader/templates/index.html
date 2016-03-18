@@ -4,10 +4,13 @@
 <meta charset="utf-8">
 <title>Picture Viewer</title>
 <script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/spectrum.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/spectrum.css" />
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/loader.css" />
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/style.css" />
@@ -22,7 +25,7 @@
   $(function connect_websocket_pic(){
       //create websocket
       var web_socket = WS4Redis({
-      uri:"{{WEBSOCKET_URI}}viewer?subscribe-broadcast&publish-broadcast&echo",
+      uri:"{{WEBSOCKET_URI}}viewer?subscribe-session",
       //triggered when msg from server is sent
       receive_message: parseWebSkt,
       heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
@@ -100,10 +103,10 @@
     //parse json server response
     var json_response = JSON.parse(response);
     if (json_response.hasOwnProperty("disconnected")) {
-      alert("Android Device Disconnected");
+      bootbox.alert("Android Device Disconnected");
     }
     else if (json_response.hasOwnProperty("connected")) {
-      alert("Android Device Connected");
+      bootbox.alert("Android Device Connected");
     }
     else if (json_response.hasOwnProperty("type")) {
       if (loading==1) {
@@ -327,7 +330,24 @@
 </script>
 </head>
 
+
+
 <body>
+
+  <nav class="navbar navbar-defaul" role="navigation">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="#">RUAutonomous Imaging System</a>
+    </div>
+    <li class="nav-item-active">
+    <form method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+      {% csrf_token %}
+     <button type="submit" class="bnt bnt-primary">Logout</button>
+    </form>
+  </li>
+  </nav>
+
+
+
   <div id="trigger">
     <form id="trigger_on_form">
       <input id="time_interval" type="text" value="0"/>
@@ -406,7 +426,7 @@ function trigger() {
     data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
     success: function(json) {
       if (json.hasOwnProperty("failure")) {
-        alert("Invalid Time Interval")
+        bootbox.alert("Invalid Time Interval")
         return;
       }
       if (json.hasOwnProperty("nothing")) {

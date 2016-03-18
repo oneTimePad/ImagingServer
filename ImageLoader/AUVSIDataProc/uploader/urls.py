@@ -19,7 +19,7 @@ droneauthentication =[
 ]
 
 gcsauthentication = [
-    url(r'^gcs/login$',GCSLogin.as_view()),
+    url(r'^gcs/login$',GCSLogin.as_view(),name="gcs-login"),
 ]
 
 urlpatterns+=droneauthentication
