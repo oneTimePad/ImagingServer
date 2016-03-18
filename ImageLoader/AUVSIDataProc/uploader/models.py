@@ -125,8 +125,7 @@ class Target(models.Model):
 		self.save()
 
 
-
-
+	'''GEOTAGGING STUFF GOES HERE '''
 	#crop target from image
 	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app
 
