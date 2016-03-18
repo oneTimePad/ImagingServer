@@ -1,5 +1,9 @@
 # Imaging Django Webserver and imaging GUI
 
+#running
+- ```./manage loaddata uploader/fixtures/users.json```
+- ```./manage runserver 0.0.0.0:2000 ```
+
 
 ###CheckList:
 
