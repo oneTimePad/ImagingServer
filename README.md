@@ -7,7 +7,7 @@
 Always make sure you pull before you start working!
 
 ### System to-do list:
-TODO LISTS MOVED TO IMAGELOADER AND CAMERATRIGGER FOLDERS
+TODO LISTS MOVED TO IMAGINGSERVER AND CAMERATRIGGER FOLDERS
 	
 	
 
