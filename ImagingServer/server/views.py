@@ -155,7 +155,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			_thread.start_new_thread(connectLoop.startLoop,())
             #tell gcs that drone is connected
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected','status':dataDict['status']})))
 
 		try:
             #attempt to make picture model entry

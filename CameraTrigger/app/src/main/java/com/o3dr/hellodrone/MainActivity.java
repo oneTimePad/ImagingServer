@@ -776,6 +776,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         //we are asking to trigger
                         requestData.put("id", android_id);
                         requestData.put("timeCache", getTime());
+                        requestData.put("status",triggerOn.get()+"");
                         //attempt to check for an image and send it
                         try{
                             Data imageData;
