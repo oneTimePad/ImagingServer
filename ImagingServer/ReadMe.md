@@ -25,3 +25,4 @@
 - [X] gui login form
 - [ ] more css
 - [ ] geotagging
+- [ ] deploy to apache2/goes along with ssl
