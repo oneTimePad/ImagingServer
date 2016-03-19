@@ -17,6 +17,7 @@
 
 ###CheckList:
 
+- [ ] dumping data in competition format
 - [X] drone side authentication
 - [X] gui side authentication
 - [ ] tls/ssl added
