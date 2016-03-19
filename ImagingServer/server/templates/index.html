@@ -5,15 +5,17 @@
 <title>Picture Viewer</title>
 <script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
 <script type="text/javascript" src="{{ STATIC_URL}}js/jquery.min.js"></script>
-<script type="text/javascript" src="{{STATIC_URL}}js/spectrum.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/spectrum.js"></script>
+
 
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/spectrum.css" />
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/loader.css" />
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/style.css" />
+
 
 <script>
   curr = 0; //the id of the picture/target in focus
@@ -43,11 +45,15 @@
       var inputs = $("#form").find(":input");
       //array of user inputs
       var input_array = {};
+
       //put each one in an array
       inputs.each(function() {
         if (this.name=="color" || this.name=="lcolor") {
-          if (this.value=="") {
+          if (this.value=="" ) {
             input_array[this.name] = "0, 0, 0";
+          }
+          else if(this.value.indexOf("(") == -1){
+            input_array[this.name] = this.value;
           }
           else {
             input_array[this.name] = this.value.substring(this.value.indexOf("(")+1,this.value.indexOf(")"));
@@ -57,14 +63,22 @@
           input_array[this.name] = this.value;
         }
       })
+
         //if there attributes, send them
       if(input_array) {
         if (picview) {
+
+          input_array['pk'] = curr;
+
+          for(var key in crop){
+            input_array[key] = crop[key];
+          }
+
           //creating a new target
           $.ajax({
-            url: "{% url 'attrform'%}",
+            url: "{% url 'gcs-targetCreate'%}",
             type: "POST",
-            data: {"pk":curr,"attr":input_array,"crop":crop},
+            data: input_array,
             success: function(json){
               //adding the target image
               var div = document.createElement("div");
@@ -85,10 +99,11 @@
         }
         else {
           //editing the shown target
+          input_array['pk'] = curr;
           $.ajax({
             url: "{% url 'gcs-targetEdit'%}",
             type: "POST",
-            data: {"pk":curr,"attr":input_array},
+            data: input_array,
             success: function(json){
               showTargetData($("#"+curr)[0]);
             }
@@ -115,15 +130,12 @@
       }
       if (json_response["type"]== "picture") {
 
-       Promise.resolve().then(function(){
-          //var picture = JSON.parse(json_response.image.substring(json_response.image.indexOf("[")+1,json_response.image.indexOf("]")))
           //get image data
           var image_data = json_response.image
           //image src
           var picture = json_response.image['fileName'];
           //image id
           var id = json_response['pk']
-          console.log(picture)
           var div = document.createElement("div");
           div.className = "thumb-div";
           var img = document.createElement("img");
@@ -140,7 +152,7 @@
 
           $("#pictures").append(div);
 
-        });
+
 
       }
     }
@@ -295,7 +307,8 @@
       else {
         corner[1] = p2[1];
       }
-      crop.corner = corner;
+      crop.x = corner[0];
+      crop.y = corner[1]
       crop.width = boxW;
       crop.height = boxH;
       crop.scaleWidth = document.focusedImage.width;
@@ -382,6 +395,7 @@
 </html>
 
 <script>
+
 $(document).ready(function(){
   //Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
   $("#palette").spectrum({

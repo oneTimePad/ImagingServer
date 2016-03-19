@@ -1,6 +1,6 @@
 [
 {
-    "model": "uploader.imaginguser",
+    "model": "server.imaginguser",
     "pk": 1,
     "fields": {
         "password": "pbkdf2_sha256$24000$x8Uo8vdiE47i$MchFhfF0Oee2W+KFIrsvs1KxDLuLRr1l7dCkHSl3yRQ=",
@@ -19,7 +19,7 @@
     }
 },
 {
-    "model": "uploader.imaginguser",
+    "model": "server.imaginguser",
     "pk": 2,
     "fields": {
         "password": "pbkdf2_sha256$24000$yz9zvzTx5xSp$3uim7ZJiDE0stUVJZcT8nMPmWT2zxOSePNfsD5MMgVU=",

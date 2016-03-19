@@ -12,14 +12,14 @@ class PictureSerializer(serializers.ModelSerializer):
         fields = ('azimuth','pitch','roll','lat','lon','alt','fileName')
 
     def deserialize(self):
-        
-        return Picture(**self.validated_data)
+
+        return Picture.objects.create(**self.validated_data)
 
 class TargetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Target
-        fields = ('color','lcolor','orientation','shape','letter','lat','lon')
+        fields = ('picture','color','lcolor','orientation','shape','letter','lat','lon')
 
     def deserialize(self):
-        return Target(**self.validated_data)
+        return Target.objects.create(**self.validated_data)

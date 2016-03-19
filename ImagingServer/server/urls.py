@@ -7,8 +7,8 @@ from rest_framework.routers import SimpleRouter
 from rest_framework_jwt.views import obtain_jwt_token,refresh_jwt_token,verify_jwt_token
 
 urlpatterns =[
+    url(r'^$',login_required(GCSViewer.as_view()),name='approot'),
     url(r'^gcs/viewer$',login_required(GCSViewer.as_view()),name='index'),
-    url(r'^gcs/attrform$',GCSAttributeFormCheck.as_view(),name='attrform'),
 ]
 
 droneauthentication =[

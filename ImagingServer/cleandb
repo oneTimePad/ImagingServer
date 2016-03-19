@@ -1,7 +1,8 @@
 #!/bin/sh
 rm db.sqlite3
-rm -rf uploader/migrations/*
+rm -rf server/migrations/*
 ./manage.py flush
-./manage.py makemigrations uploader
+./manage.py makemigrations server
 ./manage.py migrate
+./manage.py loaddata server/fixtures/users.json
 sudo rm -rf /var/www/html/*

@@ -269,19 +269,6 @@ class GCSViewset(viewsets.ModelViewSet):
 		return Response({'Success':'Success'})
 
 	@list_route(methods=['post'])
-	def getTarget(self,request,pk=None):
-		try:
-			picture = Picture.objects.get(pk=request.data['pk'])
-		except Picture.DoesNotExist:
-			return HttpResponseForbidden()
-		targ = picture.target_set.all()
-		#for dictionary of targets
-		i = 0
-		targetDict = {'target'+str((lambda j :j+1)(i)): (lambda x:{'pk':x.pk,'image':''.join(TARGET_STORAGE).join('Target').join(str(str(x.pk).zfill(4))).join('.jpeg')})(t) for t in targ }
-        #return targets if there are any
-		response = (Response(targetDict) if len(targetDict)!=0 else Response({'Notargets':'0'}))
-		return response
-	@list_route(methods=['post'])
 	def getTargetData(self,request,pk=None):
 		try:
             #return target data dictionary
@@ -290,15 +277,32 @@ class GCSViewset(viewsets.ModelViewSet):
 		except Target.DoesNotExist:
 			return HttpResponseForbidden()
 
+
+	@list_route(methods=['post'])
+	def targetCreate(self,request,pk=None):
+		try:
+			picture = Picture.objects.get(pk=request.data['pk'])
+		except Picture.DoesNotExist:
+			return HttpResponseForbidden()
+
+		target = TargetSerializer(data={key : request.data[key] for key in ('color','lcolor','orientation','shape','letter')})
+		if not target.is_valid():
+			return HttpResponseForbidden()
+		sizeData = tuple( request.data[key] for key in ('x','y','scaleWidth','width','height'))
+		target = target.deserialize()
+		target.crop(size_data=sizeData,parent_pic=picture)
+
+		return Response({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'})
+
 	@list_route(methods=['post'])
 	def targetEdit(self,request,pk=None):
 		try:
             #edit target with new values
-			target = Targets.objects.get(pk=request.data['pk'][0])
+			target = Target.objects.get(pk=request.data['pk'])
 			target.edit(request.data)
-			return HttpResponseForbidden('Success')
+			return HttpResponse('Success')
 		except Target.DoesNotExist:
-			pass
+			return HttpResponseForbidden()
 		return HttpResponseForbidden()
 
 	@list_route(methods=['post'])
@@ -327,31 +331,6 @@ class GCSViewset(viewsets.ModelViewSet):
 		except Picture.DoesNotExist:
 			pass
 		return HttpResponseForbidden()
-
-#manual attribute form
-class GCSAttributeFormCheck(APIView):
-
-	authentication_classes = (SessionAuthentication,)
-	permission_classes = (GCSAuthentication,)
-
-	def post(self,request):
-		#post data
-		post_vars= self.request.POST
-		#convert to dict
-		post_vars=dict(post_vars)
-		#get parent image pk
-		parent_image = post_vars['pk']
-		#get parent pic from db
-		parent_pic = Picture.objects.get(pk=parent_image[0])
-		#create target object
-		target = Target.objects.create(picture=parent_pic)
-		#package crop data to tuple
-		size_data=(post_vars['crop[corner][]'][0],post_vars['crop[corner][]'][1],post_vars['crop[height]'],post_vars['crop[width]'],post_vars['crop[scaleWidth]'])
-		#crop target
-		target.crop(size_data=size_data,parent_pic=parent_pic)
-		target.edit(post_vars)
-
-		return HttpResponse(simplejson.dumps({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'}),'application/json')
 
 
 #server webpage
