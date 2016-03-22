@@ -68,6 +68,7 @@ class GCSPictureSender:
 
 	def __init__(self,timeout):
 		self.timeout = timeout
+		self.latestpk = -1
 
 	def startLoop(self):
 		while True:
@@ -77,13 +78,15 @@ class GCSPictureSender:
 			except Picture.DoesNotExist:
 				continue
 			#serialize pic
-			serPic = PictureSerializer(picture)
-			#picture info
-			responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
+			if (picture.pk!=self.latestpk):
+				serPic = PictureSerializer(picture)
+				#picture info
+				responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
 
-			#send to gcs
-			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(responseData))
+				#send to gcs
+				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+				redis_publisher.publish_message(RedisMessage(responseData))
+				self.latestpk = picture.pk
 			#wait delay
 			time.sleep(self.timeout)
 
