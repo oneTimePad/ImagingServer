@@ -112,6 +112,21 @@ class DroneConnectionCheck:
 				break
 			time.sleep(self.timeout)
 '''
+determines if still triggering
+'''
+class DroneTriggerCheck:
+	def __init__(self,id,timeout):
+		self.id = id
+		self.timeout = timeout
+	def startLoop(self):
+		while True:
+			if not cache.has_key(self.id+'pic'):
+				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'stoptrig':'stoptrig'})))
+				break
+			time.sleep(self.timeout)
+
+'''
 used for drone endpoints
 '''
 class DroneViewset(viewsets.ModelViewSet):
@@ -163,8 +178,16 @@ class DroneViewset(viewsets.ModelViewSet):
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
+			if not cache.has_key('triggerLoop'):
+				triggerLoop = DroneTriggerCheck(androidId,cache.get('cachedtime')+2)
+				cache.set('triggerLoop',triggerLoop)
+				_thread.start_new_thread(triggerLoop.startLoop,())
+			#set cache to say that just send pic
+			if cache.has_key(androidId+"pic"):
+				cache.delete(androidId+"pic")
+			# set cache timeout to pic rate plus 1...allow for delay
+			cache.set(androidId+"pic","picturesent",cache.get('cachedtime')+1)
             #form image dict
-
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt')}
 			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
 
@@ -195,7 +218,9 @@ class DroneViewset(viewsets.ModelViewSet):
 				if cache.has_key('time'):
                     #send time to trigger
 					responseData = {'time':cache.get('time')}
+					cache.set("cachedtime",cache.get('time'))
 					cache.delete('time')
+
 					return Response(responseData)
             #stop triggering
 			elif cache.get('trigger') == 0:
