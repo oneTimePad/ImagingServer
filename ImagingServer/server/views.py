@@ -43,6 +43,7 @@ PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
 GCS_SEND_TIMEOUT = 10
 EXPIRATION = 8
+lock = None
 
 '''
 saves session for logged in gcs user
@@ -119,7 +120,18 @@ class DroneTriggerCheck:
 		self.id = id
 		self.timeout = timeout
 	def startLoop(self):
+		global lock
 		while True:
+			#lock to determine if trigger was stopped by user
+			lock.acquire()
+			#if trigger was stopped by user
+			if cache.get("triggercheckcond") == 0:
+				lock.release()
+				#just end
+				cache.delete("lock")
+				break
+			lock.release()
+			#if triggering mysteriously stopped
 			if not cache.has_key(self.id+'pic'):
 				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'stoptrig':'stoptrig'})))
@@ -140,6 +152,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		global EXPIRATION
 		global DRONE_DISCONNECT_TIMEOUT
 		global GCS_SEND_TIMEOUT
+		global lock
 
 		#fetch phone client information
 		dataDict = {}
@@ -151,6 +164,13 @@ class DroneViewset(viewsets.ModelViewSet):
 
 			dataDict =  simplejson.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
 			androidId = dataDict['id']
+
+		#if triggering check was killed last request
+		if not cache.has_key("lock"):
+			#if the trigger loop object still exsits
+			if cache.has_key("triggerLoop"):
+				#delete it
+				cache.delete("triggerLoop")
 
 
 		requestTime = dataDict['timeCache']
@@ -173,14 +193,21 @@ class DroneViewset(viewsets.ModelViewSet):
 			_thread.start_new_thread(connectLoop.startLoop,())
             #tell gcs that drone is connected
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected','status':dataDict['status']})))
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
 
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
 			if not cache.has_key('triggerLoop'):
+				#allocate lock
+				lock = _thread.allocate_lock()
+				#create trigger checker...just a procaution
 				triggerLoop = DroneTriggerCheck(androidId,cache.get('cachedtime')+2)
 				cache.set('triggerLoop',triggerLoop)
+				#tells the trigger check if it should continue
+				cache.set('triggercheckcond',1)
+				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'starttrig':'starttrig'})))
 				_thread.start_new_thread(triggerLoop.startLoop,())
 			#set cache to say that just send pic
 			if cache.has_key(androidId+"pic"):
@@ -224,6 +251,11 @@ class DroneViewset(viewsets.ModelViewSet):
 					return Response(responseData)
             #stop triggering
 			elif cache.get('trigger') == 0:
+				if lock:
+					lock.acquire()
+					#triggering was stopped by user, so just stopped checking
+					cache.set("triggercheckcond",0)
+					lock.release()
 				return Response({'STOP':'1'})
         #no info to send
 		return Response({'NOINFO':'1'})
