@@ -365,27 +365,24 @@
     </div>
 
     <ul class ="nav navbar-nav">
-    <form class="navbar-form" method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+      <form class="navbar-form" method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
 
       {% csrf_token %}
 
-     <button type="submit" class="btn btn-primary">Logout</button>
-    </form>
+      <button type="submit" class="btn btn-primary">Logout</button>
+      </form>
       <form class="navbar-form" id="trigger_on_form">
         <div class="form-group">
           <label for="time_interval">Trigger Time</label>
-        <input id="time_interval" type="text" value="0"/>
-      </div>
+          <input id="time_interval" type="text" value="0"/>
+        </div>
         <button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-
       <form/>
       <button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
     </ul>
-
   </nav>
 
   <div>
-
     <div class="col-md-4">
       <div id="form">
         {%csrf_token%}
@@ -400,7 +397,8 @@
           </fieldset>
           {{form.as_p}}
           <button type="button"  class="btn btn-primary" id="submit"/>Submit</button>
-      </form>
+        </form>
+      </div>
     </div>
 
     <div class="col-md-4">
@@ -414,14 +412,12 @@
       <div class="row">
         <div id="data">
           <h3 id="focus-type">Picture Data</h3>
-          <table id="focus-data">
-          </table>
+          <table id="focus-data"></table>
         </div>
       </div>
     </div>
 
     <div class="col-md-4">
-
       <div class="col-md-8">
         <div id="pictures"></div>
       </div>
@@ -430,11 +426,6 @@
       </div>
 
     </div>
-
-
-
-
-
 
   </div>
 
