@@ -124,12 +124,12 @@
     else if (json_response.hasOwnProperty("connected")) {
       bootbox.alert("Android Device Connected");
     }
-    else if (json_response.hasOwnProperty("triggering")){
+    else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
       $("#trigger_on").html("Stop Triggering");
       document.getElementById("trigger_on").value = 0;
     }
 
-    else if (json_response.hasOwnProperty("triggering")){
+    else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false"){
       $("#trigger_on").html("Start Triggering");
       document.getElementById("trigger_on").value = 1;
     }

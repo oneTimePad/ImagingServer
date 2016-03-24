@@ -59,8 +59,7 @@
             android:layout_toRightOf="@+id/remote"
             android:minWidth="40dp"
             android:nestedScrollingEnabled="true"
-            android:maxLength="20"
-            android:text="GCS IP" />
+            android:maxLength="20" />
 
 
 
