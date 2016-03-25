@@ -30,6 +30,7 @@ import time
 import _thread
 import json as simplejson
 from decimal import Decimal
+import csv
 #debug
 import pdb
 
@@ -168,7 +169,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
-
+			
 			if dataDict['triggering'] == 'true':
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'triggering':'true'})))
@@ -353,6 +354,17 @@ class GCSViewset(viewsets.ModelViewSet):
 			pass
 		return HttpResponseForbidden()
 
+	@list_route(methods=['post'])
+	def dumpTargetData(self,request,pk=None):
+		response = HttpResponse(content_type='text/csv')
+		response['Content-Disposition'] = 'attachment; filename="RU.txt"'
+		targets = Target.objects.all()
+		writer = csv.writer(response,delimiter='\t')
+		count = 1
+		for t in targets:
+			writer.writerow([count, 'STD', t.lat, t.lon, t.orientation, t.shape, t.color, t.letter, t.lcolor, t.picture.url])
+			count+=1
+		return response
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
