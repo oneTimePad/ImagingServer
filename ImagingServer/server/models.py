@@ -1,4 +1,4 @@
-\#general
+#general
 from PIL import Image
 from matplotlib import cm
 from io import BytesIO
