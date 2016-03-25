@@ -171,60 +171,57 @@
   }
 
   window.onload = function() {
-    //making the grid and viewer panels the height of the window
+    //making the panels the height of the window (excluding the navbar)
     //if the window height changes, the page has to be reloaded
-    var height = window.innerHeight - $("#trigger").height() - 30;
-    $("#left-panel").css("max-height", height + "px");
-    $("#pictures").css("max-height", height + "px");
-    $("#targets").css("max-height", height + "px");
-    var width = Math.trunc($(window).width());
-    $("#left-panel").css("max-width", "500px");
-    $("#pictures").css("max-width", (width - 500 - 170 - 100) + "px");
-    $("#targets").css("max-width", "170px");
+    setDimensions();
     //event listener for entire window (for keys)
-    document.addEventListener("keyup", function(key) {
-      var space = 32;
-      var leftarrow = 37;
-      var rightarrow = 39;
-      var del = 46;
-      switch (key.keyCode) {
-        case leftarrow:
-          var previmage = $("#"+curr).parent().prev().children()[0];
-          if (previmage!=null) {
-            setFocusedImage(previmage);
-          }
-          break;
-        case rightarrow:
-          var nextimage = $("#"+curr).parent().next().children()[0];
-          if (nextimage!=null) {
-            setFocusedImage(nextimage);
-          }
-          break;
-        case del:
+    // document.addEventListener("keyup", function(key) {
+    //   var space = 32;
+    //   var leftarrow = 37;
+    //   var rightarrow = 39;
+    //   var del = 46;
+    //   switch (key.keyCode) {
+    //     case leftarrow:
+    //       //code for requesting next image
+    //       break;
+    //     case rightarrow:
+    //       //code for requesting previous image
+    //       break;
+        // case del:
           //ajax request to server to delete image with curr as the picture/target object pk
-          if (picview) {
-            $.ajax({
-              url:"{% url 'gcs-deletePicture'%}",
-              type:"POST",
-              data: {"pk":curr},
-            })
-          }
-          else {
-            $.ajax({
-              url:"{% url 'gcs-deleteTarget'%}",
-              type:"POST",
-              data: {"pk":curr},
-            })
-          }
+          // we don't really need to delete images anymore...might need to delete targets
+          // if (picview) {
+          //   $.ajax({
+          //     url:"{% url 'gcs-deletePicture'%}",
+          //     type:"POST",
+          //     data: {"pk":curr},
+          //   })
+          // }
+          // else {
+          //   $.ajax({
+          //     url:"{% url 'gcs-deleteTarget'%}",
+          //     type:"POST",
+          //     data: {"pk":curr},
+          //   })
+          // }
           //document.focusedImage.src = 0;
-          var nextimage = $("#"+curr).parent().next().children()[0];
-          $("#"+curr).parent().remove();
-          if (nextimage!=null) {
-            setFocusedImage(nextimage);
-          }
-          break;
-      }
-    });
+          // var nextimage = $("#"+curr).parent().next().children()[0];
+          // $("#"+curr).parent().remove();
+          // if (nextimage!=null) {
+          //   setFocusedImage(nextimage);
+          // }
+          // break;
+    //   }
+    // });
+  }
+
+  function setDimensions() {
+    var height = window.innerHeight - $("#navbar").height();
+    $("#left-panel").css("max-height", height + "px");
+    $("#picture").css("max-height", height + "px");
+    $("#targets").css("max-height", height + "px");
+    var formheight = $("#form").height();
+    $("#data").css("max-height", height-formheight + "px");
   }
 
   //set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
@@ -256,7 +253,6 @@
       $("#focus-type").text("Target Data");
       showTargetData(image);
     }
-
   }
 
   function showTargetData(image) {
@@ -327,8 +323,6 @@
     }
     //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
     canvas.addEventListener("mousedown", function setP1(event) {
-      //allows you to find the height and width by imagining a rectangle around it
-      //get bounding selector parameters
       p1 = [event.layerX, event.layerY];
       cropinit = true;
     });
@@ -355,90 +349,26 @@
 </script>
 </head>
 
-
-
 <body>
-
-  <nav class="navbar navbar-default" role="navigation">
-    <div class="navbar-header">
-      <a class="navbar-brand" href="#">RUAutonomous Imaging System</a>
-    </div>
-
-    <ul class ="nav navbar-nav">
-      <form class="navbar-form" method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-
-      {% csrf_token %}
-
-      <button type="submit" class="btn btn-primary">Logout</button>
-      </form>
-      <form class="navbar-form" id="trigger_on_form">
-        <div class="form-group">
-          <label for="time_interval">Trigger Time</label>
-          <input id="time_interval" type="text" value="0"/>
-        </div>
+  <nav id="navbar">
+    <div class="title">RU Autonomous</div>
+    <div class="form">
+      <form>
+        <label for="time_interval">Trigger Time</label>
+        <input id="time_interval" type="text" value="0"/>
         <button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
         <button onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
-      <form/>
-      <button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
-    </ul>
+        <button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
+      </form>
+      <form method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Logout</button>
+      </form>
+    </div>
   </nav>
-
-  <div>
-    <div class="col-md-4">
-      <div id="form">
-        {%csrf_token%}
-        <form id="attr_form">
-          <fieldset>
-            <label for="palette">Background Color</label>
-            <input name="color" type="text" id="palette"/>
-          </fieldset>
-          <fieldset>
-            <label for="lpalette">Letter Color</label>
-            <input name="lcolor" type="text" id="lpalette"/>
-          </fieldset>
-          {{form.as_p}}
-          <button type="button"  class="btn btn-primary" id="submit"/>Submit</button>
-        </form>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="row">
-        <div id="container">
-          <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
-          <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
-        </div>
-      </div>
-
-      <div class="row">
-        <div id="data">
-          <h3 id="focus-type">Picture Data</h3>
-          <table id="focus-data"></table>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="col-md-8">
-        <div id="pictures"></div>
-      </div>
-      <div class="col-md-4">
-        <div id="targets"></div>
-      </div>
-
-    </div>
-
-  </div>
-
-
-<!--
   <div id="left-panel">
-    <div id="container">
-      <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
-      <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
-    </div>
     <div id="form">
-      {%csrf_token%}
+      {% csrf_token %}
       <form id="attr_form">
         <fieldset>
           <label for="palette">Background Color</label>
@@ -449,20 +379,24 @@
           <input name="lcolor" type="text" id="lpalette"/>
         </fieldset>
         {{form.as_p}}
-        <button type="button"  class="btn btn-primary" id="submit"/>Submit</button>
+        <button type="button" class="btn btn-primary" id="submit"/>Submit</button>
       </form>
     </div>
     <div id="data">
       <h3 id="focus-type">Picture Data</h3>
-      <table id="focus-data">
-
-      </table>
+      <table id="focus-data"></table>
     </div>
   </div>
-  <div id="pictures"></div>
+  <div id="picture">
+    <div id="container">
+      <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
+      <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
+    </div>
+  </div>
   <div id="targets"></div>
--->
 </body>
+
+
 </html>
 
 <script>

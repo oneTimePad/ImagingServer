@@ -356,7 +356,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
-		response = HttpResponse(content_type='text/csv')
+		response = HttpResponse(content_type='application/octet-stream')
 		response['Content-Disposition'] = 'attachment; filename=RU.txt'
 		targets = Target.objects.all()
 		writer = csv.writer(response,delimiter='\t')

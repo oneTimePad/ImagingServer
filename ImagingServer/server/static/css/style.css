@@ -2,9 +2,7 @@ html{
   font-family: "Helvetica", sans-serif;
   -ms-text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
-}
-body {
-  margin: 5px;
+  margin:0;
 }
 table {
   border-collapse: collapse;
@@ -16,51 +14,108 @@ td {
 img {
   vertical-align: middle;
 }
+nav {
+  height:100px;
+}
+nav .title {
+  display:inline;
+  float:left;
+}
+nav .form {
+  display:inline;
+  float:right;
+}
+nav form {
+  display:inline-block;
+}
+/*set a max height for the following with JS*/
+#left-panel {
+  max-width:15%;
+  display:inline-block;
+  float:left;
+}
+#picture {
+  max-width:70%;
+}
+#targets {
+  max-width:15%;
+  display: inline-block;
+  float: left;
+  overflow-y:scroll;
+}
+
+#form {
+  display:inline-block;
+  float:left;
+  margin:5px;
+}
+#data {
+  display:inline-block;
+  float:left;
+  margin:5px;
+  overflow-y:scroll;
+}
+
+#focusedImage {
+  max-width:100%;
+  max-height:100%;
+  height:auto;
+  margin:5px;
+}
+
 .thumb-div {
   display: inline-block;
-  margin: 1px;
+  margin: 2px;
 }
 .thumbnail {
   max-width: 150px;
   max-height: 200px;
   height: auto;
 }
-#left-panel {        
-    background-color: transparent;
-    display: inline-block;
-    float:left;
-    margin:10px;
-}
-#focused {
-  max-width:400px;
-  max-height:400px;
-  height:auto;
-}
-#pictures {
+
+.btn {
   display: inline-block;
-  float:left;
-  overflow-y:scroll;
-  margin:10px;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1.42857143;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  -ms-touch-action: manipulation;
+      touch-action: manipulation;
+  cursor: pointer;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
 }
-#targets {
-  display: inline-block;
-  float: left;
-  overflow-y:scroll;
-  margin:10px;
+.btn-primary {
+  color:#fff;
+  background-color: #337ab7;
+  border-color: #2e6da4;
 }
-#focused {
-  max-width: 400px;
-  height: auto;
+.btn-primary:focus,
+.btn-primary.focus {
+  background-color: #286090;
+  border-color: #122b40;
 }
-#form {
-  max-width:50%;
-  display:inline-block;
-  float:left;
-  margin:5px;
+.btn-primary:active,
+.btn-primary.active,
+.btn-primary:hover {
+  background-color: #286090;
+  border-color: #204d74;
 }
-#data {
-  max-width:50%;
-  display:inline-block;
-  float:left;
-  margin:5px;
+.btn-primary:active:hover,
+.btn-primary.active:hover,
+.btn-primary:active:focus,
+.btn-primary.active:focus,
+.btn-primary:active.focus,
+.btn-primary.active.focus {
+  background-color: #204d74;
+  border-color: #122b40;
 }
