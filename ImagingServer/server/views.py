@@ -169,7 +169,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
-
+			
 			if dataDict['triggering'] == 'true':
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'triggering':'true'})))
