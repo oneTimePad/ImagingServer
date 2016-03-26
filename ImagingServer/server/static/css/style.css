@@ -36,6 +36,8 @@ nav form {
 }
 #picture {
   max-width:70%;
+  display:inline-block;
+  float:left;
 }
 #targets {
   max-width:15%;
@@ -56,6 +58,11 @@ nav form {
   overflow-y:scroll;
 }
 
+#container {
+  max-width:100%;
+  max-height:100%;
+  overflow:hidden;
+}
 #focusedImage {
   max-width:100%;
   max-height:100%;
