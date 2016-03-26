@@ -23,6 +23,69 @@
   loading = 1;
   img_properties = {}; //now using an object as a map since the images are not sent down in order
   crop = {};
+  NUM_FETCH = 3;
+  image_cache = []; // caches the image strings
+
+  //redefine new type of array
+  //returns next image
+  Array.prototype.next = function(){
+    //if there is no next image
+    if(this.current+1 == this.length){
+      //request NUM_FETCH more and set new array
+      forwardPicture();
+      return;
+    }
+    //if next image is a past image (not in the array)
+    else if(this.current+1<0){
+        //update current
+        this.current++;
+        //fetch it
+        reversePicture(++this.reverseFetch);
+        return;
+
+
+    }
+    //if next image is in the array
+    else if(this.current+1>=0){
+      //return next image
+        setFocusedImage(this[++this.current]);
+        return;
+    }
+  }
+  //returns previous image
+  Array.prototype.prev = function(){
+    //if the prev image is the first one of out the array
+    if(this.current-1 == -1){
+        //update
+        this.current--;
+        //this is the first image we don't have in the django user session stack
+        this.reverseval = this.length;
+        //ask for that image
+        reversePicture(this.reverseval);
+        return;
+    }
+    //if the prev image is not in the array
+    else if(this.current-1 < 0){
+        //update
+        this.current--;
+        //move back in user session stack
+        this.reverseval++;
+        //ask for the image
+        reversePicture(this.reverseval);
+        return;
+    }
+    //else if the prev image is in the array
+    else if(this.current-1 >=0){
+      //we have it, return it
+        setFocusedImage(this[--this.current]);
+        return;
+    }
+  }
+  Array.prototype.curr = function(){
+    setFocusedImage(this[this.current]);
+  }
+  //set current index to 0
+  Array.prototype.current = 0;
 
   $(function connect_websocket_pic(){
       //create websocket
@@ -170,49 +233,93 @@
     }
   }
 
+
+
+  function forwardPicture(){
+        $.ajax({
+          url:"{% url 'gcs-forwardPicture'%}",
+          type: "POST",
+          data: {'numPics': NUM_FETCH},
+          success: function(response){
+            image_cache = new Array();
+            for(var i=0;i<response.length;i++){
+                  image_cache[i] = response[i];
+            }
+            setFocusedImage(image_cache[0]);
+        }
+      });
+    }
+
+
+
+  function reversePicture(index){
+    $.ajax({
+      url:"{% url 'gcs-reversePicture'%}",
+      type: "POST",
+      data: {'curPic': index},
+      success: function(response){
+        setFocusedImage(response);
+    }
+  });
+
+  }
+
+
   window.onload = function() {
     //making the panels the height of the window (excluding the navbar)
     //if the window height changes, the page has to be reloaded
     setDimensions();
+    if(curr == 0){
+      forwardPicture();
+    }
+    else{
+      image_cache.curr();
+    }
     //event listener for entire window (for keys)
-    // document.addEventListener("keyup", function(key) {
-    //   var space = 32;
-    //   var leftarrow = 37;
-    //   var rightarrow = 39;
-    //   var del = 46;
-    //   switch (key.keyCode) {
-    //     case leftarrow:
-    //       //code for requesting next image
-    //       break;
-    //     case rightarrow:
-    //       //code for requesting previous image
-    //       break;
-        // case del:
+     document.addEventListener("keyup", function(key) {
+       var space = 32;
+       var leftarrow = 37;
+       var rightarrow = 39;
+       var del = 46;
+
+       switch (key.keyCode) {
+         case leftarrow:
+           //code for requesting next image
+           //asynchronously ask for next image and add it
+           //since we might have to fetch it
+           image_cache.prev();
+           break;
+         case rightarrow:
+            //asynchronously ask for next image since
+            image_cache.next();
+           //code for requesting previous image
+            break;
+         case del:
           //ajax request to server to delete image with curr as the picture/target object pk
           // we don't really need to delete images anymore...might need to delete targets
-          // if (picview) {
-          //   $.ajax({
-          //     url:"{% url 'gcs-deletePicture'%}",
-          //     type:"POST",
-          //     data: {"pk":curr},
-          //   })
-          // }
-          // else {
-          //   $.ajax({
-          //     url:"{% url 'gcs-deleteTarget'%}",
-          //     type:"POST",
-          //     data: {"pk":curr},
-          //   })
-          // }
-          //document.focusedImage.src = 0;
-          // var nextimage = $("#"+curr).parent().next().children()[0];
-          // $("#"+curr).parent().remove();
-          // if (nextimage!=null) {
-          //   setFocusedImage(nextimage);
-          // }
-          // break;
-    //   }
-    // });
+           if (picview) {
+             $.ajax({
+               url:"{% url 'gcs-deletePicture'%}",
+               type:"POST",
+               data: {"pk":curr},
+             })
+           }
+           else {
+             $.ajax({
+               url:"{% url 'gcs-deleteTarget'%}",
+               type:"POST",
+               data: {"pk":curr},
+             })
+           }
+          document.focusedImage.src = 0;
+           var nextimage = $("#"+curr).parent().next().children()[0];
+           $("#"+curr).parent().remove();
+           if (nextimage!=null) {
+             setFocusedImage(nextimage);
+           }
+           break;
+       }
+     });
   }
 
   function setDimensions() {
@@ -227,14 +334,17 @@
   //set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
   function setFocusedImage(image) {
     if (picview) {
-      document.focusedImage.src=image.src;
+      curr = parseInt(image['pk']);
+      image_data = image["image"];
+      document.focusedImage.src=image_data['fileName'];
+      document.focusedImage.width =200;
+      document.focusedImage.height = 200;
       //document.focusedImage.style.width = focusedwidth+"px";
       //document.focusedImage.style.height = "auto";
-      curr=parseInt(image.id);
       canvasinit();//to resize the canvas and start a new crop
       //getting targets using the pk of the current image
       $("#focus-type").text("Picture Data");
-      pic_curr_props = img_properties[image.id];//using the string id to access the data in the map
+      pic_curr_props = image_data;//using the string id to access the data in the map
       $("#focus-data").empty()
         .append("<tr><td>Latitude</td><td>"+pic_curr_props.lat+"</td></tr>")
         .append("<tr><td>Longitude</td><td>"+pic_curr_props.lon+"</td></tr>")
@@ -387,6 +497,8 @@
       <table id="focus-data"></table>
     </div>
   </div>
+
+
   <div id="picture">
     <div id="container">
       <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>

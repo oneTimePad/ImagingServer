@@ -31,6 +31,8 @@ import _thread
 import json as simplejson
 from decimal import Decimal
 import csv
+import pika
+from django.db import transaction
 #debug
 import pdb
 
@@ -45,6 +47,10 @@ DRONE_DISCONNECT_TIMEOUT = 20
 GCS_SEND_TIMEOUT = 10
 EXPIRATION = 8
 lock = None
+connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
+channel = connection.channel()
+channel.queue_delete(queue='pictures')
+connection.close()
 
 '''
 saves session for logged in gcs user
@@ -54,16 +60,20 @@ def gcs_logged_in_handler(sender,request,user,**kwargs):
 		user=user,
 		session_id = request.session.session_key
 	)
+	if user.userType == 'gcs':
+		request.session['picstack'] = []
+
 user_logged_in.connect(gcs_logged_in_handler)
 
 '''
-creates a list of the sessions of all logged in gcs users
 '''
 def gcsSessions():
 	return [ sess.session_id for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
 
 '''
 sends pictures to gcs
+'''
+
 '''
 class GCSPictureSender:
 
@@ -91,6 +101,9 @@ class GCSPictureSender:
 				self.latestpk = picture.pk
 			#wait delay
 			time.sleep(self.timeout)
+
+'''
+
 
 
 '''
@@ -129,7 +142,6 @@ class DroneViewset(viewsets.ModelViewSet):
 		global EXPIRATION
 		global DRONE_DISCONNECT_TIMEOUT
 		global GCS_SEND_TIMEOUT
-		global lock
 
 		#fetch phone client information
 		dataDict = {}
@@ -166,10 +178,11 @@ class DroneViewset(viewsets.ModelViewSet):
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
 
+
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
-			
+
 			if dataDict['triggering'] == 'true':
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'triggering':'true'})))
@@ -193,12 +206,22 @@ class DroneViewset(viewsets.ModelViewSet):
 	            #save img to obj
 				pictureObj.photo = picture
 				pictureObj.save()
+				connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
+				channel = connection.channel()
+
+				channel.queue_declare(queue = 'pictures')
+				channel.basic_publish(exchange='',
+									routing_key='pictures',
+									body=str(pictureObj.pk))
+				connection.close()
+			'''
 			#start gcs picture send loop if not started
 			if not cache.has_key("sendLoop"):
 				#create loop obj and save in cache
 				sendLoop = GCSPictureSender(GCS_SEND_TIMEOUT)
 				cache.set("sendLoop",sendLoop)
 				_thread.start_new_thread(sendLoop.startLoop,())
+			'''
 
 		except MultiValueDictKeyError:
             #there was no picture sent
@@ -247,6 +270,23 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 	def get(self,request):
 		return self.render_to_response(self.get_context_data())
 
+
+
+class CountCallback(object):
+	def __init__(self,size,sendNum,picList):
+		#pdb.set_trace()
+		self.picList = picList
+		self.count = (size if sendNum > size else sendNum)
+		self.count = self.count if self.count >0 else 1
+	def __call__(self,ch,method,properties,body):
+		#pdb.set_trace()
+		ch.basic_ack(delivery_tag=method.delivery_tag)
+		self.picList.append(int(body))
+		self.count-=1
+		if self.count == 0:
+			ch.stop_consuming()
+
+
 '''
 used for GCS endpoints
 '''
@@ -290,6 +330,38 @@ class GCSViewset(viewsets.ModelViewSet):
         #Success
 		return Response({'Success':'Success'})
 
+
+	@transaction.atomic
+	@list_route(methods=['post'])
+	def forwardPicture(self,request,pk=None):
+		#pdb.set_trace()
+		connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+		channel = connection.channel()
+		queue = channel.queue_declare(queue='pictures')
+		picList = []
+		numPics = int(request.POST['numPics'])
+		callback = CountCallback(queue.method.message_count,numPics,picList)
+		channel.basic_consume(callback,queue='pictures')
+		channel.start_consuming()
+		#pdb.set_trace()
+		connection.close()
+		pics = [Picture.objects.get(pk=int(id)) for id in picList]
+		picStack = request.session['picstack']
+		for pk in picList:
+			picStack.insert(int(pk),0)
+		serPics = [{'pk':picture.pk,'image':PictureSerializer(picture).data} for picture in pics ]
+		return Response(serPics)
+
+	@list_route(methods=['post'])
+	def reversePicture(self,request,pk=None):
+		pdb.set_trace()
+		index = request.POST['curPic']
+		picture = Picture.objects.get(request.session['picstack'][int(index)])
+		serPic = PictureSerializer(picture)
+		return Response({'type':'picture','pk':picture.pk,'image':serPic.data})
+
+
+
 	@list_route(methods=['post'])
 	def getTargetData(self,request,pk=None):
 		try:
@@ -309,7 +381,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 		target = TargetSerializer(data={key : request.data[key] for key in ('color','lcolor','orientation','shape','letter')})
 		if not target.is_valid():
-			return HttpResponse("Not valid")
+			return HttpResponseForbidden()
 		sizeData = tuple( request.data[key] for key in ('x','y','scaleWidth','width','height'))
 		target = target.deserialize()
 		target.crop(size_data=sizeData,parent_pic=picture)
@@ -356,8 +428,8 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
-		response = HttpResponse(content_type='application/octet-stream')
-		response['Content-Disposition'] = 'attachment; filename=RU.txt'
+		response = HttpResponse(content_type='text/csv')
+		response['Content-Disposition'] = 'attachment; filename="RU.txt"'
 		targets = Target.objects.all()
 		writer = csv.writer(response,delimiter='\t')
 		count = 1

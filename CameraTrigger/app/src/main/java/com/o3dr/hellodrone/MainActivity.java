@@ -477,6 +477,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         //open camera and set params
                         mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
                         Camera.Parameters params = mCamera.getParameters();
+
+                        double thetaV = Math.toRadians(params.getVerticalViewAngle());
+                        double thetaH = Math.toRadians(params.getHorizontalViewAngle());
+                        Log.i("angle","Hori"+thetaH);
+                        Log.i("angle","Verti"+thetaV);
+
                         params.setFocusMode(params.FOCUS_MODE_INFINITY);
                         params.setPictureSize(300, 300);
                         params.setRotation(90);
