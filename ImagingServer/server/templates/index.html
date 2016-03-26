@@ -288,6 +288,7 @@
     var corner = [];
     var boxW;
     var boxH;
+    var zoom = 3;
     //set canvas to image params
     var canvas = document.getElementById("selector");
     canvas.width = document.focusedImage.width;
@@ -345,6 +346,15 @@
       ctx.fillRect(corner[0],corner[1],boxW,boxH);
       cropinit = false;
     });
+    canvas.addEventListener("mouseover", function zoomToMouse(event) {
+      mx = event.layerX;
+      my = event.layerY;
+      tx = pic.width/2 - mx;
+      ty = pic.height/2 - my;
+      var pic = getElementById("focused");
+      pic.css("transform", "scale(" + zoom + "," + zoom + ")");
+      pic.css("transform", "translate("+tx+","+ty+")");
+    });
   }
 </script>
 </head>
@@ -390,7 +400,7 @@
   <div id="picture">
     <div id="container">
       <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
-      <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
+      <img src="/*SimulatedTargetSize.png*/" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
     </div>
   </div>
   <div id="targets"></div>
