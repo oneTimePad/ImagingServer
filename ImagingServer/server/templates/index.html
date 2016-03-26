@@ -349,11 +349,10 @@
     canvas.addEventListener("mouseover", function zoomToMouse(event) {
       mx = event.layerX;
       my = event.layerY;
-      tx = pic.width/2 - mx;
-      ty = pic.height/2 - my;
-      var pic = getElementById("focused");
-      pic.css("transform", "scale(" + zoom + "," + zoom + ")");
-      pic.css("transform", "translate("+tx+","+ty+")");
+      tx = this.width/2 - mx; //canvas has the same width and height as the image
+      ty = this.height/2 - my;
+      $("#focused").css("transform", "scale(" + zoom + "," + zoom + ")");
+      $("#focused").css("transform", "translate("+tx+","+ty+")");
     });
   }
 </script>
