@@ -174,6 +174,7 @@
     //making the panels the height of the window (excluding the navbar)
     //if the window height changes, the page has to be reloaded
     setDimensions();
+    canvasinit();
     //event listener for entire window (for keys)
     // document.addEventListener("keyup", function(key) {
     //   var space = 32;
@@ -285,6 +286,7 @@
     var p1;
     var p2;
     var cropinit;
+    var panning=true;
     var corner = [];
     var boxW;
     var boxH;
@@ -323,15 +325,31 @@
       crop.scaleWidth = document.focusedImage.width;
     }
     //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+    canvas.addEventListener("dblclick", function toggle(event) {
+      if (panning) {
+        panning = false;
+      }
+      else {
+        panning = true;
+      }
+    })
     canvas.addEventListener("mousedown", function setP1(event) {
-      p1 = [event.layerX, event.layerY];
-      cropinit = true;
+        p1 = [event.layerX, event.layerY];
+        cropinit = true;
     });
     //so that if the user releases the mouse after it leaves the canvas, the crop completes
     canvas.addEventListener("mouseleave", function() {
+      if (panning) {
+        $("#focused").css("transform", "scale(1,1)");
+      }
       cropinit = false;
     });
     canvas.addEventListener("mousemove", function drawBox(event) {
+      if (panning) {
+        var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
+        var ty = this.height/2 - event.layerY;
+        $("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+      }
       if (cropinit) {
         p2 = [event.layerX, event.layerY];
         setBox();
@@ -345,14 +363,6 @@
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.fillRect(corner[0],corner[1],boxW,boxH);
       cropinit = false;
-    });
-    canvas.addEventListener("mouseover", function zoomToMouse(event) {
-      mx = event.layerX;
-      my = event.layerY;
-      tx = this.width/2 - mx; //canvas has the same width and height as the image
-      ty = this.height/2 - my;
-      $("#focused").css("transform", "scale(" + zoom + "," + zoom + ")");
-      $("#focused").css("transform", "translate("+tx+","+ty+")");
     });
   }
 </script>
