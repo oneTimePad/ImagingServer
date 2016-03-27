@@ -439,12 +439,7 @@
     }
     //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
     canvas.addEventListener("dblclick", function toggle(event) {
-      if (panning) {
-        panning = false;
-      }
-      else {
-        panning = true;
-      }
+      panning = !panning;
     })
     canvas.addEventListener("mousedown", function setP1(event) {
         p1 = [event.layerX, event.layerY];
@@ -454,6 +449,10 @@
     canvas.addEventListener("mouseleave", function() {
       if (panning) {
         $("#focused").css("transform", "scale(1,1)");
+        $("#focused").css("-o-transform", "scale(1,1)");
+        $("#focused").css("-webkit-transform", "scale(1,1)");
+        $("#focused").css("-moz-transform", "scale(1,1)");
+        $("#focused").css("-ms-transform", "scale(1,1)");
       }
       cropinit = false;
     });
@@ -462,6 +461,10 @@
         var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
         var ty = this.height/2 - event.layerY;
         $("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+        $("#focused").css("-o-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+        $("#focused").css("-webkit-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+        $("#focused").css("-moz-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+        $("#focused").css("-ms-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
       }
       if (cropinit) {
         p2 = [event.layerX, event.layerY];
