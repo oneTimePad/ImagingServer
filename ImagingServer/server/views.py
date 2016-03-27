@@ -346,9 +346,11 @@ class GCSViewset(viewsets.ModelViewSet):
 		#pdb.set_trace()
 		connection.close()
 		pics = [Picture.objects.get(pk=int(id)) for id in picList]
+		#pdb.set_trace()
 		picStack = request.session['picstack']
 		for pk in picList:
-			picStack.insert(int(pk),0)
+			picStack.insert(0,int(pk))
+		request.session['picstack'] = picStack
 		serPics = [{'pk':picture.pk,'image':PictureSerializer(picture).data} for picture in pics ]
 		return Response(serPics)
 
@@ -356,7 +358,10 @@ class GCSViewset(viewsets.ModelViewSet):
 	def reversePicture(self,request,pk=None):
 		pdb.set_trace()
 		index = request.POST['curPic']
-		picture = Picture.objects.get(request.session['picstack'][int(index)])
+		picStack = request.session['picstack']
+		if int(index) >= len(picStack):
+			return Response({'type':'nopicture'})
+		picture = Picture.objects.get(pk=picStack[int(index)])
 		serPic = PictureSerializer(picture)
 		return Response({'type':'picture','pk':picture.pk,'image':serPic.data})
 

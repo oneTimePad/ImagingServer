@@ -26,6 +26,29 @@
   NUM_FETCH = 3;
   image_cache = []; // caches the image strings
 
+  (function(){
+    // Convert array to object
+    var convArrToObj = function(array){
+        var thisEleObj = new Object();
+        if(typeof array == "object"){
+            for(var i in array){
+                var thisEle = convArrToObj(array[i]);
+                thisEleObj[i] = thisEle;
+            }
+        }else {
+            thisEleObj = array;
+        }
+        return thisEleObj;
+    };
+    var oldJSONStringify = JSON.stringify;
+    JSON.stringify = function(input){
+        if(oldJSONStringify(input) == '[]')
+            return oldJSONStringify(convArrToObj(input));
+        else
+            return oldJSONStringify(input);
+    };
+})();
+
   //redefine new type of array
   //returns next image
   Array.prototype.next = function(){
@@ -40,7 +63,7 @@
         //update current
         this.current++;
         //fetch it
-        reversePicture(++this.reverseFetch);
+        reversePicture(--this.reverseval);
         return;
 
 
@@ -85,7 +108,7 @@
     setFocusedImage(this[this.current]);
   }
   //set current index to 0
-  Array.prototype.current = 0;
+  //Array.prototype.current = 0;
 
   $(function connect_websocket_pic(){
       //create websocket
@@ -234,7 +257,9 @@
   }
 
 
-
+  /*
+  retrieve next NUM_FETCH pics
+  */
   function forwardPicture(){
         $.ajax({
           url:"{% url 'gcs-forwardPicture'%}",
@@ -245,20 +270,35 @@
             for(var i=0;i<response.length;i++){
                   image_cache[i] = response[i];
             }
+
             setFocusedImage(image_cache[0]);
         }
       });
     }
 
 
-
+    /*
+    get a pic in the past if cache doesn't have it
+    */
   function reversePicture(index){
     $.ajax({
       url:"{% url 'gcs-reversePicture'%}",
       type: "POST",
       data: {'curPic': index},
       success: function(response){
-        setFocusedImage(response);
+        // if we received a response
+        if(response.hasOwnProperty('type')==true){
+          if(response['type']=='picture'){
+            setFocusedImage(response);
+          }
+          //no more pics left to go back to
+          else if(response['type'] == 'nopicture'){
+            image_cache.current++;
+            image_cache.reverseval--;
+            bootbox.alert("no more old pictures");
+          }
+        }
+
     }
   });
 
@@ -270,14 +310,19 @@
     //if the window height changes, the page has to be reloaded
     setDimensions();
 
-    if(curr == 0){
+
+    if(window.sessionStorage.getItem("curr") ==null){
       forwardPicture();
     }
     else{
+      image_cache = JSON.parse(window.sessionStorage.getItem("image_cache"));
+      curr = window.sessionStorage.getItem("curr");
       image_cache.curr();
+      console.log(image_cache.current);
+      console.log(curr);
+      console.log(image_cache[image_cache.current]['pk'])
     }
 
-    canvasinit();
 
     //event listener for entire window (for keys)
      document.addEventListener("keyup", function(key) {
@@ -338,14 +383,16 @@
   //set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
   function setFocusedImage(image) {
     if (picview) {
+      window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache));
+      window.sessionStorage.setItem("curr",curr);
       curr = parseInt(image['pk']);
       image_data = image["image"];
       document.focusedImage.src=image_data['fileName'];
-      document.focusedImage.width =200;
-      document.focusedImage.height = 200;
+      canvasinit();
+      //document.focusedImage.width =200;
+      //document.focusedImage.height = 200;
       //document.focusedImage.style.width = focusedwidth+"px";
-      //document.focusedImage.style.height = "auto";
-      canvasinit();//to resize the canvas and start a new crop
+      //document.focusedImage.style.height = "auto";//to resize the canvas and start a new crop
       //getting targets using the pk of the current image
       $("#focus-type").text("Picture Data");
       pic_curr_props = image_data;//using the string id to access the data in the map
@@ -357,6 +404,7 @@
         .append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
         .append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>");
         //Add orientation
+
     }
     else {
       document.focusedImage.src=image.src;
@@ -524,7 +572,7 @@
   <div id="picture">
     <div id="container">
       <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
-      <img src="{{STATIC_URL}}SimulatedTargetSize.png" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
+      <img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
     </div>
   </div>
   <div id="targets"></div>
