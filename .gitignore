@@ -1,3 +1,4 @@
 ImagingServer/db.sqlite3
 ImagingServer/__pycache__/
-
+ImagingServer/server/__pycache__/
+ImagingServer/ImagingServer/__pycache__/
