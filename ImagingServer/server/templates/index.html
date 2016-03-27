@@ -410,7 +410,6 @@
     canvas.height = document.focusedImage.height;
     canvas.style.display = "block";
     var ctx = canvas.getContext("2d");
-    var tc;
     ctx.fillStyle="rgba(210,220,255,0.6)";
     //whether the cropping is taking place
     var cropinit=false;
@@ -432,30 +431,43 @@
       else {
         corner[1] = p2[1];
       }
-      crop.x = corner[0];
-      crop.y = corner[1]
-      crop.width = boxW;
-      crop.height = boxH;
-      crop.scaleWidth = document.focusedImage.width;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillRect(corner[0],corner[1],boxW,boxH);
+    }
+    function finalizeBox() {
+      var transform = $("#focused").css("transform").replace("matrix(","").replace(")","").split(",");
+      var scale = parseInt(transform[0]);
+      var transx = parseInt(transform[4]);
+      var transy = parseInt(transform[5]);
+      var factor = parseInt((scale-1)/2);
+      var width = $("#selector").width();
+      var height = $("#selector").height()
+      crop.x = parseInt((width*factor + corner[0]-transx)/scale);
+      crop.y = parseInt((height*factor + corner[1]-transy)/scale);
+      crop.width = parseInt(boxW/scale);
+      crop.height = parseInt(boxH/scale);
+      crop.scaleWidth = width;
+      //console.log(crop);
     }
     //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
     canvas.addEventListener("dblclick", function toggle(event) {
       panning = !panning;
     })
     canvas.addEventListener("mousedown", function setP1(event) {
-        p1 = [event.layerX, event.layerY];
-        cropinit = true;
+        if (!panning) {
+          p1 = [event.layerX, event.layerY];
+          cropinit = true;
+        }
     });
     //so that if the user releases the mouse after it leaves the canvas, the crop completes
     canvas.addEventListener("mouseleave", function() {
       if (panning) {
         $("#focused").css("transform", "scale(1,1)");
-        $("#focused").css("-o-transform", "scale(1,1)");
-        $("#focused").css("-webkit-transform", "scale(1,1)");
-        $("#focused").css("-moz-transform", "scale(1,1)");
-        $("#focused").css("-ms-transform", "scale(1,1)");
       }
-      cropinit = false;
+      else {
+        finalizeBox();
+        cropinit = false;
+      }
     });
     canvas.addEventListener("mousemove", function drawBox(event) {
       if (panning) {
@@ -466,23 +478,16 @@
         if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
         if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
         $("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-o-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-webkit-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-moz-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-ms-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
       }
       else if (cropinit) {
         p2 = [event.layerX, event.layerY];
         setBox();
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.fillRect(corner[0],corner[1],boxW,boxH);
       }
     });
     canvas.addEventListener("mouseup", function finishBox(event) {
       p2=[event.layerX, event.layerY];
       setBox();
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillRect(corner[0],corner[1],boxW,boxH);
+      finalizeBox();
       cropinit = false;
     });
   }
