@@ -403,13 +403,14 @@
     var corner = [];
     var boxW;
     var boxH;
-    var zoom = 3;
+    var zoom = 5;
     //set canvas to image params
     var canvas = document.getElementById("selector");
     canvas.width = document.focusedImage.width;
     canvas.height = document.focusedImage.height;
     canvas.style.display = "block";
     var ctx = canvas.getContext("2d");
+    var tc;
     ctx.fillStyle="rgba(210,220,255,0.6)";
     //whether the cropping is taking place
     var cropinit=false;
@@ -459,14 +460,18 @@
     canvas.addEventListener("mousemove", function drawBox(event) {
       if (panning) {
         var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
+        if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
+        if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
         var ty = this.height/2 - event.layerY;
+        if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
+        if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
         $("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
         $("#focused").css("-o-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
         $("#focused").css("-webkit-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
         $("#focused").css("-moz-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
         $("#focused").css("-ms-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
       }
-      if (cropinit) {
+      else if (cropinit) {
         p2 = [event.layerX, event.layerY];
         setBox();
         ctx.clearRect(0,0,canvas.width,canvas.height);
