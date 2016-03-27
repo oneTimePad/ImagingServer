@@ -108,7 +108,9 @@
     setFocusedImage(this[this.current]);
   }
   //set current index to 0
-  //Array.prototype.current = 0;
+  Array.prototype.current = 0;
+  //set current reverse index to 0
+  Array.prototype.reverseval =0;
 
   $(function connect_websocket_pic(){
       //create websocket
@@ -310,17 +312,20 @@
     //if the window height changes, the page has to be reloaded
     setDimensions();
 
-
+    //if there is no state to restore
     if(window.sessionStorage.getItem("curr") ==null){
+      //attempt to get a pic
       forwardPicture();
     }
+    // else if there is a state to restore
     else{
-      image_cache = JSON.parse(window.sessionStorage.getItem("image_cache"));
-      curr = window.sessionStorage.getItem("curr");
+      //restore state on refresh
+      image_cache = JSON.parse(window.sessionStorage.getItem("image_cache")); //array of images
+      curr = window.sessionStorage.getItem("curr"); //current pic index
+      image_cache.current=window.sessionStorage.getItem("current",image_cache.current); //prototype current
+      image_cache.reverseval=window.sessionStorage.getItem("reverseval",image_cache.reverseval);//prototype reverseval
       image_cache.curr();
-      console.log(image_cache.current);
-      console.log(curr);
-      console.log(image_cache[image_cache.current]['pk'])
+
     }
 
 
@@ -333,38 +338,26 @@
 
        switch (key.keyCode) {
          case leftarrow:
-           //code for requesting next image
            //asynchronously ask for next image and add it
            //since we might have to fetch it
-           image_cache.prev();
+           if(picview){
+             image_cache.prev();
+           }
            break;
          case rightarrow:
             //asynchronously ask for next image since
+            if(picview){
             image_cache.next();
-           //code for requesting previous image
+            }
             break;
          case del:
-          //ajax request to server to delete image with curr as the picture/target object pk
-          // we don't really need to delete images anymore...might need to delete targets
-           if (picview) {
-             $.ajax({
-               url:"{% url 'gcs-deletePicture'%}",
-               type:"POST",
-               data: {"pk":curr},
-             })
-           }
-           else {
+         //delete target
+           if(!picview) {
              $.ajax({
                url:"{% url 'gcs-deleteTarget'%}",
                type:"POST",
                data: {"pk":curr},
-             })
-           }
-          document.focusedImage.src = 0;
-           var nextimage = $("#"+curr).parent().next().children()[0];
-           $("#"+curr).parent().remove();
-           if (nextimage!=null) {
-             setFocusedImage(nextimage);
+             });
            }
            break;
        }
@@ -383,8 +376,11 @@
   //set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
   function setFocusedImage(image) {
     if (picview) {
-      window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache));
-      window.sessionStorage.setItem("curr",curr);
+      //save all state data
+      window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
+      window.sessionStorage.setItem("curr",curr); // current pic id
+      window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
+      window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
       curr = parseInt(image['pk']);
       image_data = image["image"];
       document.focusedImage.src=image_data['fileName'];
@@ -534,6 +530,12 @@
       cropinit = false;
     });
   }
+  //clear storage on logout to avoid attempting to grab
+  //a non-existant image on login
+  $(function(){
+      $("#logoutfm").submit(function(){
+      window.sessionStorage.clear();
+  });})
 </script>
 </head>
 
@@ -548,7 +550,7 @@
         <button onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
         <button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
       </form>
-      <form method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+      <form method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary">Logout</button>
       </form>

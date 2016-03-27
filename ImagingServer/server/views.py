@@ -356,7 +356,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def reversePicture(self,request,pk=None):
-		pdb.set_trace()
+		#pdb.set_trace()
 		index = request.POST['curPic']
 		picStack = request.session['picstack']
 		if int(index) >= len(picStack):
