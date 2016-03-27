@@ -13,534 +13,536 @@
 
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/bootstrap.min.css"/>
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/spectrum.css" />
-<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/loader.css" />
+<!--<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/loader.css" />-->
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/style.css" />
 
 
 <script>
-  curr = 0; //the id of the picture/target in focus
-  picview = true;//true when a picture is in view, false when a target is in view
-  loading = 1;
-  img_properties = {}; //now using an object as a map since the images are not sent down in order
-  crop = {};
-  NUM_FETCH = 3;
-  image_cache = []; // caches the image strings
+	curr = 0; //the id of the picture/target in focus
+	picview = true;//true when a picture is in view, false when a target is in view
+	loading = 1;
+	img_properties = {}; //now using an object as a map since the images are not sent down in order
+	crop = {};
+	NUM_FETCH = 3;
+	image_cache = []; // caches the image strings
 
-  //redefine new type of array
-  //returns next image
-  Array.prototype.next = function(){
-    //if there is no next image
-    if(this.current+1 == this.length){
-      //request NUM_FETCH more and set new array
-      forwardPicture();
-      return;
-    }
-    //if next image is a past image (not in the array)
-    else if(this.current+1<0){
-        //update current
-        this.current++;
-        //fetch it
-        reversePicture(++this.reverseFetch);
-        return;
-
-
-    }
-    //if next image is in the array
-    else if(this.current+1>=0){
-      //return next image
-        setFocusedImage(this[++this.current]);
-        return;
-    }
-  }
-  //returns previous image
-  Array.prototype.prev = function(){
-    //if the prev image is the first one of out the array
-    if(this.current-1 == -1){
-        //update
-        this.current--;
-        //this is the first image we don't have in the django user session stack
-        this.reverseval = this.length;
-        //ask for that image
-        reversePicture(this.reverseval);
-        return;
-    }
-    //if the prev image is not in the array
-    else if(this.current-1 < 0){
-        //update
-        this.current--;
-        //move back in user session stack
-        this.reverseval++;
-        //ask for the image
-        reversePicture(this.reverseval);
-        return;
-    }
-    //else if the prev image is in the array
-    else if(this.current-1 >=0){
-      //we have it, return it
-        setFocusedImage(this[--this.current]);
-        return;
-    }
-  }
-  Array.prototype.curr = function(){
-    setFocusedImage(this[this.current]);
-  }
-  //set current index to 0
-  Array.prototype.current = 0;
-
-  $(function connect_websocket_pic(){
-      //create websocket
-      var web_socket = WS4Redis({
-      uri:"{{WEBSOCKET_URI}}viewer?subscribe-session",
-      //triggered when msg from server is sent
-      receive_message: parseWebSkt,
-      heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
-      });
-    }
-  )
-
-  //sets up form submission
-  $(function form_submit_setup() {
-    //on user submit
-    $("#submit").on("click", function(event) {
-      //allow for ajax
-      event.preventDefault();
-      //get all form attributes
-      var inputs = $("#form").find(":input");
-      //array of user inputs
-      var input_array = {};
-
-      //put each one in an array
-      inputs.each(function() {
-        if (this.name=="color" || this.name=="lcolor") {
-          if (this.value=="" ) {
-            input_array[this.name] = "0, 0, 0";
-          }
-          else if(this.value.indexOf("(") == -1){
-            input_array[this.name] = this.value;
-          }
-          else {
-            input_array[this.name] = this.value.substring(this.value.indexOf("(")+1,this.value.indexOf(")"));
-          }
-        }
-        else {
-          input_array[this.name] = this.value;
-        }
-      })
-
-        //if there attributes, send them
-      if(input_array) {
-        if (picview) {
-
-          input_array['pk'] = curr;
-
-          for(var key in crop){
-            input_array[key] = crop[key];
-          }
-
-          //creating a new target
-          $.ajax({
-            url: "{% url 'gcs-targetCreate'%}",
-            type: "POST",
-            data: input_array,
-            success: function(json){
-              //adding the target image
-              var div = document.createElement("div");
-              div.className = "thumb-div";
-              image = document.createElement("img");
-              image.className = "thumbnail";
-              image.src = json.image;
-              image.id = json.pk;
-              image.addEventListener("click", function() {
-                picview = false;
-                setFocusedImage(this);
-                return false;
-              })
-              div.appendChild(image);
-              $("#targets").append(div);
-            }
-          });
-        }
-        else {
-          //editing the shown target
-          input_array['pk'] = curr;
-          $.ajax({
-            url: "{% url 'gcs-targetEdit'%}",
-            type: "POST",
-            data: input_array,
-            success: function(json){
-              showTargetData($("#"+curr)[0]);
-            }
-          })
-        }
-      }
-    })
-  })
-
-  //handles picture received from websocket
-  function parseWebSkt(response){
-    //parse json server response
-    var json_response = JSON.parse(response);
-    if (json_response.hasOwnProperty("disconnected")) {
-      bootbox.alert("Android Device Disconnected");
-
-    }
-    else if (json_response.hasOwnProperty("connected")) {
-      bootbox.alert("Android Device Connected");
-    }
-    else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
-      $("#trigger_on").html("Stop Triggering");
-      document.getElementById("trigger_on").value = 0;
-    }
-
-    else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false"){
-      $("#trigger_on").html("Start Triggering");
-      document.getElementById("trigger_on").value = 1;
-    }
+	//redefine new type of array
+	//returns next image
+	Array.prototype.next = function(){
+		//if there is no next image
+		if(this.current+1 == this.length){
+			//request NUM_FETCH more and set new array
+			forwardPicture();
+			return;
+		}
+		//if next image is a past image (not in the array)
+		else if(this.current+1<0){
+				//update current
+				this.current++;
+				//fetch it
+				reversePicture(++this.reverseFetch);
+				return;
 
 
-    else if (json_response.hasOwnProperty("type")) {
-      if (loading==1) {
-        loading = 0;
-        return;
-      }
-      if (json_response["type"]== "picture") {
+		}
+		//if next image is in the array
+		else if(this.current+1>=0){
+			//return next image
+				setFocusedImage(this[++this.current]);
+				return;
+		}
+	}
+	//returns previous image
+	Array.prototype.prev = function(){
+		//if the prev image is the first one of out the array
+		if(this.current-1 == -1){
+				//update
+				this.current--;
+				//this is the first image we don't have in the django user session stack
+				this.reverseval = this.length;
+				//ask for that image
+				reversePicture(this.reverseval);
+				return;
+		}
+		//if the prev image is not in the array
+		else if(this.current-1 < 0){
+				//update
+				this.current--;
+				//move back in user session stack
+				this.reverseval++;
+				//ask for the image
+				reversePicture(this.reverseval);
+				return;
+		}
+		//else if the prev image is in the array
+		else if(this.current-1 >=0){
+			//we have it, return it
+				setFocusedImage(this[--this.current]);
+				return;
+		}
+	}
+	Array.prototype.curr = function(){
+		setFocusedImage(this[this.current]);
+	}
+	//set current index to 0
+	Array.prototype.current = 0;
 
-          //get image data
-          var image_data = json_response.image
-          //image src
-          var picture = json_response.image['fileName'];
-          //image id
-          var id = json_response['pk']
-          var div = document.createElement("div");
-          div.className = "thumb-div";
-          var img = document.createElement("img");
-          img.className = "thumbnail";
-          img.src= picture
-          img.id=parseInt(id)
-          img_properties[img.id]= image_data
-          img.addEventListener("click", function() {
-            picview = true;
-            setFocusedImage(this);
-            return false;
-          });
-          div.appendChild(img);
+	$(function connect_websocket_pic(){
+			//create websocket
+			var web_socket = WS4Redis({
+			uri:"{{WEBSOCKET_URI}}viewer?subscribe-session",
+			//triggered when msg from server is sent
+			receive_message: parseWebSkt,
+			heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+			});
+		}
+	)
 
-          $("#pictures").append(div);
+	//sets up form submission
+	$(function form_submit_setup() {
+		//on user submit
+		$("#submit").on("click", function(event) {
+			//allow for ajax
+			event.preventDefault();
+			//get all form attributes
+			var inputs = $("#form").find(":input");
+			//array of user inputs
+			var input_array = {};
+
+			//put each one in an array
+			inputs.each(function() {
+				if (this.name=="color" || this.name=="lcolor") {
+					if (this.value=="" ) {
+						input_array[this.name] = "0, 0, 0";
+					}
+					else if(this.value.indexOf("(") == -1){
+						input_array[this.name] = this.value;
+					}
+					else {
+						input_array[this.name] = this.value.substring(this.value.indexOf("(")+1,this.value.indexOf(")"));
+					}
+				}
+				else {
+					input_array[this.name] = this.value;
+				}
+			})
+
+				//if there attributes, send them
+			if(input_array) {
+				if (picview) {
+
+					input_array['pk'] = curr;
+
+					for(var key in crop){
+						input_array[key] = crop[key];
+					}
+
+					//creating a new target
+					$.ajax({
+						url: "{% url 'gcs-targetCreate'%}",
+						type: "POST",
+						data: input_array,
+						success: function(json){
+							//adding the target image
+							var div = document.createElement("div");
+							div.className = "thumb-div";
+							image = document.createElement("img");
+							image.className = "thumbnail";
+							image.src = json.image;
+							image.id = json.pk;
+							image.addEventListener("click", function() {
+								picview = false;
+								setFocusedImage(this);
+								return false;
+							})
+							div.appendChild(image);
+							$("#targets").append(div);
+						}
+					});
+				}
+				else {
+					//editing the shown target
+					input_array['pk'] = curr;
+					$.ajax({
+						url: "{% url 'gcs-targetEdit'%}",
+						type: "POST",
+						data: input_array,
+						success: function(json){
+							showTargetData($("#"+curr)[0]);
+						}
+					})
+				}
+			}
+		})
+	})
+
+	//handles picture received from websocket
+	function parseWebSkt(response){
+		//parse json server response
+		var json_response = JSON.parse(response);
+		if (json_response.hasOwnProperty("disconnected")) {
+			bootbox.alert("Android Device Disconnected");
+
+		}
+		else if (json_response.hasOwnProperty("connected")) {
+			bootbox.alert("Android Device Connected");
+		}
+		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
+			$("#trigger_on").html("Stop Triggering");
+			document.getElementById("trigger_on").value = 0;
+		}
+
+		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false"){
+			$("#trigger_on").html("Start Triggering");
+			document.getElementById("trigger_on").value = 1;
+		}
 
 
+		else if (json_response.hasOwnProperty("type")) {
+			if (loading==1) {
+				loading = 0;
+				return;
+			}
+			if (json_response["type"]== "picture") {
 
-      }
-    }
-  }
+					//get image data
+					var image_data = json_response.image
+					//image src
+					var picture = json_response.image['fileName'];
+					//image id
+					var id = json_response['pk']
+					var div = document.createElement("div");
+					div.className = "thumb-div";
+					var img = document.createElement("img");
+					img.className = "thumbnail";
+					img.src= picture
+					img.id=parseInt(id)
+					img_properties[img.id]= image_data
+					img.addEventListener("click", function() {
+						picview = true;
+						setFocusedImage(this);
+						return false;
+					});
+					div.appendChild(img);
+
+					$("#pictures").append(div);
 
 
 
-  function forwardPicture(){
-        $.ajax({
-          url:"{% url 'gcs-forwardPicture'%}",
-          type: "POST",
-          data: {'numPics': NUM_FETCH},
-          success: function(response){
-            image_cache = new Array();
-            for(var i=0;i<response.length;i++){
-                  image_cache[i] = response[i];
-            }
-            setFocusedImage(image_cache[0]);
-        }
-      });
-    }
+			}
+		}
+	}
 
 
 
-  function reversePicture(index){
-    $.ajax({
-      url:"{% url 'gcs-reversePicture'%}",
-      type: "POST",
-      data: {'curPic': index},
-      success: function(response){
-        setFocusedImage(response);
-    }
-  });
+	function forwardPicture(){
+				$.ajax({
+					url:"{% url 'gcs-forwardPicture'%}",
+					type: "POST",
+					data: {'numPics': NUM_FETCH},
+					success: function(response){
+						image_cache = new Array();
+						for(var i=0;i<response.length;i++){
+									image_cache[i] = response[i];
+						}
+						setFocusedImage(image_cache[0]);
+				}
+			});
+		}
 
-  }
 
 
-  window.onload = function() {
-    //making the panels the height of the window (excluding the navbar)
-    //if the window height changes, the page has to be reloaded
-    setDimensions();
+	function reversePicture(index){
+		$.ajax({
+			url:"{% url 'gcs-reversePicture'%}",
+			type: "POST",
+			data: {'curPic': index},
+			success: function(response){
+				setFocusedImage(response);
+		}
+	});
 
-    if(curr == 0){
-      forwardPicture();
-    }
-    else{
-      image_cache.curr();
-    }
+	}
 
-    canvasinit();
 
-    //event listener for entire window (for keys)
-     document.addEventListener("keyup", function(key) {
-       var space = 32;
-       var leftarrow = 37;
-       var rightarrow = 39;
-       var del = 46;
+	window.onload = function() {
+		//making the panels the height of the window (excluding the navbar)
+		//if the window height changes, the page has to be reloaded
+		setDimensions();
 
-       switch (key.keyCode) {
-         case leftarrow:
-           //code for requesting next image
-           //asynchronously ask for next image and add it
-           //since we might have to fetch it
-           image_cache.prev();
-           break;
-         case rightarrow:
-            //asynchronously ask for next image since
-            image_cache.next();
-           //code for requesting previous image
-            break;
-         case del:
-          //ajax request to server to delete image with curr as the picture/target object pk
-          // we don't really need to delete images anymore...might need to delete targets
-           if (picview) {
-             $.ajax({
-               url:"{% url 'gcs-deletePicture'%}",
-               type:"POST",
-               data: {"pk":curr},
-             })
-           }
-           else {
-             $.ajax({
-               url:"{% url 'gcs-deleteTarget'%}",
-               type:"POST",
-               data: {"pk":curr},
-             })
-           }
-          document.focusedImage.src = 0;
-           var nextimage = $("#"+curr).parent().next().children()[0];
-           $("#"+curr).parent().remove();
-           if (nextimage!=null) {
-             setFocusedImage(nextimage);
-           }
-           break;
-       }
-     });
-  }
+		if(curr == 0){
+			forwardPicture();
+		}
+		else{
+			image_cache.curr();
+		}
 
-  function setDimensions() {
-    var height = window.innerHeight - $("#navbar").height();
-    $("#left-panel").css("max-height", height + "px");
-    $("#picture").css("max-height", height + "px");
-    $("#targets").css("max-height", height + "px");
-    var formheight = $("#form").height();
-    $("#data").css("max-height", height-formheight + "px");
-  }
+		canvasinit();
 
-  //set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
-  function setFocusedImage(image) {
-    if (picview) {
-      curr = parseInt(image['pk']);
-      image_data = image["image"];
-      document.focusedImage.src=image_data['fileName'];
-      document.focusedImage.width =200;
-      document.focusedImage.height = 200;
-      //document.focusedImage.style.width = focusedwidth+"px";
-      //document.focusedImage.style.height = "auto";
-      canvasinit();//to resize the canvas and start a new crop
-      //getting targets using the pk of the current image
-      $("#focus-type").text("Picture Data");
-      pic_curr_props = image_data;//using the string id to access the data in the map
-      $("#focus-data").empty()
-        .append("<tr><td>Latitude</td><td>"+pic_curr_props.lat+"</td></tr>")
-        .append("<tr><td>Longitude</td><td>"+pic_curr_props.lon+"</td></tr>")
-        .append("<tr><td>Altitude</td><td>"+pic_curr_props.alt+"</td></tr>")
-        .append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
-        .append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
-        .append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>");
-        //Add orientation
-    }
-    else {
-      document.focusedImage.src=image.src;
-      //document.focusedImage.style.width = focusedwidth+"px";
-      //document.focusedImage.style.height = "auto";
-      curr=parseInt(image.id);
-      $("#selector").css("display","none");
-      $("#focus-type").text("Target Data");
-      showTargetData(image);
-    }
-  }
+		//event listener for entire window (for keys)
+		document.addEventListener("keyup", function(key) {
+			var space = 32;
+			var leftarrow = 37;
+			var rightarrow = 39;
+			var del = 46;
 
-  function showTargetData(image) {
-    pk = parseInt(image.id);
-    $.ajax({
-      url: "{% url 'gcs-getTargetData'%}",
-      type: "POST",
-      dataType: "json",
-      data: {"pk": pk},
-      success: function(json) {
-        $("#focus-data").empty()
-          .append("<tr><td>Color</td><td>"+json.color+"</td></tr>")
-          .append("<tr><td>Letter Color</td><td>"+json.lcolor+"</td></tr>")
-          .append("<tr><td>Orientation</td><td>"+json.orientation+"</td></tr>")
-          .append("<tr><td>Shape</td><td>"+json.shape+"</td></tr>")
-          .append("<tr><td>Letter</td><td>"+json.letter+"</td></tr>")
-          .append("<tr><td>Latitude</td><td>"+json.lat+"</td></tr>")
-          .append("<tr><td>Longitude</td><td>"+json.lon+"</td></tr>");
-        $("#lpalette").val(json.lcolor);
-        $("#palette").val(json.color);
-        $("#orientation").val(json.orientation);
-        $("#shape").val(json.shape);
-        $("#letter").val(json.letter);
-      }
-    })
-  }
+			switch (key.keyCode) {
+				case leftarrow:
+					//code for requesting next image
+					//asynchronously ask for next image and add it
+					//since we might have to fetch it
+					image_cache.prev();
+					break;
+				case rightarrow:
+					 //asynchronously ask for next image since
+					 image_cache.next();
+					//code for requesting previous image
+					 break;
+				case del:
+				 //ajax request to server to delete image with curr as the picture/target object pk
+				 // we don't really need to delete images anymore...might need to delete targets
+					if (picview) {
+						$.ajax({
+							url:"{% url 'gcs-deletePicture'%}",
+							type:"POST",
+							data: {"pk":curr},
+						})
+					}
+					else {
+						$.ajax({
+							url:"{% url 'gcs-deleteTarget'%}",
+							type:"POST",
+							data: {"pk":curr},
+						})
+					}
+				 document.focusedImage.src = 0;
+					var nextimage = $("#"+curr).parent().next().children()[0];
+					$("#"+curr).parent().remove();
+					if (nextimage!=null) {
+						setFocusedImage(nextimage);
+					}
+					break;
+			 }
+		});
+	}
 
-  //sets the canvas width and height and allows it to listen for cropping
-  function canvasinit() {
-    var p1;
-    var p2;
-    var cropinit;
-    var panning=true;
-    var corner = [];
-    var boxW;
-    var boxH;
-    var zoom = 5;
-    //set canvas to image params
-    var canvas = document.getElementById("selector");
-    canvas.width = document.focusedImage.width;
-    canvas.height = document.focusedImage.height;
-    canvas.style.display = "block";
-    var ctx = canvas.getContext("2d");
-    ctx.fillStyle="rgba(210,220,255,0.6)";
-    //whether the cropping is taking place
-    var cropinit=false;
-    function setBox() {
-      boxW = p1[0]-p2[0];
-      boxH = p1[1]-p2[1];
-      //finding the top left corner
-      if (boxW<0) {
-        corner[0] = p1[0];
-        boxW = -boxW;
-      }
-      else {
-        corner[0] = p2[0];
-      }
-      if (boxH<0) {
-        corner[1] = p1[1];
-        boxH = -boxH;
-      }
-      else {
-        corner[1] = p2[1];
-      }
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillRect(corner[0],corner[1],boxW,boxH);
-    }
-    function finalizeBox() {
-      var transform = $("#focused").css("transform").replace("matrix(","").replace(")","").split(",");
-      var scale = parseInt(transform[0]);
-      var transx = parseInt(transform[4]);
-      var transy = parseInt(transform[5]);
-      var factor = parseInt((scale-1)/2);
-      var width = $("#selector").width();
-      var height = $("#selector").height()
-      crop.x = parseInt((width*factor + corner[0]-transx)/scale);
-      crop.y = parseInt((height*factor + corner[1]-transy)/scale);
-      crop.width = parseInt(boxW/scale);
-      crop.height = parseInt(boxH/scale);
-      crop.scaleWidth = width;
-      //console.log(crop);
-    }
-    //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
-    canvas.addEventListener("dblclick", function toggle(event) {
-      panning = !panning;
-    })
-    canvas.addEventListener("mousedown", function setP1(event) {
-        if (!panning) {
-          p1 = [event.layerX, event.layerY];
-          cropinit = true;
-        }
-    });
-    //so that if the user releases the mouse after it leaves the canvas, the crop completes
-    canvas.addEventListener("mouseleave", function() {
-      if (panning) {
-        $("#focused").css("transform", "scale(1,1)");
-      }
-      else {
-        finalizeBox();
-        cropinit = false;
-      }
-    });
-    canvas.addEventListener("mousemove", function drawBox(event) {
-      if (panning) {
-        var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
-        if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
-        if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
-        var ty = this.height/2 - event.layerY;
-        if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
-        if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
-        $("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-      }
-      else if (cropinit) {
-        p2 = [event.layerX, event.layerY];
-        setBox();
-      }
-    });
-    canvas.addEventListener("mouseup", function finishBox(event) {
-      p2=[event.layerX, event.layerY];
-      setBox();
-      finalizeBox();
-      cropinit = false;
-    });
-  }
+	function setDimensions() {
+		var height = window.innerHeight - $("#navbar").height() - 10;
+		$("#left-panel").css("max-height", height + "px");
+		$("#picture").css("max-height", height + "px");
+		$("#targets").css("max-height", height + "px");
+		var formheight = $("#form").height();
+		$("#data").css("max-height", height-formheight + "px");
+	}
+
+	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
+	function setFocusedImage(image) {
+		if (picview) {
+			curr = parseInt(image['pk']);
+			image_data = image["image"];
+			document.focusedImage.src=image_data['fileName'];
+			document.focusedImage.width =200;
+			document.focusedImage.height = 200;
+			//document.focusedImage.style.width = focusedwidth+"px";
+			//document.focusedImage.style.height = "auto";
+			canvasinit();//to resize the canvas and start a new crop
+			//getting targets using the pk of the current image
+			$("#focus-type").text("Picture Data");
+			pic_curr_props = image_data;//using the string id to access the data in the map
+			$("#focus-data").empty()
+				.append("<tr><td>Latitude</td><td>"+pic_curr_props.lat+"</td></tr>")
+				.append("<tr><td>Longitude</td><td>"+pic_curr_props.lon+"</td></tr>")
+				.append("<tr><td>Altitude</td><td>"+pic_curr_props.alt+"</td></tr>")
+				.append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
+				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
+				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>");
+				//Add orientation
+		}
+		else {
+			document.focusedImage.src=image.src;
+			//document.focusedImage.style.width = focusedwidth+"px";
+			//document.focusedImage.style.height = "auto";
+			curr=parseInt(image.id);
+			$("#selector").css("display","none");
+			$("#focus-type").text("Target Data");
+			showTargetData(image);
+		}
+	}
+
+	function showTargetData(image) {
+		pk = parseInt(image.id);
+		$.ajax({
+			url: "{% url 'gcs-getTargetData'%}",
+			type: "POST",
+			dataType: "json",
+			data: {"pk": pk},
+			success: function(json) {
+				$("#focus-data").empty()
+					.append("<tr><td>Color</td><td>"+json.color+"</td></tr>")
+					.append("<tr><td>Letter Color</td><td>"+json.lcolor+"</td></tr>")
+					.append("<tr><td>Orientation</td><td>"+json.orientation+"</td></tr>")
+					.append("<tr><td>Shape</td><td>"+json.shape+"</td></tr>")
+					.append("<tr><td>Letter</td><td>"+json.letter+"</td></tr>")
+					.append("<tr><td>Latitude</td><td>"+json.lat+"</td></tr>")
+					.append("<tr><td>Longitude</td><td>"+json.lon+"</td></tr>");
+				$("#lpalette").val(json.lcolor);
+				$("#palette").val(json.color);
+				$("#orientation").val(json.orientation);
+				$("#shape").val(json.shape);
+				$("#letter").val(json.letter);
+			}
+		})
+	}
+
+	//sets the canvas width and height and allows it to listen for cropping
+	function canvasinit() {
+		var p1;
+		var p2;
+		var cropinit;
+		var panning=true;
+		var corner = [];
+		var boxW;
+		var boxH;
+		var zoom = 5;
+		//set canvas to image params
+		var canvas = document.getElementById("selector");
+		canvas.width = document.focusedImage.width;
+		canvas.height = document.focusedImage.height;
+		canvas.style.display = "block";
+		var ctx = canvas.getContext("2d");
+		ctx.fillStyle="rgba(210,220,255,0.6)";
+		//whether the cropping is taking place
+		var cropinit=false;
+		function setBox() {
+			boxW = p1[0]-p2[0];
+			boxH = p1[1]-p2[1];
+			//finding the top left corner
+			if (boxW<0) {
+				corner[0] = p1[0];
+				boxW = -boxW;
+			}
+			else {
+				corner[0] = p2[0];
+			}
+			if (boxH<0) {
+				corner[1] = p1[1];
+				boxH = -boxH;
+			}
+			else {
+				corner[1] = p2[1];
+			}
+			ctx.clearRect(0,0,canvas.width,canvas.height);
+			ctx.fillRect(corner[0],corner[1],boxW,boxH);
+		}
+		function finalizeBox() {
+			var transform = $("#focused").css("transform").replace("matrix(","").replace(")","").split(",");
+			var scale = parseInt(transform[0]);
+			var transx = parseInt(transform[4]);
+			var transy = parseInt(transform[5]);
+			var factor = parseInt((scale-1)/2);
+			var width = $("#selector").width();
+			var height = $("#selector").height()
+			crop.x = parseInt((width*factor + corner[0]-transx)/scale);
+			crop.y = parseInt((height*factor + corner[1]-transy)/scale);
+			crop.width = parseInt(boxW/scale);
+			crop.height = parseInt(boxH/scale);
+			crop.scaleWidth = width;
+			//console.log(crop);
+		}
+		//the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
+		canvas.addEventListener("dblclick", function toggle(event) {
+			panning = !panning;
+		})
+		canvas.addEventListener("mousedown", function setP1(event) {
+				if (!panning) {
+					p1 = [event.layerX, event.layerY];
+					cropinit = true;
+				}
+		});
+		//so that if the user releases the mouse after it leaves the canvas, the crop completes
+		canvas.addEventListener("mouseleave", function() {
+			if (panning) {
+				$("#focused").css("transform", "scale(1,1)");
+			}
+			else {
+				finalizeBox();
+				cropinit = false;
+			}
+		});
+		canvas.addEventListener("mousemove", function drawBox(event) {
+			if (panning) {
+				var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
+				if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
+				if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
+				var ty = this.height/2 - event.layerY;
+				if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
+				if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
+				$("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+			}
+			else if (cropinit) {
+				p2 = [event.layerX, event.layerY];
+				setBox();
+			}
+		});
+		canvas.addEventListener("mouseup", function finishBox(event) {
+			if (cropinit) {
+				p2=[event.layerX, event.layerY];
+				setBox();
+				finalizeBox();
+				cropinit = false;
+			}
+		});
+	}
 </script>
 </head>
 
 <body>
-  <nav id="navbar">
-    <div class="title">RU Autonomous</div>
-    <div class="form">
-      <form>
-        <label for="time_interval">Trigger Time</label>
-        <input id="time_interval" type="text" value="0"/>
-        <button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-        <button onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
-        <button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
-      </form>
-      <form method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-primary">Logout</button>
-      </form>
-    </div>
-  </nav>
-  <div id="left-panel">
-    <div id="form">
-      {% csrf_token %}
-      <form id="attr_form">
-        <fieldset>
-          <label for="palette">Background Color</label>
-          <input name="color" type="text" id="palette"/>
-        </fieldset>
-        <fieldset>
-          <label for="lpalette">Letter Color</label>
-          <input name="lcolor" type="text" id="lpalette"/>
-        </fieldset>
-        {{form.as_p}}
-        <button type="button" class="btn btn-primary" id="submit"/>Submit</button>
-      </form>
-    </div>
-    <div id="data">
-      <h3 id="focus-type">Picture Data</h3>
-      <table id="focus-data"></table>
-    </div>
-  </div>
+	<nav id="navbar">
+		<div class="title">RU Autonomous</div>
+		<div class="form">
+			<form>
+				<label for="time_interval">Trigger Time</label>
+				<input id="time_interval" type="text" value="0"/>
+				<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+				<button onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
+				<button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
+			</form>
+			<form method="post" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+				{% csrf_token %}
+				<button type="submit" class="btn btn-primary">Logout</button>
+			</form>
+		</div>
+	</nav>
+	<div id="left-panel">
+		<div id="form">
+			{% csrf_token %}
+			<form id="attr_form">
+				<fieldset>
+					<label for="palette">Background Color</label>
+					<input name="color" type="text" id="palette"/>
+				</fieldset>
+				<fieldset>
+					<label for="lpalette">Letter Color</label>
+					<input name="lcolor" type="text" id="lpalette"/>
+				</fieldset>
+				{{form.as_p}}
+				<button type="button" class="btn btn-primary" id="submit"/>Submit</button>
+			</form>
+		</div>
+		<div id="data">
+			<h3 id="focus-type">Picture Data</h3>
+			<table id="focus-data"></table>
+		</div>
+	</div>
 
 
-  <div id="picture">
-    <div id="container">
-      <canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
-      <img src="{{STATIC_URL}}SimulatedTargetSize.png" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
-    </div>
-  </div>
-  <div id="targets"></div>
+	<div id="picture">
+		<div id="container">
+			<canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
+			<img src="{{STATIC_URL}}SimulatedTargetSize.png" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
+		</div>
+	</div>
+	<div id="targets"></div>
 </body>
 
 
@@ -549,77 +551,77 @@
 <script>
 
 $(document).ready(function(){
-  //Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
-  $("#palette").spectrum({
-    showPaletteOnly: true,
-    showPalette:true,
-    color: "black",
-    palette: [
-        ["black", "white", "gray", "red", "blue"],
-        ["green", "yellow", "purple", "brown", "orange"]
-    ]
-  });
+	//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
+	$("#palette").spectrum({
+		showPaletteOnly: true,
+		showPalette:true,
+		color: "black",
+		palette: [
+				["black", "white", "gray", "red", "blue"],
+				["green", "yellow", "purple", "brown", "orange"]
+		]
+	});
 });
 
 $(document).ready(function(){
-  $("#lpalette").spectrum({
-    showPaletteOnly: true,
-    showPalette:true,
-    color: "black",
-    palette: [
-      ["black", "white", "gray", "red", "blue"],
-      ["green", "yellow", "purple", "brown", "orange"]
-    ]
-  });
+	$("#lpalette").spectrum({
+		showPaletteOnly: true,
+		showPalette:true,
+		color: "black",
+		palette: [
+			["black", "white", "gray", "red", "blue"],
+			["green", "yellow", "purple", "brown", "orange"]
+		]
+	});
 });
 
 function set_smart_trigger(){
-  var smart_trigger= document.getElementById("smart_trigger")
-  $("#smart_trigger").val(Math.abs(smart_trigger.value-1))
-  if(smart_trigger.value==false){
-    $("#smart_trigger").html("Smart Triggering On")
-  }
-  else {
-    $("#smart_trigger").html("Smart Triggering Off")
-  }
+	var smart_trigger= document.getElementById("smart_trigger")
+	$("#smart_trigger").val(Math.abs(smart_trigger.value-1))
+	if(smart_trigger.value==false){
+		$("#smart_trigger").html("Smart Triggering On")
+	}
+	else {
+		$("#smart_trigger").html("Smart Triggering Off")
+	}
 }
 
 function trigger() {
-  $.ajax({
-    url:"{%url 'gcs-cameraTrigger' %}",
-    type:"POST",
-    dataType:"JSON",
-    data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
-    success: function(json) {
-      if (json.hasOwnProperty("failure")) {
-        bootbox.alert("Invalid Time Interval")
-        return;
-      }
-      if (json.hasOwnProperty("nothing")) {
-        return;
-      }
-      var time_int = document.getElementById("time_interval");
-      time_int.value=0;
-      var trigger_on = document.getElementById("trigger_on");
-      $("#trigger_on").val(Math.abs(trigger_on.value-1));
-      if (trigger_on.value==0) {
-        $("#trigger_on").html("Stop Triggering");
-      }
-      else {
-        $("#trigger_on").html("Start Triggering");
-      }
-    }
-  })
+	$.ajax({
+		url:"{%url 'gcs-cameraTrigger' %}",
+		type:"POST",
+		dataType:"JSON",
+		data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+		success: function(json) {
+			if (json.hasOwnProperty("failure")) {
+				bootbox.alert("Invalid Time Interval")
+				return;
+			}
+			if (json.hasOwnProperty("nothing")) {
+				return;
+			}
+			var time_int = document.getElementById("time_interval");
+			time_int.value=0;
+			var trigger_on = document.getElementById("trigger_on");
+			$("#trigger_on").val(Math.abs(trigger_on.value-1));
+			if (trigger_on.value==0) {
+				$("#trigger_on").html("Stop Triggering");
+			}
+			else {
+				$("#trigger_on").html("Start Triggering");
+			}
+		}
+	})
 }
 
 function dump_targets() {
-  $.ajax({
-    url:"{%url 'gcs-dumpTargetData' %}",
-    type:"POST",
-    success: function() {
-      console.log("targets");
-    }
-  });
-  return false;
+	$.ajax({
+		url:"{%url 'gcs-dumpTargetData' %}",
+		type:"POST",
+		success: function() {
+			console.log("targets");
+		}
+	});
+	return false;
 }
 </script>

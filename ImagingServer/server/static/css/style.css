@@ -16,11 +16,12 @@ img {
   vertical-align: middle;
 }
 nav {
-  height:100px;
+  height:50px;
 }
 nav .title {
   display:inline;
   float:left;
+  font-size: 35px;
 }
 nav .form {
   display:inline;
@@ -34,6 +35,7 @@ nav form {
   max-width:15%;
   display:inline-block;
   float:left;
+  padding:5px;
 }
 #picture {
   max-width:70%;
@@ -45,6 +47,7 @@ nav form {
   display: inline-block;
   float: left;
   overflow-y:scroll;
+  padding:5px;
 }
 
 #form {
