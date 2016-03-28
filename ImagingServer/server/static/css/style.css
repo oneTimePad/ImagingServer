@@ -1,74 +1,92 @@
 
-html{
+html {
   font-family: "Helvetica", sans-serif;
   -ms-text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
-  margin:0;
+}
+body {
+  background-color: #F8F8F8;
+  color: #444;
+  margin: 0;
+  padding: 0;
 }
 table {
   border-collapse: collapse;
   border-spacing: 0;
 }
-td {
+th, td {
+  text-align: left;
   padding: 2px;
 }
 img {
   vertical-align: middle;
 }
 nav {
-  height:100px;
+  height: 50px;
+  background-color: #E8E8E8;
+  padding: 10px 10px 0px;
+  margin: 0px 0px 10px;
+  border-color: #D0D0D0;
+  border-bottom-style: solid;
 }
 nav .title {
-  display:inline;
-  float:left;
+  display: inline;
+  float: left;
+  font-size: 35px;
+  font-style: bold;
 }
 nav .form {
-  display:inline;
-  float:right;
+  display: inline;
+  float: right;
 }
 nav form {
-  display:inline-block;
+  display: inline-block;
+}
+#time_interval {
+  max-width:5em;
 }
 /*set a max height for the following with JS*/
 #left-panel {
-  max-width:15%;
-  display:inline-block;
-  float:left;
-}
-#picture {
-  max-width:70%;
-  display:inline-block;
-  float:left;
-}
-#targets {
-  max-width:15%;
+  width: 20%;
   display: inline-block;
   float: left;
-  overflow-y:scroll;
+  padding: 0px 10px;
+}
+#picture {
+  width: 60%;
+  display: inline-block;
+  float: left;
+}
+#targets {
+  width: 15%;
+  display: inline-block;
+  float: right;
+  overflow-y: scroll;
+  padding: 0px 10px;
 }
 
 #form {
-  display:inline-block;
-  float:left;
-  margin:5px;
+  display: inline-block;
+  float: left;
+}
+#id_letter {
+  max-width:2em;
 }
 #data {
-  display:inline-block;
-  float:left;
-  margin:5px;
-  overflow-y:scroll;
+  display: inline-block;
+  float: left;
+  margin: 5px;
 }
 
 #container {
-  max-width:100%;
-  max-height:100%;
-  overflow:hidden;
+  width: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
-#focusedImage {
-  max-width:100%;
-  max-height:100%;
-  height:auto;
-  margin:5px;
+#focused {
+  width: 100%;
+  max-height: 100%;
+  height: auto;
 }
 
 .thumb-div {
@@ -81,6 +99,10 @@ nav form {
   height: auto;
 }
 
+label {
+  font-style: bold;
+  margin-left: 2px;
+}
 .btn {
   display: inline-block;
   padding: 6px 12px;
@@ -103,29 +125,188 @@ nav form {
   border-radius: 4px;
 }
 .btn-primary {
-  color:#fff;
+  color: #fff;
   background-color: #337ab7;
   border-color: #2e6da4;
 }
-.btn-primary:focus,
+.btn-primary: focus,
 .btn-primary.focus {
   background-color: #286090;
   border-color: #122b40;
 }
-.btn-primary:active,
+.btn-primary: active,
 .btn-primary.active,
-.btn-primary:hover {
+.btn-primary: hover {
   background-color: #286090;
   border-color: #204d74;
 }
-.btn-primary:active:hover,
-.btn-primary.active:hover,
-.btn-primary:active:focus,
-.btn-primary.active:focus,
-.btn-primary:active.focus,
+.btn-primary: active: hover,
+.btn-primary.active: hover,
+.btn-primary: active: focus,
+.btn-primary.active: focus,
+.btn-primary: active.focus,
 .btn-primary.active.focus {
   background-color: #204d74;
   border-color: #122b40;
 }
-Status API Training Shop Blog About
-© 2016 GitHub, Inc. Terms Privacy Security Contact Help
+
+/*bootbox things*/
+.modal-open {
+  overflow: hidden;
+}
+.modal {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1050;
+  display: none;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+  outline: 0;
+}
+.modal.fade .modal-dialog {
+  -webkit-transition: -webkit-transform .3s ease-out;
+       -o-transition:      -o-transform .3s ease-out;
+          transition:         transform .3s ease-out;
+  -webkit-transform: translate(0, -25%);
+      -ms-transform: translate(0, -25%);
+       -o-transform: translate(0, -25%);
+          transform: translate(0, -25%);
+}
+.modal.in .modal-dialog {
+  -webkit-transform: translate(0, 0);
+      -ms-transform: translate(0, 0);
+       -o-transform: translate(0, 0);
+          transform: translate(0, 0);
+}
+.modal-open .modal {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.modal-dialog {
+  position: relative;
+  width: auto;
+  margin: 10px;
+}
+.modal-content {
+  position: relative;
+  background-color: #fff;
+  -webkit-background-clip: padding-box;
+          background-clip: padding-box;
+  border: 1px solid #999;
+  border: 1px solid rgba(0, 0, 0, .2);
+  border-radius: 6px;
+  outline: 0;
+  -webkit-box-shadow: 0 3px 9px rgba(0, 0, 0, .5);
+          box-shadow: 0 3px 9px rgba(0, 0, 0, .5);
+}
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1040;
+  background-color: #000;
+}
+.modal-backdrop.fade {
+  filter: alpha(opacity=0);
+  opacity: 0;
+}
+.modal-backdrop.in {
+  filter: alpha(opacity=50);
+  opacity: .5;
+}
+.modal-header {
+  padding: 15px;
+  border-bottom: 1px solid #e5e5e5;
+}
+.modal-header .close {
+  margin-top: -2px;
+}
+.modal-title {
+  margin: 0;
+  line-height: 1.42857143;
+}
+.modal-body {
+  position: relative;
+  padding: 15px;
+}
+.modal-footer {
+  padding: 15px;
+  text-align: right;
+  border-top: 1px solid #e5e5e5;
+}
+.modal-footer .btn + .btn {
+  margin-bottom: 0;
+  margin-left: 5px;
+}
+.modal-footer .btn-group .btn + .btn {
+  margin-left: -1px;
+}
+.modal-footer .btn-block + .btn-block {
+  margin-left: 0;
+}
+.modal-scrollbar-measure {
+  position: absolute;
+  top: -9999px;
+  width: 50px;
+  height: 50px;
+  overflow: scroll;
+}
+@media (min-width: 768px) {
+  .modal-dialog {
+    width: 600px;
+    margin: 30px auto;
+  }
+  .modal-content {
+    -webkit-box-shadow: 0 5px 15px rgba(0, 0, 0, .5);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, .5);
+  }
+  .modal-sm {
+    width: 300px;
+  }
+}
+@media (min-width: 992px) {
+  .modal-lg {
+    width: 900px;
+  }
+}
+.modal-header:before,
+.modal-header:after,
+.modal-footer:before,
+.modal-footer:after {
+  display: table;
+  content: " ";
+}
+.modal-header:after,
+.modal-footer:after {
+  clear: both;
+}
+.close {
+  float: right;
+  font-size: 21px;
+  font-weight: bold;
+  line-height: 1;
+  color: #000;
+  text-shadow: 0 1px 0 #fff;
+  filter: alpha(opacity=20);
+  opacity: .2;
+}
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+  filter: alpha(opacity=50);
+  opacity: .5;
+}
+button.close {
+  -webkit-appearance: none;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}

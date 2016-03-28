@@ -11,13 +11,12 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/spectrum.js"></script>
 
 
-<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/bootstrap.min.css"/>
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/spectrum.css" />
-<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/loader.css" />
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/style.css" />
 
 
 <script>
+
   curr = 0; //the id of the picture/target in focus
   picview = true;//true when a picture is in view, false when a target is in view
   loading = 1;
@@ -468,7 +467,7 @@
     canvas.height = document.focusedImage.height;
     canvas.style.display = "block";
     var ctx = canvas.getContext("2d");
-    var tc;
+
     ctx.fillStyle="rgba(210,220,255,0.6)";
     //whether the cropping is taking place
     var cropinit=false;
@@ -490,30 +489,42 @@
       else {
         corner[1] = p2[1];
       }
-      crop.x = corner[0];
-      crop.y = corner[1]
-      crop.width = boxW;
-      crop.height = boxH;
-      crop.scaleWidth = document.focusedImage.width;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillRect(corner[0],corner[1],boxW,boxH);
+    }
+    function finalizeBox() {
+     var transform = $("#focused").css("transform").replace("matrix(","").replace(")","").split(",");
+      var scale = parseInt(transform[0]);
+      var transx = parseInt(transform[4]);
+      var transy = parseInt(transform[5]);
+      var factor = parseInt((scale-1)/2);
+      var width = $("#selector").width();
+      var height = $("#selector").height()
+      crop.x = parseInt((width*factor + corner[0]-transx)/scale);
+      crop.y = parseInt((height*factor + corner[1]-transy)/scale);
+      crop.width = parseInt(boxW/scale);
+      crop.height = parseInt(boxH/scale);
+     crop.scaleWidth = width;
     }
     //the cropped section will not be resizeable after the user finishes, but the user can create a new cropped section
     canvas.addEventListener("dblclick", function toggle(event) {
       panning = !panning;
     })
     canvas.addEventListener("mousedown", function setP1(event) {
-        p1 = [event.layerX, event.layerY];
-        cropinit = true;
+      if (!panning) {
+          p1 = [event.layerX, event.layerY];
+          cropinit = true;
+        }
     });
     //so that if the user releases the mouse after it leaves the canvas, the crop completes
     canvas.addEventListener("mouseleave", function() {
       if (panning) {
         $("#focused").css("transform", "scale(1,1)");
-        $("#focused").css("-o-transform", "scale(1,1)");
-        $("#focused").css("-webkit-transform", "scale(1,1)");
-        $("#focused").css("-moz-transform", "scale(1,1)");
-        $("#focused").css("-ms-transform", "scale(1,1)");
       }
-      cropinit = false;
+      else {
+        finalizeBox();
+        cropinit = false;
+      }
     });
     canvas.addEventListener("mousemove", function drawBox(event) {
       if (panning) {
@@ -524,25 +535,21 @@
         if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
         if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
         $("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-o-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-webkit-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-moz-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-        $("#focused").css("-ms-transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+
       }
       else if (cropinit) {
         p2 = [event.layerX, event.layerY];
         setBox();
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.fillRect(corner[0],corner[1],boxW,boxH);
+
       }
     });
     canvas.addEventListener("mouseup", function finishBox(event) {
       p2=[event.layerX, event.layerY];
       setBox();
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillRect(corner[0],corner[1],boxW,boxH);
+      finalizeBox();
       cropinit = false;
     });
+
   }
   //clear storage on logout to avoid attempting to grab
   //a non-existant image on login
@@ -550,10 +557,12 @@
       $("#logoutfm").submit(function(){
       window.sessionStorage.clear();
   });})
+
 </script>
 </head>
 
 <body>
+
   <nav id="navbar">
     <div class="title">RU Autonomous</div>
     <div class="form">
@@ -601,6 +610,7 @@
     </div>
   </div>
   <div id="targets"></div>
+
 </body>
 
 
@@ -609,77 +619,77 @@
 <script>
 
 $(document).ready(function(){
-  //Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
-  $("#palette").spectrum({
-    showPaletteOnly: true,
-    showPalette:true,
-    color: "black",
-    palette: [
-        ["black", "white", "gray", "red", "blue"],
-        ["green", "yellow", "purple", "brown", "orange"]
-    ]
-  });
+	//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
+	$("#palette").spectrum({
+		showPaletteOnly: true,
+		showPalette:true,
+		color: "black",
+		palette: [
+				["black", "white", "gray", "red", "blue"],
+				["green", "yellow", "purple", "brown", "orange"]
+		]
+	});
 });
 
 $(document).ready(function(){
-  $("#lpalette").spectrum({
-    showPaletteOnly: true,
-    showPalette:true,
-    color: "black",
-    palette: [
-      ["black", "white", "gray", "red", "blue"],
-      ["green", "yellow", "purple", "brown", "orange"]
-    ]
-  });
+	$("#lpalette").spectrum({
+		showPaletteOnly: true,
+		showPalette:true,
+		color: "black",
+		palette: [
+			["black", "white", "gray", "red", "blue"],
+			["green", "yellow", "purple", "brown", "orange"]
+		]
+	});
 });
 
 function set_smart_trigger(){
-  var smart_trigger= document.getElementById("smart_trigger")
-  $("#smart_trigger").val(Math.abs(smart_trigger.value-1))
-  if(smart_trigger.value==false){
-    $("#smart_trigger").html("Smart Triggering On")
-  }
-  else {
-    $("#smart_trigger").html("Smart Triggering Off")
-  }
+	var smart_trigger= document.getElementById("smart_trigger")
+	$("#smart_trigger").val(Math.abs(smart_trigger.value-1))
+	if(smart_trigger.value==false){
+		$("#smart_trigger").html("Smart Triggering On")
+	}
+	else {
+		$("#smart_trigger").html("Smart Triggering Off")
+	}
 }
 
 function trigger() {
-  $.ajax({
-    url:"{%url 'gcs-cameraTrigger' %}",
-    type:"POST",
-    dataType:"JSON",
-    data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
-    success: function(json) {
-      if (json.hasOwnProperty("failure")) {
-        bootbox.alert("Invalid Time Interval")
-        return;
-      }
-      if (json.hasOwnProperty("nothing")) {
-        return;
-      }
-      var time_int = document.getElementById("time_interval");
-      time_int.value=0;
-      var trigger_on = document.getElementById("trigger_on");
-      $("#trigger_on").val(Math.abs(trigger_on.value-1));
-      if (trigger_on.value==0) {
-        $("#trigger_on").html("Stop Triggering");
-      }
-      else {
-        $("#trigger_on").html("Start Triggering");
-      }
-    }
-  })
+	$.ajax({
+		url:"{%url 'gcs-cameraTrigger' %}",
+		type:"POST",
+		dataType:"JSON",
+		data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+		success: function(json) {
+			if (json.hasOwnProperty("failure")) {
+				bootbox.alert("Invalid Time Interval")
+				return;
+			}
+			if (json.hasOwnProperty("nothing")) {
+				return;
+			}
+			var time_int = document.getElementById("time_interval");
+			time_int.value=0;
+			var trigger_on = document.getElementById("trigger_on");
+			$("#trigger_on").val(Math.abs(trigger_on.value-1));
+			if (trigger_on.value==0) {
+				$("#trigger_on").html("Stop Triggering");
+			}
+			else {
+				$("#trigger_on").html("Start Triggering");
+			}
+		}
+	})
 }
 
 function dump_targets() {
-  $.ajax({
-    url:"{%url 'gcs-dumpTargetData' %}",
-    type:"POST",
-    success: function() {
-      console.log("targets");
-    }
-  });
-  return false;
+	$.ajax({
+		url:"{%url 'gcs-dumpTargetData' %}",
+		type:"POST",
+		success: function() {
+			console.log("targets");
+		}
+	});
+	return false;
 }
 </script>

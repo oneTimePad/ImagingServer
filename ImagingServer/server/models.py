@@ -2,6 +2,7 @@
 from PIL import Image
 from matplotlib import cm
 from io import BytesIO
+import math
 import cv2
 import numpy as np
 import os
@@ -85,7 +86,15 @@ class Target(models.Model):
 	lat = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	lon = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 
+	# Camera information. Nexus 6P in portrait 
+	# Field of View angles (1/2 image viewing angles)
+	fovV = 35.0 # Portrait
+	fovH = 26.5 # Landscape
 
+	# Conversion between meters to GPS coordinate degrees
+	# ONLY FOR MARYLAND LOCATION
+	# Every 0.8627 meters is about 0.00001 degrees Lat/Lon
+	METER_TO_DEGREE = 0.00001/0.8627 
 
 	def edit(self,edits):
 		self.letter=edits['letter']
@@ -96,6 +105,72 @@ class Target(models.Model):
 		self.orientation = edits['orientation']
 		self.save()
 
+	# Calculates the angle between two points.
+	# Used to get the angle between the center GPS location 
+	#  and the cropped location. 
+	def angle_between_points(pt1, pt2):
+		x1, y1 = pt1 
+		x2, y2 = pt2
+		inner_product = x1*x2 + y1*y2
+		len1 = math.hypot(x1, y1)
+		len2 = math.hypot(x2, y2)
+		return math.acos(inner_product/(len1*len2))
+
+	# Input the x, and y pixel location of a point or a crop
+	# This function will give out the GPS lat/lon coordinates
+	# of that pixel on the image
+	def calculate_coordinates(x,y):
+		# Interpolate the relative angle from Tangent to ground
+		relXAngle = (roll - fovH) + (2*fovH)*( float(x) / float(orig_height))
+		relYAngle = (pitch - fovV) - (2*fovV)*( float(y) / float(orig_width))
+
+		relXRadian = math.radians(relXAngle)
+		relYRadian = math.radians(relYAngle)
+		azimuthRadian = math.radians(azimuth)
+
+		# Use the relative angle from GPS tangent to point
+		# to determine the distance removed from GPS center
+		# Value calculated in pixels 
+		deltaX = altitude_pixels * math.sin(relXRadian)
+		deltaY = altitude_pixels * math.sin(relYRadian)
+		deltaMagnitude = math.hypot(deltaX, deltaY)
+
+		# Angle between the Camera's North and the Point
+		angleNorthPoint = angle_between_points([northX-gpsX,northY-gpsY], [x-gpsX,y-gpsY])
+
+		# Check if the click is to the right or left of the North line
+		# This equation determines if the click is to the left or right of the line
+		# Negative = Left
+		# Positive = Right
+		# Don't need to check for if North/South, calculation already goes from -180 to 180
+		isRight = (northX - gpsX)*(y - gpsY) - (northY - gpsY)*(x - gpsX)
+		if (isRight < 0):
+			angleNorthPt = -angleNorthPt
+
+		# Now use the deltaMagnitude and compute the North/South and West/East components
+		deltaNS = deltaMagnitude * math.cos(angleNorthPt) # The N/S component of the magnitude (in pixels)
+		deltaWE = deltaMagnitude * math.sin(angleNorthPt) # The W/E component of the magnitude (in pixels)
+
+		# Combine these with the GPS location to obtain the distance away
+		# Depends on the azimuth and where on the screen is being clicked
+		# In pixels
+		ptX = int(gpsX + deltaWE)
+		ptY = int(gpsY - deltaNS)
+
+		# When the lines are drawn, they are drawn as though the image is pointing NORTH
+		# So clicking on the green line will draw a blue line pointing up
+		# Have to convert this value into GPS Lat and Long based on conversion of
+		# Altitude / pixels from below
+		ptX_meters = deltaWE * (altitude/altitude_pixels)
+		ptY_meters = deltaNS * (altitude/altitude_pixels)
+
+		# ************************* MOST IMPORTANT INFORMATION ******************************
+		# This is the calculated Latitude, Longitude of the point
+		ptLatitude = (ptY_meters * METER_TO_DEGREE_CONVERSION) + gpsLatitude
+		ptLongitude = (ptX_meters * METER_TO_DEGREE_CONVERSION) + gpsLongitude
+
+		# Returns the [lat,lon]
+		return ptLatitude, ptLongitude
 
 	'''GEOTAGGING STUFF GOES HERE '''
 	#crop target from image
@@ -109,17 +184,58 @@ class Target(models.Model):
 		width = int(width)
 		scale_width = int(scale_width)
 
+		# Get information on camera angles
+		azimuth = parent_pic.azimuth # Angle from North
+		pitch = parent_pic.pitch # Forward/back angle
+		roll = parent_pic.roll # Left/Right angle
+
+		# Calculate the edge angles of the image
+		# Top left of image is 0,0
+		angle_V_0 = pitch + fovV # Top of image
+		angle_V_1 = pitch - fovV # Bottom of image
+		angle_H_0 = roll - fovH # Left sied of image
+		angle_H_1 = roll + fovH # Right side of image
+
+		# Calculate the total distance (meters) that the image spans
+		totalVDistance = altitude * ( math.tan(math.radians(angle_V_0)) - math.tan(math.radians(angle_V_1)) )
+		totalHDistance = altitude * ( -math.tan(math.radians(angle_H_0)) + math.tan(math.radians(angle_H_1)) )
+
+		# Ratio between the altitude height and the vertical pixel 
+		# count and vertical distance
+		# Pixels      0 - img_V_pixels
+		# Distance    0 - altitude m 
+		altitude_pixels = (((altitude/totalVDistance)*img_V_pixels) + ((altitude/totalHDistance)*img_H_pixels))/2
+
+		# Calculate the distance from the center of the image to the center of gps
+		deltaYGPS = altitude_pixels * math.sin(math.radians(pitch))
+		deltaXGPS = altitude_pixels * math.sin(math.radians(roll))
+
+		# The pixels for the y direction go "UP" when 
+		# the pixel goes towards the bottom of the image
+		# REMEMBER top left of image is 0,0
+		#          bottom right of image is max,max
+		gpsX = img_center_X + deltaXGPS
+		gpsY = img_center_Y + deltaYGPS
+
+		# These values are to help with calculating the angle
+		# between the point and the GPS center
+		northX = gpsX + gpsX * math.cos( math.radians(azimuth + 90))
+		northY = gpsY + gpsY * math.sin( math.radians(azimuth + 90))
+
 		#get the file name of pic=pk
 		file_name  =str(parent_pic.photo.file)
 
 		original_image = Image.open(file_name)
 
 		#convert strange json format to integers
-		orig_width,_ = original_image.size #1020 for AUVSI camera
+		orig_width,orig_height = original_image.size #1020 for AUVSI camera
 		x = int(x*orig_width/scale_width)
 		y = int(y*orig_width/scale_width)
 		width = int(width*orig_width/scale_width)
 		height = int(height*orig_width/scale_width)
+
+		# Get the GPS coordinates of the crop location
+		crop_Lat,cropLon = calculate_coordinates(x,y)
 
 		cropped_image = original_image.crop((x,y,x+width,y+height))
 
