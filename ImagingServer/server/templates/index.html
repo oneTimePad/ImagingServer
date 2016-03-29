@@ -366,7 +366,7 @@ function PictureArray(){
           success: function(response){
             image_cache = new PictureArray();
             for(var i=0;i<response.length;i++){
-                  image_cache[i] = response[i];
+                  image_cache.push(response[i]);
             }
             PictureArray.prototype.allow = true;
 
