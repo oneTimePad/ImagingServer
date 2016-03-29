@@ -23,7 +23,7 @@
   img_properties = {}; //now using an object as a map since the images are not sent down in order
   crop = {};
   NUM_FETCH = 3;
-  image_cache = []; // caches the image strings
+  image_cache = null; // caches the image strings
 
   (function(){
     // Convert array to object
@@ -48,73 +48,168 @@
     };
 })();
 
-  //redefine new type of array
-  //returns next image
-  Array.prototype.next = function(){
-    //if there is no next image
-    if(this.current+1 == this.length){
-      //request NUM_FETCH more and set new array
-      forwardPicture();
-      return;
-    }
-    //if next image is a past image (not in the array)
-    else if(this.current+1<0){
-        //update current
-        this.current++;
-        //fetch it
-        reversePicture(--this.reverseval);
-        return;
+//Array for holding pictures
+function PictureArray(){
 
+      if((args=arguments[0])){
+        for(keys in args){
+            switch (keys) {
+              case "current":
+                this.current =args['current'];
+                break;
+              case "reversal":
+                this.reversal = args['reversal'];
+                break;
+              case "viewed":
+                this.viewed = args['viewed'];
+                break;
+              default:
+                if(args[keys].hasOwnProperty("image")==true){
+                  this[keys] = args[keys];
+                }
+                break;
+            }
+        }
+      }
 
-    }
-    //if next image is in the array
-    else if(this.current+1>=0){
-      //return next image
+      if(this.current==undefined){
+        this.current = 0;
+      }
+
+      if(this.reversal == undefined){
+        this.reversal = 0;
+      }
+
+      if(this.viewed == undefined){
+        this.viewed = (function(){
+            var viewed = {'0':1};
+            for(var i=1;i<NUM_FETCH;i++){
+                viewed[i.toString()] = 0;
+            };
+            return viewed;
+        })();
+      }
+
+      //plus 1 to current
+      this.upCurrent = function(){
+          this.current++;
+      }
+      //minus 1 to current
+      this.downCurrent = function(){
+          this.current--;
+      }
+      //getter
+      this.getCurrent = function(){
+        return this.current;
+      }
+      //setter
+      this.setCurrent = function(c){
+        this.current = c;
+      }
+      //plus 1 reversal
+      this.upReverse = function(r){
+        this.reversal++;
+      }
+      //minus 1 reversal
+      this.downReverse = function(){
+        this.reversal--;
+      }
+      //setter
+      this.setReverse =function(r){
+        this.reversal = r;
+      }
+      //getter
+      this.getReverse = function(){
+        return this.reversal;
+      }
+      //mark a pic as viewed if not already
+      this.viewedIt = function(){
         if(this.viewed[(this.current+1).toString()]==0){
           this.viewed[(this.current+1).toString()]=1;
         }
-        setFocusedImage(this[++this.current]);
+      }
+      //getter
+      this.getViewed = function(){
+        return this.viewed;
+      }
+
+  }
+  //give it array properties
+  PictureArray.prototype = Array.prototype;
+  //lock from prototypes from being recalled
+  PictureArray.prototype.allow = true;
+  //get next picture
+  PictureArray.prototype.next = function(){
+      if(!PictureArray.prototype.allow){
         return;
-    }
+      }
+      PictureArray.prototype.allow = false;
+        if(this.getCurrent()+1 == this.length){
+          //request NUM_FETCH more and set new array
+          forwardPicture();
+          return;
+        }
+        //if next image is a past image (not in the array)
+        else if(this.getCurrent()+1<0){
+            //update current
+            this.upCurrent();
+            this.downReverse();
+            //fetch it
+            reversePicture(this.getReverse())
+            return;
+        }
+        //if next image is in the array
+        else if(this.getCurrent()+1>=0){
+          //return next image
+            this.viewedIt();
+            this.upCurrent();
+            setFocusedImage(this[this.getCurrent()]);
+            PictureArray.prototype.allow = true;
+            return;
+        }
   }
   //returns previous image
-  Array.prototype.prev = function(){
+  PictureArray.prototype.prev = function(){
     //if the prev image is the first one of out the array
-
-    if(this.current-1 == -1){
-
+    if(!PictureArray.prototype.allow){return;}
+    PictureArray.prototype.allow = false;
+    if(this.getCurrent()-1 == -1){
 
         //update
-        this.current--;
+        this.downCurrent();
         //this is the first image we don't have in the django user session stack
-        this.reverseval = this.length;
+        this.setReverse(this.length);
         //ask for that image
-        reversePicture(this.reverseval);
+        reversePicture(this.getReverse());
         return;
     }
     //if the prev image is not in the array
-    else if(this.current-1 < 0){
+    else if(this.getCurrent()-1 < 0){
 
         //update
-        this.current--;
+        this.downCurrent();
         //move back in user session stack
-        this.reverseval++;
+        this.upReverse();
         //ask for the image
-        reversePicture(this.reverseval);
+        reversePicture(this.getReverse());
         return;
     }
     //else if the prev image is in the array
-    else if(this.current-1 >=0){
+    else if(this.getCurrent()-1 >=0){
+      this.downCurrent();
       //we have it, return it
-        setFocusedImage(this[--this.current]);
+        setFocusedImage(this[this.getCurrent()]);
+        PictureArray.prototype.allow = true;
         return;
     }
   }
   //jump to next new image
-  Array.prototype.jump = function(){
+  PictureArray.prototype.jump = function(){
+    if(!PictureArray.prototype.allow){return;}
+    PictureArray.prototype.allow = false;
     //find the last image we saw
     last = 0;
-    for(key in this.viewed){
+    for(key in this.getViewed()){
       if(this.viewed[key]==1){
         last = parseInt(key);
       }
@@ -126,27 +221,27 @@
     }
     //else get the next image in the list
     else{
-      this.current = last;
-      setFocusedImage(this[this.current]);
+      this.setCurrent(last);
+      setFocusedImage(this[this.getCurrent()]);
+      PictureArray.prototype.allow = true;
       return;
     }
 
   }
   //sets the current image marked in the list
-  Array.prototype.curr = function(){
-    if(this.current>=0){
-      setFocusedImage(this[this.current]);
+  PictureArray.prototype.curr = function(){
+    if(!PictureArray.prototype.allowConnect){return;}
+    PictureArray.prototype.allow = false;
+    if(this.getCurrent()>=0){
+      setFocusedImage(this[this.getCurrent()]);
+      PictureArray.prototype.allow = true;
     }
     else{
-      reversePicture(this.reverseval);
+
+      reversePicture(this.getReverse());
     }
   }
-  //set current index to 0
-  Array.prototype.current = 0;
-  //set current reverse index to 0
-  Array.prototype.reverseval =0;
-  //marks if an image in the list is viewed
-  Array.prototype.viewed= {'0':1,'1':0,'2':0};
+
 
   $(function connect_websocket_pic(){
       //create websocket
@@ -269,10 +364,11 @@
           type: "POST",
           data: {'numPics': NUM_FETCH},
           success: function(response){
-            image_cache = new Array();
+            image_cache = new PictureArray();
             for(var i=0;i<response.length;i++){
                   image_cache[i] = response[i];
             }
+            PictureArray.prototype.allow = true;
 
             setFocusedImage(image_cache[0]);
         }
@@ -296,14 +392,16 @@
           }
           //no more pics left to go back to
           else if(response['type'] == 'nopicture'){
-            image_cache.current++;
-            image_cache.reverseval--;
+            image_cache.upCurrent();
+            image_cache.downReverse();
             bootbox.alert("no more old pictures");
           }
         }
+        PictureArray.prototype.allow = true;
 
-    }
-  });
+      }
+    });
+  }
 /*
   }
   function loop(){
@@ -326,11 +424,11 @@
     // else if there is a state to restore
     else{
       //restore state on refresh
-      image_cache = JSON.parse(window.sessionStorage.getItem("image_cache")); //array of images
+      image_cache = new PictureArray(JSON.parse(window.sessionStorage.getItem("image_cache"))); //array of images
       curr = window.sessionStorage.getItem("curr"); //current pic index
-      image_cache.current=window.sessionStorage.getItem("current"); //prototype current
-      image_cache.reverseval=window.sessionStorage.getItem("reverseval");//prototype reverseval
-      image_cache.viewed = JSON.parse(window.sessionStorage.getItem("viewed"));
+      //image_cache.current=window.sessionStorage.getItem("current"); //prototype current
+      //image_cache.reverseval=window.sessionStorage.getItem("reverseval");//prototype reverseval
+      //image_cache.viewed = JSON.parse(window.sessionStorage.getItem("viewed"));
       image_cache.curr();
 
     }
@@ -347,18 +445,18 @@
          case leftarrow:
            //asynchronously ask for next image and add it
            //since we might have to fetch it
-           if(picview){
+           if(picview&&image_cache){
              image_cache.prev();
            }
            break;
          case rightarrow:
             //asynchronously ask for next image since
-            if(picview){
+            if(picview&&image_cache){
             image_cache.next();
             }
             break;
          case enter:
-            if(picview){
+            if(picview&&image_cache){
               image_cache.jump();
             }
             break;
@@ -391,9 +489,9 @@
       //save all state data
       window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
       window.sessionStorage.setItem("curr",curr); // current pic id
-      window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
-      window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
-      window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
+      //window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
+      //window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
+      //window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
       curr = parseInt(image['pk']);
       image_data = image["image"];
       document.focusedImage.src=image_data['fileName'];
@@ -553,10 +651,12 @@
   }
   //clear storage on logout to avoid attempting to grab
   //a non-existant image on login
+
   $(function(){
       $("#logoutfm").submit(function(){
       window.sessionStorage.clear();
-  });})
+    });
+  });
 
 </script>
 </head>
