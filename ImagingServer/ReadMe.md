@@ -22,7 +22,7 @@
 - [X] gui side authentication
 - [ ] image data dump to competition electronic format in real-time
 - [ ] deploy to apache2 with TLS
-- [ ] HTML/CSS to viewer and login
+- [X] HTML/CSS to viewer and login
 	- nicer gallery, etc...
 - [ ] geotagging
-
+- [ ] fix cropper
