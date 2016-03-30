@@ -628,7 +628,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         private void refresh(){
             //get current system time
             long unixTime = System.currentTimeMillis()/1000;
-            Log.i("delta",expiration-unixTime+"");
+            Log.i("delta", expiration - unixTime + "");
             //if token expiration is close
             if(expiration-unixTime<=3560) {
 
@@ -669,6 +669,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             JSONObject payload = new JSONObject(token_decode);
                             expiration=Long.parseLong(payload.getString("exp"));
                             break;
+                        case 400:
+                            //if phone disconnects for too long
+                            //needs to re-login
+                            privateLogin();
+                            break;
+
                         default:
                             Log.e("Error Response","Status" +status);
                             break;
@@ -692,72 +698,77 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
         }
 
+        void privateLogin(){
+            try {
+                //login to obtain token
+                URL url = new URL("http://" + URL + "/drone/login");
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setRequestMethod("POST");
+                //send json username and password
+                JSONObject requestData = new JSONObject();
+                requestData.put("username",((EditText)findViewById(R.id.username)).getText().toString());
+                requestData.put("password",((EditText)findViewById(R.id.password)).getText().toString());
+
+                con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                con.setDoInput(true);
+                con.setDoOutput(true);
+                con.setUseCaches(false);
+
+                OutputStream osC = con.getOutputStream();
+                OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
+                osW.write(requestData.toString());
+                osW.flush();
+                osW.close();
+
+
+                int status = con.getResponseCode();
+
+                switch (status){
+                    case 200:
+                        //get token response
+                        JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
+                        token = response.getString("token");
+                        //parse out expiration
+                        String[] token_split = token.split("\\.");
+
+                        String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
+                        JSONObject payload = new JSONObject(token_decode);
+                        expiration=Long.parseLong(payload.getString("exp"));
+
+                        break;
+                    default:
+                        Log.e("Error Response","Status"+status);
+                        break;
+                }
+                con.disconnect();
+                synchronized (uThread){
+                    uThread.notify();
+                }
+
+
+            }
+            catch (JSONException e){
+                e.printStackTrace();
+            }
+            catch (MalformedURLException e){
+                e.printStackTrace();
+            }
+            catch (ProtocolException e){
+                e.printStackTrace();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+
+
+        }
+
         //login to obtain auth token
         void login(){
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        //login to obtain token
-                        URL url = new URL("http://" + URL + "/drone/login");
-                        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-                        con.setRequestMethod("POST");
-                        //send json username and password
-                        JSONObject requestData = new JSONObject();
-                        requestData.put("username",((EditText)findViewById(R.id.username)).getText().toString());
-                        requestData.put("password",((EditText)findViewById(R.id.password)).getText().toString());
-
-                        con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                        con.setDoInput(true);
-                        con.setDoOutput(true);
-                        con.setUseCaches(false);
-
-                        OutputStream osC = con.getOutputStream();
-                        OutputStreamWriter osW = new OutputStreamWriter(osC, "UTF-8");
-                        osW.write(requestData.toString());
-                        osW.flush();
-                        osW.close();
-
-
-                        int status = con.getResponseCode();
-
-                        switch (status){
-                            case 200:
-                                //get token response
-                                JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
-                                token = response.getString("token");
-                                //parse out expiration
-                                String[] token_split = token.split("\\.");
-
-                                String token_decode = new String(Base64.decode(token_split[1].getBytes(), Base64.DEFAULT), "UTF-8");
-                                JSONObject payload = new JSONObject(token_decode);
-                                expiration=Long.parseLong(payload.getString("exp"));
-
-                                break;
-                            default:
-                                Log.e("Error Response","Status"+status);
-                                break;
-                        }
-                        con.disconnect();
-                        synchronized (uThread){
-                            uThread.notify();
-                        }
-
-
-                    }
-                    catch (JSONException e){
-                        e.printStackTrace();
-                    }
-                    catch (MalformedURLException e){
-                        e.printStackTrace();
-                    }
-                    catch (ProtocolException e){
-                        e.printStackTrace();
-                    }
-                    catch (IOException e){
-                        e.printStackTrace();
-                    }
-
+                    privateLogin();
                 }
 
 

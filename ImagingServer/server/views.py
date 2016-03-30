@@ -44,8 +44,7 @@ TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 #important time constants
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
-GCS_SEND_TIMEOUT = 10
-EXPIRATION = 8
+EXPIRATION = 10
 lock = None
 connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
 channel = connection.channel()
@@ -72,36 +71,6 @@ def gcsSessions():
 
 '''
 sends pictures to gcs
-'''
-
-'''
-class GCSPictureSender:
-
-
-	def __init__(self,timeout):
-		self.timeout = timeout
-		self.latestpk = -1
-
-	def startLoop(self):
-		while True:
-			#get latest picture based on pk
-			try:
-				picture = Picture.objects.latest('pk')
-			except Picture.DoesNotExist:
-				continue
-			#serialize pic
-			if (picture.pk!=self.latestpk):
-				serPic = PictureSerializer(picture)
-				#picture info
-				responseData = simplejson.dumps({'type':'picture','pk':picture.pk,'image':serPic.data})
-
-				#send to gcs
-				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-				redis_publisher.publish_message(RedisMessage(responseData))
-				self.latestpk = picture.pk
-			#wait delay
-			time.sleep(self.timeout)
-
 '''
 
 
