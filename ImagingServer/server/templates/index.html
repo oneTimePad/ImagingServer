@@ -19,11 +19,11 @@
 
 	curr = 0; //the id of the picture/target in focus
 	picview = true;//true when a picture is in view, false when a target is in view
-	loading = 1;
 	img_properties = {}; //now using an object as a map since the images are not sent down in order
 	crop = {};
 	NUM_FETCH = 3;
 	image_cache = null; // caches the image strings
+	firstinit = false;
 
 	(function(){
 		// Convert array to object
