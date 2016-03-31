@@ -3,3 +3,5 @@ ImagingServer/__pycache__
 ImagingServer/server/__pycache__
 ImagingServer/ImagingServer/__pycache__
 ImagingServer/server/migrations
+*.pyc
+__pycache__/
