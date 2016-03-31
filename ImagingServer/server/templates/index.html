@@ -16,7 +16,6 @@
 
 
 <script>
-
 	curr = 0; //the id of the picture/target in focus
 	picview = true;//true when a picture is in view, false when a target is in view
 	img_properties = {}; //now using an object as a map since the images are not sent down in order
@@ -47,10 +46,8 @@
 						return oldJSONStringify(input);
 		};
 })();
-
 //Array for holding pictures
 function PictureArray(){
-
 			if((args=arguments[0])){
 				for(keys in args){
 						switch (keys) {
@@ -71,15 +68,12 @@ function PictureArray(){
 						}
 				}
 			}
-
 			if(this.current==undefined){
 				this.current = 0;
 			}
-
 			if(this.reversal == undefined){
 				this.reversal = 0;
 			}
-
 			if(this.viewed == undefined){
 				this.viewed = (function(){
 						var viewed = {'0':1};
@@ -89,7 +83,6 @@ function PictureArray(){
 						return viewed;
 				})();
 			}
-
 			//plus 1 to current
 			this.upCurrent = function(){
 					this.current++;
@@ -132,7 +125,6 @@ function PictureArray(){
 			this.getViewed = function(){
 				return this.viewed;
 			}
-
 	}
 	//give it array properties
 	PictureArray.prototype = Array.prototype;
@@ -173,7 +165,6 @@ function PictureArray(){
 		if(!PictureArray.prototype.allow){return;}
 		PictureArray.prototype.allow = false;
 		if(this.getCurrent()-1 == -1){
-
 				//update
 				this.downCurrent();
 				//this is the first image we don't have in the django user session stack
@@ -184,7 +175,6 @@ function PictureArray(){
 		}
 		//if the prev image is not in the array
 		else if(this.getCurrent()-1 < 0){
-
 				//update
 				this.downCurrent();
 				//move back in user session stack
@@ -225,7 +215,6 @@ function PictureArray(){
 			PictureArray.prototype.allow = true;
 			return;
 		}
-
 	}
 	//sets the current image marked in the list
 	PictureArray.prototype.curr = function(){
@@ -236,12 +225,9 @@ function PictureArray(){
 			PictureArray.prototype.allow = true;
 		}
 		else{
-
 			reversePicture(this.getReverse());
 		}
 	}
-
-
 	$(function connect_websocket_pic(){
 			//create websocket
 			var web_socket = WS4Redis({
@@ -252,7 +238,6 @@ function PictureArray(){
 			});
 		}
 	)
-
 	//sets up form submission
 	$(function form_submit_setup() {
 		//on user submit
@@ -263,7 +248,6 @@ function PictureArray(){
 			var inputs = $("#form").find(":input");
 			//array of user inputs
 			var input_array = {};
-
 			//put each one in an array
 			inputs.each(function() {
 				if (this.name=="color" || this.name=="lcolor") {
@@ -281,17 +265,13 @@ function PictureArray(){
 					input_array[this.name] = this.value;
 				}
 			})
-
 				//if there attributes, send them
 			if(input_array) {
 				if (picview) {
-
 					input_array['pk'] = curr;
-
 					for(var key in crop){
 						input_array[key] = crop[key];
 					}
-
 					//creating a new target
 					$.ajax({
 						url: "{% url 'gcs-targetCreate'%}",
@@ -330,14 +310,12 @@ function PictureArray(){
 			}
 		})
 	})
-
 	//handles picture received from websocket
 	function parseWebSkt(response){
 		//parse json server response
 		var json_response = JSON.parse(response);
 		if (json_response.hasOwnProperty("disconnected")) {
 			bootbox.alert("Android Device Disconnected");
-
 		}
 		else if (json_response.hasOwnProperty("connected")) {
 			bootbox.alert("Android Device Connected");
@@ -346,14 +324,11 @@ function PictureArray(){
 			$("#trigger_on").html("Stop Triggering");
 			document.getElementById("trigger_on").value = 0;
 		}
-
 		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false"){
 			$("#trigger_on").html("Start Triggering");
 			document.getElementById("trigger_on").value = 1;
 		}
 	}
-
-
 	/*
 	retrieve next NUM_FETCH pics
 	*/
@@ -367,13 +342,10 @@ function PictureArray(){
 						for(var i=0;i<response.length;i++){
 									image_cache.push(response[i]);
 						}
-
 						setFocusedImage(image_cache[0]);
 				}
 			});
 		}
-
-
 		/*
 		get a pic in the past if cache doesn't have it
 		*/
@@ -396,36 +368,35 @@ function PictureArray(){
 						PictureArray.prototype.allow = true;
 					}
 				}
-
-
 			}
 		});
 	}
-
+/*
+	//wanna do some testing before I add this
 	function loop(){
 		while(looping){
 			image_cache.next();
 			setTimeout(function(){},3000);
 		}
-	}
-
+	}*/
 	window.onload = function() {
 		//making the panels the height of the window (excluding the navbar)
 		//if the window height changes, the page has to be reloaded
 		setDimensions();
 		//if there is no state to restore
-		if(window.sessionStorage.getItem("curr")==null) {
+		if(window.sessionStorage.getItem("curr") ==null){
 			//attempt to get a pic
 			forwardPicture();
 		}
 		// else if there is a state to restore
-		else {
+		else{
 			//restore state on refresh
-			image_cache = JSON.parse(window.sessionStorage.getItem("image_cache")); //array of images
+			image_cache = new PictureArray(JSON.parse(window.sessionStorage.getItem("image_cache"))); //array of images
 			curr = window.sessionStorage.getItem("curr"); //current pic index
-			image_cache.current=window.sessionStorage.getItem("current"); //prototype current
-			image_cache.reverseval=window.sessionStorage.getItem("reverseval");//prototype reverseval
-			image_cache.viewed = JSON.parse(window.sessionStorage.getItem("viewed"));
+			//image_cache.current=window.sessionStorage.getItem("current"); //prototype current
+			//image_cache.reverseval=window.sessionStorage.getItem("reverseval");//prototype reverseval
+			//image_cache.viewed = JSON.parse(window.sessionStorage.getItem("viewed"));
+			PictureArray.prototype.allow = true;
 			image_cache.curr();
 		}
 		//event listener for entire window (for keys)
@@ -434,23 +405,22 @@ function PictureArray(){
 			 var leftarrow = 37;
 			 var rightarrow = 39;
 			 var del = 46;
-
 			 switch (key.keyCode) {
 				 case leftarrow:
 					 //asynchronously ask for next image and add it
 					 //since we might have to fetch it
-					 if(picview){
+					 if(picview&&image_cache){
 						 image_cache.prev();
 					 }
 					 break;
 				 case rightarrow:
 						//asynchronously ask for next image since
-						if(picview){
+						if(picview&&image_cache){
 						image_cache.next();
 						}
 						break;
 				 case enter:
-						if(picview){
+						if(picview&&image_cache){
 							image_cache.jump();
 						}
 						break;
@@ -467,23 +437,23 @@ function PictureArray(){
 			 }
 		 });
 	}
-
 	function setDimensions() {
-		var height = window.innerHeight - $("#navbar").height() - 35;
-		$("#left-panel").css("height", height + "px");
-		$("#picture").css("height", height + "px");
-		$("#targets").css("height", height + "px");
+		var height = window.innerHeight - $("#navbar").height();
+		$("#left-panel").css("max-height", height + "px");
+		$("#picture").css("max-height", height + "px");
+		$("#targets").css("max-height", height + "px");
+		var formheight = $("#form").height();
+		$("#data").css("max-height", height-formheight + "px");
 	}
-
 	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
 		if (picview) {
 			//save all state data
 			window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
 			window.sessionStorage.setItem("curr",curr); // current pic id
-			window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
-			window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
-			window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
+			//window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
+			//window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
+			//window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
 			curr = parseInt(image['pk']);
 			image_data = image["image"];
 			document.focusedImage.src=image_data['fileName'];
@@ -503,7 +473,7 @@ function PictureArray(){
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
 				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>");
 				//Add orientation
-
+			PictureArray.prototype.allow = true;
 		}
 		else {
 			document.focusedImage.src=image.src;
@@ -515,7 +485,6 @@ function PictureArray(){
 			showTargetData(image);
 		}
 	}
-
 	function showTargetData(image) {
 		pk = parseInt(image.id);
 		$.ajax({
@@ -540,7 +509,6 @@ function PictureArray(){
 			}
 		})
 	}
-
 	//sets the canvas width and height and allows it to listen for cropping
 	function canvasinit() {
 		var p1;
@@ -655,11 +623,10 @@ function PictureArray(){
 	//clear storage on logout to avoid attempting to grab
 	//a non-existant image on login
 	$(function(){
-		$("#logoutfm").submit(function() {
+			$("#logoutfm").submit(function(){
 			window.sessionStorage.clear();
 		});
-	})
-
+	});
 </script>
 </head>
 
@@ -672,7 +639,7 @@ function PictureArray(){
 				<label for="time_interval">Trigger Time</label>
 				<input id="time_interval" type="text" value="0"/>
 				<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-				<button onclick="dump_targets(); return false;" class="btn btn-primary">Dump Target Data</button>
+				<button onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
 				<button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>
 
 			</form>
@@ -711,7 +678,7 @@ function PictureArray(){
 		<div id="container">
 			<canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
 			<img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
-	</div>
+ 	</div>
 	</div>
 	<div id="targets"></div>
 
@@ -721,7 +688,6 @@ function PictureArray(){
 </html>
 
 <script>
-
 $(document).ready(function(){
 	//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
 	$("#palette").spectrum({
@@ -734,7 +700,6 @@ $(document).ready(function(){
 		]
 	});
 });
-
 $(document).ready(function(){
 	$("#lpalette").spectrum({
 		showPaletteOnly: true,
@@ -746,7 +711,6 @@ $(document).ready(function(){
 		]
 	});
 });
-
 function set_smart_trigger(){
 	var smart_trigger= document.getElementById("smart_trigger")
 	$("#smart_trigger").val(Math.abs(smart_trigger.value-1))
@@ -757,7 +721,6 @@ function set_smart_trigger(){
 		$("#smart_trigger").html("Smart Triggering Off")
 	}
 }
-
 function trigger() {
 	$.ajax({
 		url:"{%url 'gcs-cameraTrigger' %}",
