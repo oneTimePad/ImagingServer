@@ -4,7 +4,7 @@ import os
 
 from celery import Celery
 
-os.envrion.setdefault('DJANGO_SETTINGS_MODULE','ImagingServer.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE','ImagingServer.settings')
 
 
 from django.conf import settings

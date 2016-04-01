@@ -131,7 +131,7 @@ class Target(models.Model):
 		scale_width = int(size_data[2])
 		x,y,_,width,height = [int(data * orig_width / scale_width) for data in size_data]
 		if not scale_width or not orig_width or not orig_height:
-			print 'Data is screwy. Exiting early.'
+			print('Data is screwy. Exiting early.')
 			return
 		# x = int(x)
 		# y = int(y)
@@ -162,7 +162,7 @@ class Target(models.Model):
 		roll = float(parent_pic.roll) # Left/Right angle
 		altitude = float(parent_pic.alt)
 		if not altitude:
-			print 'Altitude is 0. Skipping geotagging.'
+			print('Altitude is 0. Skipping geotagging.')
 			self.save()
 			return
 
