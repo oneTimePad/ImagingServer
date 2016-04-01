@@ -22,7 +22,7 @@
 	crop = {};
 	NUM_FETCH = 3;
 	image_cache = null; // caches the image strings
-	firstinit = false;
+	firstinit = true;
 
 	(function(){
 		// Convert array to object
@@ -439,11 +439,11 @@ function PictureArray(){
 	}
 	function setDimensions() {
 		var height = window.innerHeight - $("#navbar").height() - 35;
-		$("#left-panel").css("max-height", height + "px");
-		$("#picture").css("max-height", height + "px");
-		$("#targets").css("max-height", height + "px");
-		var formheight = $("#form").height();
-		$("#data").css("max-height", height-formheight + "px");
+		$("#left-panel").css("height", height + "px");
+		$("#picture").css("height", height + "px");
+		$("#targets").css("height", height + "px");
+		// var formheight = $("#form").height();
+		// $("#data").css("max-height", height-formheight + "px");
 	}
 	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
@@ -451,18 +451,37 @@ function PictureArray(){
 			//save all state data
 			window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
 			window.sessionStorage.setItem("curr",curr); // current pic id
-			//window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
-			//window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
-			//window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
 			curr = parseInt(image['pk']);
 			image_data = image["image"];
 			document.focusedImage.src=image_data['fileName'];
+			//yayyy time to mess with how the browser shows images
+			// if (firstinit) {
+			// 	while (firstinit) {
+			// 		img = $("#focused")
+			// 		img.on("load",onLoad = function() {
+			// 			firstinit = false;
+			// 		})
+			// 		console.log(document.focusedImage.naturalWidth+" "+document.focusedImage.naturalHeight);
+			// 		document.focusedImage.style.height = "auto";
+			// 	}
+			// 	firstinit = true;
+			// 	img.off("load",onLoad)
+			// }
+			aspect_ratio = 4/3
+			max_width = $("#picture").width();
+			max_height = $("#picture").height();
+			console.log("calc: "+(aspect_ratio*max_height)+max_width)
+			if (aspect_ratio*max_height>=max_width) {
+				// width is constraining, must be kept at 100%
+				document.focusedImage.style.height = "auto"
+				document.focusedImage.style.width="100%"
+			}
+			else {
+				document.focusedImage.style.height="100%"
+				document.focusedImage.style.width = "auto"
+			}
+			console.log("WH "+$("#focused").width()+" "+$("#focused").height())
 			canvasinit();
-			//document.focusedImage.width =200;
-			//document.focusedImage.height = 200;
-			//document.focusedImage.style.width = focusedwidth+"px";
-			//document.focusedImage.style.height = "auto";//to resize the canvas and start a new crop
-			//getting targets using the pk of the current image
 			$("#focus-type").text("Picture Data");
 			pic_curr_props = image_data;//using the string id to access the data in the map
 			$("#focus-data").empty()
@@ -554,8 +573,8 @@ function PictureArray(){
 			var transx = parseInt(transform[4]);
 			var transy = parseInt(transform[5]);
 			var factor = parseInt((scale-1)/2);
-			var width = $("#selector").width();
-			var height = $("#selector").height()
+			var width = $("#focused").width();
+			var height = $("#focused").height()
 			crop.x = parseInt((width*factor + corner[0]-transx)/scale);
 			crop.y = parseInt((height*factor + corner[1]-transy)/scale);
 			crop.width = parseInt(boxW/scale);
@@ -563,8 +582,8 @@ function PictureArray(){
 			crop.scaleWidth = width;
 			console.log("crop "+crop.x+" "+crop.y+" "+crop.width+" "+crop.height+" "+crop.scaleWidth+" "+height)
 		}
-		if (!firstinit) {
-			firstinit = true;
+		if (firstinit) {
+			firstinit = false;
 			canvas.addEventListener("dblclick", function toggle(event) {
 				panning = !panning;
 				cropinit = false;
