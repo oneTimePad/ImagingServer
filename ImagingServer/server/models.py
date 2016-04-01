@@ -129,7 +129,8 @@ class Target(models.Model):
 
 		#unpackage crop data
 		scale_width = int(size_data[2])
-		x,y,_,width,height = [int(data * orig_width / scale_width) for data in size_data]
+		x,y,_,width,height = [int(int(data) * orig_width / scale_width) for data in size_data]
+
 		if not scale_width or not orig_width or not orig_height:
 			print('Data is screwy. Exiting early.')
 			return
@@ -146,8 +147,10 @@ class Target(models.Model):
 
 		cropped_image = original_image.crop((x,y,x+width,y+height))
 
+		image_io = BytesIO()
+
 		#save image to stringIO file as JPEG
-		cropped_image.save(BytesIO(),format='JPEG')
+		cropped_image.save(image_io,format='JPEG')
 
 		#convert image to django recognized format
 		django_cropped_image = InMemoryUploadedFile(image_io,None,"Target"+str(self.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
