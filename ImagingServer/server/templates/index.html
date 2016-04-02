@@ -637,8 +637,8 @@ function PictureArray(){
 		var zoom = 5;
 		//set canvas to image params
 		var canvas = document.getElementById("selector");
-		canvas.width = $("#container").width();
-		canvas.height = $("#container").height();
+		canvas.width = $("#focused").width();
+		canvas.height = $("#focused").height();
 		canvas.style.display = "block";
 		var ctx = canvas.getContext("2d");
 
