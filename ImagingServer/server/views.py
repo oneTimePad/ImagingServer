@@ -45,11 +45,11 @@ TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
 EXPIRATION = 10
-lock = None
 connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
 channel = connection.channel()
 channel.queue_delete(queue='pictures')
 connection.close()
+
 
 '''
 saves session for logged in gcs user
@@ -74,32 +74,6 @@ sends pictures to gcs
 '''
 
 
-
-'''
-used to check if drone is still connected
-'''
-class DroneConnectionCheck:
-
-	def __init__(self,id,timeout):
-		self.id = id
-		self.timeout = timeout
-	def startLoop(self):
-		while True:
-			#if drone cache entry is gone
-			if not cache.has_key(self.id):
-				#then drone hasn't connected in a while
-				#delete looper obj
-				cache.delete("connectLoop")
-				#tell gcs drone disconnected
-				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
-				break
-			time.sleep(self.timeout)
-
-
-'''
-used for drone endpoints
-'''
 class DroneViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (JSONWebTokenAuthentication,)
@@ -127,25 +101,18 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		requestTime = dataDict['timeCache']
         #determine if drone has contacted before
-		if not cache.has_key(androidId):
+		if not cache.has_key("android"):
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
+			cache.set("checkallowed",True)
             #if no set its cache entry
-			cache.set(androidId,requestTime,EXPIRATION)
+			cache.set("android",requestTime,EXPIRATION)
 		else:
             #else delete the old one
-			cache.delete(androidId)
+			cache.delete("android")
             #create a new one
-			cache.set(androidId,requestTime,EXPIRATION)
-        #if drone connection check not started
-		if not cache.has_key('connectLoop'):
-            #create connection check object
-			connectLoop = DroneConnectionCheck(androidId,DRONE_DISCONNECT_TIMEOUT)
-            #save it in cache
-			cache.set('connectLoop',connectLoop)
-            #start loop in new thread
-			_thread.start_new_thread(connectLoop.startLoop,())
-            #tell gcs that drone is connected
-			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
+			cache.set("android",requestTime,EXPIRATION)
+
 
 
 		try:
@@ -183,14 +150,6 @@ class DroneViewset(viewsets.ModelViewSet):
 									routing_key='pictures',
 									body=str(pictureObj.pk))
 				connection.close()
-			'''
-			#start gcs picture send loop if not started
-			if not cache.has_key("sendLoop"):
-				#create loop obj and save in cache
-				sendLoop = GCSPictureSender(GCS_SEND_TIMEOUT)
-				cache.set("sendLoop",sendLoop)
-				_thread.start_new_thread(sendLoop.startLoop,())
-			'''
 
 		except MultiValueDictKeyError:
             #there was no picture sent
@@ -256,6 +215,17 @@ class CountCallback(object):
 			ch.stop_consuming()
 
 
+
+def connectionCheck():
+
+	if cache.has_key("checkallowed"):
+		#pdb.set_trace()
+		if not cache.has_key("android"):
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
+			cache.delete("checkallowed")
+
+
 '''
 used for GCS endpoints
 '''
@@ -273,8 +243,10 @@ class GCSViewset(viewsets.ModelViewSet):
 		return redirect(reverse('gcs-login'))
 
 
+
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):
+		connectionCheck()
         #attempting to trigger
 		triggerStatus = request.data['trigger']
         #if attempting to trigger and time is 0 or there is no time
@@ -303,7 +275,8 @@ class GCSViewset(viewsets.ModelViewSet):
 	@transaction.atomic
 	@list_route(methods=['post'])
 	def forwardPicture(self,request,pk=None):
-		#pdb.set_trace()
+		connectionCheck()
+
 		connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 		channel = connection.channel()
 		queue = channel.queue_declare(queue='pictures')
@@ -325,6 +298,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def reversePicture(self,request,pk=None):
+		connectionCheck()
 		#pdb.set_trace()
 		index = request.POST['curPic']
 		picStack = request.session['picstack']
@@ -338,6 +312,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def getTargetData(self,request,pk=None):
+		connectionCheck()
 		try:
             #return target data dictionary
 			targetData = TargetSerializer(Target.objects.get(pk = request.data['pk']))
@@ -348,6 +323,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def targetCreate(self,request,pk=None):
+		connectionCheck()
 		try:
 			picture = Picture.objects.get(pk=request.data['pk'])
 		except Picture.DoesNotExist:
@@ -364,6 +340,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def targetEdit(self,request,pk=None):
+		connectionCheck()
 		try:
             #edit target with new values
 			target = Target.objects.get(pk=request.data['pk'])
@@ -375,6 +352,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def deleteTarget(self,request,pk=None):
+		connectionCheck()
 		try:
             #get target photo path and delete it
 			target = Target.objects.get(pk=request.data['pk'])
@@ -384,27 +362,19 @@ class GCSViewset(viewsets.ModelViewSet):
 			pass
 		return HttpResponseForbidden()
 
-	@list_route(methods=['post'])
-	def deletePicture(self,request,pk=None):
-		try:
-            #get target photo path and delete it
-			picture = Picture.objects.get(pk=request.data['pk'])
-			os.remove(picture.photo.path)
-            #delete all of the picture's targets
-			for t in picture.target_set.all():
-				os.remove(t.target_pic.path)
-				t.delete()
-			picture.delete()
-			return HttpResponse('Success')
-		except Picture.DoesNotExist:
-			pass
-		return HttpResponseForbidden()
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
+		connectionCheck()
+		response = HttpResponse(content_type='text/csv')
+		response['Content-Disposition'] = 'attachment; filename="RU.txt"'
 		targets = Target.objects.all()
-		data = ''.join([str(n+1)+'\tSTD\t'+str(targets[n].lat)+'\t'+str(targets[n].lon)+'\t'+targets[n].orientation+'\t'+targets[n].shape+'\t'+targets[n].color+'\t'+targets[n].letter+'\t'+targets[n].lcolor+'\t'+targets[n].picture.url+'\n' for n in range(0,len(targets))])
-		return Response({'data':data})
+		writer = csv.writer(response,delimiter='\t')
+		count = 1
+		for t in targets:
+			writer.writerow([count, 'STD', t.lat, t.lon, t.orientation, t.shape, t.color, t.letter, t.lcolor, t.picture.url])
+			count+=1
+		return response
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):

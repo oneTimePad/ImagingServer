@@ -22,6 +22,7 @@
 	crop = {};
 	NUM_FETCH = 3;
 	image_cache = null; // caches the image strings
+	next_array = null;
 	firstinit = false;
 
 	(function(){
@@ -48,97 +49,153 @@
 })();
 //Array for holding pictures
 function PictureArray(){
+			var current; //current picture index
+			var reversal; //reverse picture index
+			var viewed;  //marker whether picture has been viewed or not
+
+
+
+			//check if arguments exist to constructor
 			if((args=arguments[0])){
+				//for all arguments
 				for(keys in args){
 						switch (keys) {
+							//set them accordingly
 							case "current":
-								this.current =args['current'];
+								current =args['current'];
 								break;
 							case "reversal":
-								this.reversal = args['reversal'];
+								reversal = args['reversal'];
 								break;
 							case "viewed":
-								this.viewed = args['viewed'];
+								viewed = args['viewed'];
 								break;
+								//insert images into cache
 							default:
 								if(args[keys].hasOwnProperty("image")==true){
-									this[keys] = args[keys];
+									this.push(args[keys]);
 								}
 								break;
 						}
 				}
 			}
-			if(this.current==undefined){
-				this.current = 0;
+			//if no constructor args, set defaults
+			if(current==undefined){
+				current = 0;
 			}
-			if(this.reversal == undefined){
-				this.reversal = 0;
+			if(reversal == undefined){
+				reversal = 0;
 			}
-			if(this.viewed == undefined){
-				this.viewed = (function(){
-						var viewed = {'0':1};
-						for(var i=1;i<NUM_FETCH;i++){
-								viewed[i.toString()] = 0;
+			//set viewed array defaults
+			if(viewed == undefined){
+				viewed = (function(length){
+					//mark the first as viewed, and the rest as not
+						var localViewed = {};
+						for(var i=0;i<length;i++){
+								localViewed[i.toString()] = 0;
 						};
-						return viewed;
-				})();
+						return localViewed;
+				})(this.length);
 			}
 			//plus 1 to current
 			this.upCurrent = function(){
-					this.current++;
+					current++;
 			}
 			//minus 1 to current
 			this.downCurrent = function(){
-					this.current--;
+					current--;
 			}
 			//getter
 			this.getCurrent = function(){
-				return this.current;
+				return current;
 			}
 			//setter
 			this.setCurrent = function(c){
-				this.current = c;
+				current = c;
 			}
 			//plus 1 reversal
 			this.upReverse = function(r){
-				this.reversal++;
+				reversal++;
 			}
 			//minus 1 reversal
 			this.downReverse = function(){
-				this.reversal--;
+				reversal--;
 			}
 			//setter
 			this.setReverse =function(r){
-				this.reversal = r;
+				reversal = r;
 			}
 			//getter
 			this.getReverse = function(){
-				return this.reversal;
+				return reversal;
 			}
 			//mark a pic as viewed if not already
 			this.viewedIt = function(){
-				if(this.viewed[(this.current+1).toString()]==0){
-					this.viewed[(this.current+1).toString()]=1;
+
+				if(viewed[(current).toString()]==0){
+					viewed[(current).toString()]=1;
 				}
+
 			}
 			//getter
 			this.getViewed = function(){
-				return this.viewed;
+				return viewed;
+			}
+
+			//check if there is a replacement object
+			this.swapArray = function(){
+				//if there is one
+				if(next_array!=null){
+					//set the global cache
+					image_cache = next_array;
+					//mark the first pic as viewed
+					image_cache.viewedIt();
+					next_array = null;
+					//set the focus
+					image_cache.curr();
+					return true;
+				}
+				//else there is not one
+				return false;
+
+			}
+
+			this.serializePrep = function (){
+				this.current = current;
+				this.reversal = reversal;
+				this.viewed = viewed;
 			}
 	}
 	//give it array properties
 	PictureArray.prototype = Array.prototype;
-	//lock from prototypes from being recalled
-	PictureArray.prototype.allow = false;
+
+	//don't allow user to keep asking server for image
+	PictureArray.prototype.allowForward = true;
+
+	//this might not be necessary due to js being single-thread
+	PictureArray.prototype.allow = true;
+
 	//get next picture
 	PictureArray.prototype.next = function(){
-			if(!PictureArray.prototype.allow){
-				return;
-			}
-			PictureArray.prototype.allow = false;
+				//if a new array has arrived, lock these allow
+				//the new array checks the current state
+				//this might not be a problem since js is single threaded
+				if(!PictureArray.prototype.allow){
+					return;
+				}
+
 				if(this.getCurrent()+1 == this.length){
+					if(this.swapArray()){
+						return;
+					}
+
+					if(!PictureArray.prototype.allowForward){
+						return;
+					}
+					PictureArray.prototype.allowForward = false;
 					//request NUM_FETCH more and set new array
 					forwardPicture();
+
 					return;
 				}
 				//if next image is a past image (not in the array)
@@ -153,8 +210,8 @@ function PictureArray(){
 				//if next image is in the array
 				else if(this.getCurrent()+1>=0){
 					//return next image
+					  this.upCurrent();
 						this.viewedIt();
-						this.upCurrent();
 						setFocusedImage(this[this.getCurrent()]);
 						return;
 				}
@@ -163,7 +220,6 @@ function PictureArray(){
 	PictureArray.prototype.prev = function(){
 		//if the prev image is the first one of out the array
 		if(!PictureArray.prototype.allow){return;}
-		PictureArray.prototype.allow = false;
 		if(this.getCurrent()-1 == -1){
 				//update
 				this.downCurrent();
@@ -194,35 +250,46 @@ function PictureArray(){
 	//jump to next new image
 	PictureArray.prototype.jump = function(){
 		if(!PictureArray.prototype.allow){return;}
-		PictureArray.prototype.allow = false;
 		//find the last image we saw
 		last = 0;
-		for(key in this.getViewed()){
-			if(this.viewed[key]==1){
+		var viewed = this.getViewed();
+		for(key in viewed){
+			if(viewed[key]==1){
 				last = parseInt(key);
 			}
 		}
 		//if we exhausted it
 		if(last+1>=this.length){
+			//check if there is an array pending
+			if(this.swapArray()){
+				return;
+			}
+			//if this was already called, don't allow it to call again
+			if(!PictureArray.prototype.allowForward){
+				return;
+			}
+			//lock forward fetching
+			PictureArray.prototype.allowForward = false;
+			//else grab a new one
 			forwardPicture();
 			return;
 		}
 		//else get the next image in the list
 		else{
+			//update current
 			this.setCurrent(last+1);
+			//mark the new one as viewed
 			this.viewedIt();
+			//set as focused
 			setFocusedImage(this[this.getCurrent()]);
-			PictureArray.prototype.allow = true;
 			return;
 		}
 	}
 	//sets the current image marked in the list
 	PictureArray.prototype.curr = function(){
-		if(!PictureArray.prototype.allow){return;}
-		PictureArray.prototype.allow = false;
+		console.log(this.getCurrent());
 		if(this.getCurrent()>=0){
 			setFocusedImage(this[this.getCurrent()]);
-			PictureArray.prototype.allow = true;
 		}
 		else{
 			reversePicture(this.getReverse());
@@ -338,11 +405,24 @@ function PictureArray(){
 					type: "POST",
 					data: {'numPics': NUM_FETCH},
 					success: function(response){
-						image_cache = new PictureArray();
+						PictureArray.prototype.allow = false;
+						cache = new PictureArray(JSON.parse(JSON.stringify(response)));
+						/*
 						for(var i=0;i<response.length;i++){
-									image_cache.push(response[i]);
+									cache.push(response[i]);
 						}
-						setFocusedImage(image_cache[0]);
+						*/
+						if(image_cache==null || image_cache.getCurrent()+1==image_cache.length){
+							image_cache = cache;
+							image_cache.viewedIt();
+							setFocusedImage(image_cache[0]);
+						}
+						else{
+								next_array = cache;
+						}
+						PictureArray.prototype.allowForward=true;
+						PictureArray.prototype.allow = true;
+
 				}
 			});
 		}
@@ -392,11 +472,13 @@ function PictureArray(){
 		else{
 			//restore state on refresh
 			image_cache = new PictureArray(JSON.parse(window.sessionStorage.getItem("image_cache"))); //array of images
+			next_array =  new PictureArray(JSON.parse(window.sessionStorage.getItem("next_array")));
 			curr = window.sessionStorage.getItem("curr"); //current pic index
 			//image_cache.current=window.sessionStorage.getItem("current"); //prototype current
 			//image_cache.reverseval=window.sessionStorage.getItem("reverseval");//prototype reverseval
 			//image_cache.viewed = JSON.parse(window.sessionStorage.getItem("viewed"));
 			PictureArray.prototype.allow = true;
+			PictureArray.prototype.allowForward = true;
 			image_cache.curr();
 		}
 		//event listener for entire window (for keys)
@@ -449,8 +531,17 @@ function PictureArray(){
 	function setFocusedImage(image) {
 		if (picview) {
 			//save all state data
+			image_cache.serializePrep();
 			window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
 			window.sessionStorage.setItem("curr",curr); // current pic id
+			if(next_array != null){
+				window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
+			}
+			else{
+				window.sessionStorage.setItem("next_array",null);
+			}
+			//window.sessionStorage.setItem("allow",PictureArray.prototype.allow);
+			//window.sessionStorage.setItem("allowForward",PictureArray.prototype.allowForward);
 			//window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
 			//window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
 			//window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
