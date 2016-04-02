@@ -116,10 +116,100 @@ class Target(models.Model):
 		len2 = math.hypot(x2, y2)
 		return math.acos(inner_product/(len1*len2))
 
+<<<<<<< HEAD
 	# Input the x, and y pixel location of a point or a crop
 	# This function will give out the GPS lat/lon coordinates
 	# of that pixel on the image
 	def calculate_coordinates(x,y):
+=======
+	'''GEOTAGGING STUFF GOES HERE '''
+	#crop target from image
+	def crop(self,size_data,parent_pic):#right now the gps coordinates are not right, need to change based on the app
+
+		#get the file name of pic=pk and open image
+		original_image = Image.open(str(parent_pic.photo.file))
+
+		#convert strange json format to integers
+		orig_width,orig_height = original_image.size #1020 for AUVSI camera
+
+		#unpackage crop data
+		scale_width = int(size_data[2])
+		x,y,_,width,height = [int(int(data) * orig_width / scale_width) for data in size_data]
+
+		if not scale_width or not orig_width or not orig_height:
+			print('Data is screwy. Exiting early.')
+			return
+		# x = int(x)
+		# y = int(y)
+		# height = int(height)
+		# width = int(width)
+		# scale_width = int(scale_width)
+
+		# x = int(x*orig_width/scale_width)
+		# y = int(y*orig_width/scale_width)
+		# width = int(width*orig_width/scale_width)
+		# height = int(height*orig_width/scale_width)
+
+		cropped_image = original_image.crop((x,y,x+width,y+height))
+
+		image_io = BytesIO()
+
+		#save image to stringIO file as JPEG
+		cropped_image.save(image_io,format='JPEG')
+
+		#convert image to django recognized format
+		django_cropped_image = InMemoryUploadedFile(image_io,None,"Target"+str(self.pk).zfill(4)+'.jpeg','image/jpeg',image_io.getbuffer().nbytes,None)
+
+		#assign target image to target object
+		self.picture=django_cropped_image
+
+		# GEOTAGGING STUFF
+		# Get information on camera angles
+		azimuth = float(parent_pic.azimuth) # Angle from North
+		pitch = float(parent_pic.pitch) # Forward/back angle
+		roll = float(parent_pic.roll) # Left/Right angle
+		altitude = float(parent_pic.alt)
+		if not altitude:
+			print('Altitude is 0. Skipping geotagging.')
+			self.save()
+			return
+
+		# Calculate the edge angles of the image
+		# Top left of image is 0,0
+		angle_V_0 = pitch + fovV # Top of image
+		angle_V_1 = pitch - fovV # Bottom of image
+		angle_H_0 = roll - fovH # Left sied of image
+		angle_H_1 = roll + fovH # Right side of image
+
+		# Calculate the total distance (meters) that the image spans
+		totalVDistance = altitude * ( math.tan(math.radians(angle_V_0)) - math.tan(math.radians(angle_V_1)) )
+		totalHDistance = altitude * ( -math.tan(math.radians(angle_H_0)) + math.tan(math.radians(angle_H_1)) )
+
+		# Ratio between the altitude height and the vertical pixel 
+		# count and vertical distance
+		# Pixels      0 - img_V_pixels
+		# Distance    0 - altitude m 
+		altitude_pixels = (((altitude/totalVDistance)*orig_height) + ((altitude/totalHDistance)*orig_width))/2
+
+		# Calculate the distance from the center of the image to the center of gps
+		deltaYGPS = altitude_pixels * math.sin(math.radians(pitch))
+		deltaXGPS = altitude_pixels * math.sin(math.radians(roll))
+
+		# The pixels for the y direction go "UP" when 
+		# the pixel goes towards the bottom of the image
+		# REMEMBER top left of image is 0,0
+		#          bottom right of image is max,max
+		gpsX = orig_width/2 + deltaXGPS
+		gpsY = orig_height/2 + deltaYGPS
+
+		# These values are to help with calculating the angle
+		# between the point and the GPS center
+		northX = gpsX + gpsX * math.cos( math.radians(azimuth + 90))
+		northY = gpsY + gpsY * math.sin( math.radians(azimuth + 90))
+
+		# Get the GPS coordinates of the crop location
+		# crop_Lat,cropLon = calculate_coordinates(x,y)
+>>>>>>> b90702370de3fb411d27f37df6b7f8687326de63
 		# Interpolate the relative angle from Tangent to ground
 		relXAngle = (roll - fovH) + (2*fovH)*( float(x) / float(orig_height))
 		relYAngle = (pitch - fovV) - (2*fovV)*( float(y) / float(orig_width))
