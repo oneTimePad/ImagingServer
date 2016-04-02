@@ -366,15 +366,9 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
 		connectionCheck()
-		response = HttpResponse(content_type='text/csv')
-		response['Content-Disposition'] = 'attachment; filename="RU.txt"'
 		targets = Target.objects.all()
-		writer = csv.writer(response,delimiter='\t')
-		count = 1
-		for t in targets:
-			writer.writerow([count, 'STD', t.lat, t.lon, t.orientation, t.shape, t.color, t.letter, t.lcolor, t.picture.url])
-			count+=1
-		return response
+		data = ''.join([str(n+1)+'\tSTD\t'+str(targets[n].lat)+'\t'+str(targets[n].lon)+'\t'+targets[n].orientation+'\t'+targets[n].shape+'\t'+targets[n].color+'\t'+targets[n].letter+'\t'+targets[n].lcolor+'\t'+targets[n].picture.url+'\n' for n in range(0,len(targets))])
+		return Response({'data':data})
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):

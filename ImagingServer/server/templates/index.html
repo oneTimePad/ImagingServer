@@ -464,6 +464,23 @@ function PictureArray(){
 		//making the panels the height of the window (excluding the navbar)
 		//if the window height changes, the page has to be reloaded
 		setDimensions();
+		img = $("#focused");
+		img.on("load", onLoad = function() {
+			console.log("focused image loaded "+this.naturalWidth+" "+this.naturalHeight);
+			aspect_ratio = this.naturalWidth/this.naturalHeight;
+			max_width = $("#picture").width();
+			max_height = $("#picture").height();
+			if (aspect_ratio*max_height>=max_width) {
+				// width is constraining, must be kept at 100%
+				document.focusedImage.style.height = "auto"
+				document.focusedImage.style.width="100%"
+			}
+			else {
+				document.focusedImage.style.height="100%"
+				document.focusedImage.style.width = "auto"
+			}
+			canvasinit();
+		})
 		//if there is no state to restore
 		if(window.sessionStorage.getItem("curr") ==null){
 			//attempt to get a pic
@@ -551,34 +568,6 @@ function PictureArray(){
 			curr = parseInt(image['pk']);
 			image_data = image["image"];
 			document.focusedImage.src=image_data['fileName'];
-			//yayyy time to mess with how the browser shows images
-			// if (firstinit) {
-			// 	while (firstinit) {
-			// 		img = $("#focused")
-			// 		img.on("load",onLoad = function() {
-			// 			firstinit = false;
-			// 		})
-			// 		console.log(document.focusedImage.naturalWidth+" "+document.focusedImage.naturalHeight);
-			// 		document.focusedImage.style.height = "auto";
-			// 	}
-			// 	firstinit = true;
-			// 	img.off("load",onLoad)
-			// }
-			aspect_ratio = 4/3
-			max_width = $("#picture").width();
-			max_height = $("#picture").height();
-			console.log("calc: "+(aspect_ratio*max_height)+max_width)
-			if (aspect_ratio*max_height>=max_width) {
-				// width is constraining, must be kept at 100%
-				document.focusedImage.style.height = "auto"
-				document.focusedImage.style.width="100%"
-			}
-			else {
-				document.focusedImage.style.height="100%"
-				document.focusedImage.style.width = "auto"
-			}
-			console.log("WH "+$("#focused").width()+" "+$("#focused").height())
-			canvasinit();
 			$("#focus-type").text("Picture Data");
 			pic_curr_props = image_data;//using the string id to access the data in the map
 			$("#focus-data").empty()
@@ -593,8 +582,6 @@ function PictureArray(){
 		}
 		else {
 			document.focusedImage.src=image.src;
-			//document.focusedImage.style.width = focusedwidth+"px";
-			//document.focusedImage.style.height = "auto";
 			curr=parseInt(image.id);
 			$("#selector").css("display","none");
 			$("#focus-type").text("Target Data");
@@ -739,7 +726,7 @@ function PictureArray(){
 	//clear storage on logout to avoid attempting to grab
 	//a non-existant image on login
 	$(function(){
-			$("#logoutfm").submit(function(){
+		$("#logoutfm").submit(function(){
 			window.sessionStorage.clear();
 		});
 	});
