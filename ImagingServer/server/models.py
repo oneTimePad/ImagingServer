@@ -72,26 +72,26 @@ class Target(models.Model):
 	)
 
 	SHAPE_CHOICES = (
-		('CIR','Circle'),
-		('SCI','Semicircle'),
-		('QCI','Quarter Circle'),
-		('TRI','Triangle'),
-		('SQU','Square'),
-		('REC','Rectangle'),
-		('TRA','Trapezoid'),
-		('PEN','Pentagon'),
-		('HEX','Hexagon'),
-		('HEP','Heptagon'),
-		('OCT','Octagon'),
-		('STA','Star'),
-		('CRO','Cross'),
+		('Circle','Circle'),
+		('Semicircle','Semicircle'),
+		('Quarter Circle','Quarter Circle'),
+		('Triangle','Triangle'),
+		('Square','Square'),
+		('Rectangle','Rectangle'),
+		('Trapezoid','Trapezoid'),
+		('Pentagon','Pentagon'),
+		('Hexagon','Hexagon'),
+		('Heptagon','Heptagon'),
+		('Octagon','Octagon'),
+		('Star','Star'),
+		('Cross','Cross'),
 	)
 	#target data
 	picture = models.ImageField(storage=fs_targets,default=0)
 	color = models.CharField(max_length=20)
 	lcolor = models.CharField(max_length=20)
 	orientation = models.CharField(max_length=2,choices=ORIENTATION_CHOICES)
-	shape = models.CharField(max_length=3,choices=SHAPE_CHOICES)
+	shape = models.CharField(max_length=14,choices=SHAPE_CHOICES)
 	letter = models.CharField(max_length=1)
 	#latitude and longitude for top left corner of target cropped image
 	lat = models.DecimalField(max_digits=9, decimal_places=6, default=0)
