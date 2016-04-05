@@ -219,7 +219,7 @@ class CountCallback(object):
 def connectionCheck():
 
 	if cache.has_key("checkallowed"):
-		#pdb.set_trace()
+
 		if not cache.has_key("android"):
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
