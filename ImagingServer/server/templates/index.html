@@ -534,14 +534,6 @@ function PictureArray(){
 							 url:"{% url 'gcs-deleteTarget'%}",
 							 type:"POST",
 							 data: {"pk":curr},
-							 success:function(resp){
-								 $(".thumbnail").remove("#"+curr);
-								 if(image_cache){
-									 picview=true;
-									 image_cache.curr();
-									 $("#back").hide();
-								 }
-							 }
 						 });
 					 }
 					 break;
