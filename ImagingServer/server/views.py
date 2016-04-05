@@ -359,7 +359,8 @@ class GCSViewset(viewsets.ModelViewSet):
 		try:
             #get target photo path and delete it
 			target = Target.objects.get(pk=request.data['pk'])
-			os.remove(target.target_pic.path)
+			os.remove(target.picture.path)
+			target.delete()
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass

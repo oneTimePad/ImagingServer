@@ -518,42 +518,50 @@ function PictureArray(){
 			image_cache.curr();
 		}
 		//event listener for entire window (for keys)
-		 document.addEventListener("keyup", function(key) {
-			 var enter = 13;
-			 var leftarrow = 37;
-			 var rightarrow = 39;
-			 var del = 46;
-			 switch (key.keyCode) {
-				 case leftarrow:
-					 //asynchronously ask for next image and add it
-					 //since we might have to fetch it
-					 if(picview&&image_cache){
-						 image_cache.prev();
-					 }
-					 break;
-				 case rightarrow:
-						//asynchronously ask for next image since
-						if(picview&&image_cache){
-						image_cache.next();
-						}
-						break;
-				 case enter:
-						if(picview&&image_cache){
-							image_cache.jump();
-						}
-						break;
-				 case del:
-				 //delete target
-					 if(!picview) {
-						 $.ajax({
-							 url:"{% url 'gcs-deleteTarget'%}",
-							 type:"POST",
-							 data: {"pk":curr},
-						 });
-					 }
-					 break;
-			 }
-		 });
+		document.addEventListener("keyup", function(key) {
+			var enter = 13;
+			var leftarrow = 37;
+			var rightarrow = 39;
+			var del = 46;
+			switch (key.keyCode) {
+				case leftarrow:
+					//asynchronously ask for next image and add it
+					//since we might have to fetch it
+					if(picview&&image_cache){
+						image_cache.prev();
+					}
+					break;
+				case rightarrow:
+					//asynchronously ask for next image since
+					if(picview&&image_cache){
+					image_cache.next();
+					}
+					break;
+				case enter:
+					if(picview&&image_cache){
+						image_cache.jump();
+					}
+					break;
+				case del:
+				//delete target
+					if(!picview) {
+						$.ajax({
+							url:"{% url 'gcs-deleteTarget'%}",
+							type:"POST",
+							data: {"pk":curr},
+							success:function(resp){
+								$(".thumbnail").remove("#"+curr);
+								if(image_cache){
+									picview=true;
+									image_cache.curr();
+									$("#back").hide();
+								}
+							}
+						});
+					}
+					break;
+			}
+		});
 	}
 	function setDimensions() {
 		var height = window.innerHeight - $("#navbar").height() - 35;
