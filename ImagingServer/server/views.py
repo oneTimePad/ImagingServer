@@ -335,8 +335,11 @@ class GCSViewset(viewsets.ModelViewSet):
 		sizeData = tuple( request.data[key] for key in ('x','y','scaleWidth','width','height'))
 		target = target.deserialize()
 		target.crop(size_data=sizeData,parent_pic=picture)
+		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+		redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'create','pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
+		return Response()
 
-		return Response({'pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'})
+			
 
 	@list_route(methods=['post'])
 	def targetEdit(self,request,pk=None):
