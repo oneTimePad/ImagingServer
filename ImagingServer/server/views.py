@@ -219,7 +219,7 @@ class CountCallback(object):
 def connectionCheck():
 
 	if cache.has_key("checkallowed"):
-		#pdb.set_trace()
+
 		if not cache.has_key("android"):
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
@@ -359,8 +359,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		try:
             #get target photo path and delete it
 			target = Target.objects.get(pk=request.data['pk'])
-			os.remove(target.picture.path)
-			target.delete()
+			os.remove(target.target_pic.path)
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
