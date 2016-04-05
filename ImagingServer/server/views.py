@@ -320,6 +320,12 @@ class GCSViewset(viewsets.ModelViewSet):
 		except Target.DoesNotExist:
 			return HttpResponseForbidden()
 
+	@list_route(methods=['post'])
+	def getAllTargets(self,request,pk=None):
+		connectionCheck()
+		data = [{'pk':t.pk, 'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg'} for t in Target.objects.all()]
+		return Response(simplejson.dumps({'targets':data}))
+
 
 	@list_route(methods=['post'])
 	def targetCreate(self,request,pk=None):
@@ -328,7 +334,6 @@ class GCSViewset(viewsets.ModelViewSet):
 			picture = Picture.objects.get(pk=request.data['pk'])
 		except Picture.DoesNotExist:
 			return HttpResponseForbidden()
-		lol = {key : request.data[key] for key in ('color','lcolor','orientation','shape','letter')}
 		target = TargetSerializer(data={key : request.data[key] for key in ('color','lcolor','orientation','shape','letter')})
 		if not target.is_valid():
 			return HttpResponseForbidden()
