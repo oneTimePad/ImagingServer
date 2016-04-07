@@ -36,7 +36,7 @@ import pika
 from .client import Client, AsyncClient
 from .types import  Telemetry
 from .exceptions import InteropError
-import requests
+#import requests
 #debug
 import pdb
 
