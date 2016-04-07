@@ -348,6 +348,22 @@ class GCSViewset(viewsets.ModelViewSet):
 		#redirect to login page
 		return redirect(reverse('gcs-login'))
 
+	@list_route(methods=['post'])
+	def initializeInterop(self,request):
+		#validate interop credential data
+		serverCreds = ServerCredsSerializer(data=self.data)
+		if not self.is_valid():
+			#respond with Error
+			return HttpResponseForbidden("invalid server creds %s",self.errors)
+		#create client
+		client = AsyncClient(*serverCreds.validated_data)
+		#if it didnot return a client, respnd with error
+		if not isinstance(class,"AsyncClient"):
+			return HttpResponse({"error":client})
+		#success
+		else:
+			cache.set("InteropClient",client)
+			return HttpResponse({"success":"interopinitialized"})
 
 
 	@list_route(methods=['post'])

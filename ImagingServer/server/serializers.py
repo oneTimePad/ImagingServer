@@ -23,3 +23,9 @@ class TargetSerializer(serializers.ModelSerializer):
 
     def deserialize(self):
         return Target.objects.create(**self.validated_data)
+
+
+class ServerCredsSerializer(serializers.Serializer):
+        username = serializers.CharField(max_length=100)
+        password = serializers.CharField(max_length=100)
+        server = serializers.CharField(max_length=100)
