@@ -12,3 +12,8 @@ class GCSAuthentication(BasePermission):
 
     def has_permission(self,request,view):
         return request.user and request.user.is_authenticated() and request.user.userType =="gcs"
+
+class TelemetryAuthentication(BasePermission):
+    
+    def has_permission(self,request,view):
+        return request.user and request.user.is_authenticated() and request.user.userType =="telemetry"

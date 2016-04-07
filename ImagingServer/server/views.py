@@ -11,6 +11,7 @@ from django.contrib.auth import authenticate,login,logout,get_user_model
 from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
 from django.contrib.auth.signals import user_logged_in
+from django.db import transaction
 #websockets
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
@@ -26,13 +27,16 @@ from .serializers import *
 from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
 #general
 import os
-import time
-import _thread
+from time import time,sleep
 import json as simplejson
 from decimal import Decimal
 import csv
 import pika
-from django.db import transaction
+#telemetry
+from .client import Client, AsyncClient
+from .types import  Telemetry
+from .exceptions import InteropError
+import requests
 #debug
 import pdb
 
@@ -40,6 +44,9 @@ import pdb
 #constants from Environment Vars
 IMAGE_STORAGE = os.getenv("IMAGE_STORAGE","http://localhost:80/PHOTOS")
 TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
+
+
+
 
 #important time constants
 PICTURE_SEND_DELAY = 7
@@ -72,6 +79,105 @@ def gcsSessions():
 '''
 sends pictures to gcs
 '''
+
+
+class TelemetryInteropViewset(viewsets.ModelViewSet):
+	authentication_classes = (JSONWebTokenAuthentication,)
+	permission_classes = (TelemetryAuthentication,)
+	#started writing some telemetry posting STUFF
+	#this is where all the telemetry interop  stuff should go
+	#mission planner requests this endpoint via HTTPS
+	#it firsts needs to login to django
+	#logging in is done via the JSONWEBTOKEN obtain token endpoint
+	#need to add Authorization flag to verify token
+	@list_route(methods=['post'])
+	def postTelemetry(self,request,pk=None):
+		pass
+		'''
+		startTime = time()
+		t = Telemetry(latitude=request.data['lat'],
+            		longitude=request.data['lon'],
+					altitude_msl=request.data['alt'],
+					uas_heading=request.data['heading'])
+					'''
+		'''
+		#post it
+			#@RUAutonomous-autopilot
+			#might be where exception catching goes, look for a InteropError obj
+			successful = False
+			while not successful:
+				try:
+					postTime = time()
+					self.client.post_telemetry(t).result()
+					print "Time to post: %f" % (time() - postTime)
+					successful = True
+				except InteropError as e:
+					#@RUAutonomous-autopilot
+					#We might need more exceptions here and below
+					code,reason,text = e.errorData()
+					print "POST /api/telmetry has failed."
+					print "Error code : %d Error Reason: %s" %(code,reason)
+					print "Text Reason: \n%s" %(text)
+
+					if code == 400:
+						print "Invalid telemetry data. Stopping."
+						sys.exit(1)
+
+					elif code == 404:
+						print "Server Might be down.\n Trying again at 1Hz"
+						sleep(1)
+
+					elif code == 405 or code == 500:
+						print "Internal error (code: %s). Stopping." % (str(code))
+						sys.exit(1)
+
+					elif code == 403:
+						#@RUAutonomous-autopilot
+						# TODO: Ask to reenter credentials after n tries or reset that mysterious cookie
+						print "Server has not authenticated this login. Attempting to relogin."
+						username = os.getenv('INTEROP_USER','testuser')
+						password = os.getenv('INTEROP_PASS','testpass')
+						self.post('/api/login', data={'username': username, 'password': password})
+
+				except requests.ConnectionError:
+					print "A server at %s was not found. Waiting for a second, then retrying." % (server)
+					sleep(1)
+
+				except requests.Timeout:
+					print "The server timed out. Waiting for a second, then retrying."
+					sleep(1)
+
+				except requests.TooManyRedirects:
+					print "The URL redirects to itself; reenter the address:"
+					enterAUVSIServerAddress()
+					self.client.url = os.getenv('INTEROP_SERVER')
+					sleep(1)
+
+				except requests.URLRequired:
+					print "The URL is invalid; reenter the address:"
+					enterAUVSIServerAddress()
+					self.client.url = os.getenv('INTEROP_SERVER')
+					sleep(1)
+
+				except requests.RequestException as e:
+					# catastrophic error. bail.
+					print e
+					sys.exit(1)
+
+				except concurrent.futures.CancelledError:
+					print "Multithreading failed. Waiting for a second, then retrying."
+					sleep(1)
+
+				except concurrent.futures.TimeoutError:
+					print "Multithreading timed out. Waiting for a second, then retrying."
+					sleep(1)
+
+				except:
+					print "Unknown error: %s" % (sys.exc_info()[0])
+					sys.exit(1)
+
+			'''
+
 
 
 class DroneViewset(viewsets.ModelViewSet):
@@ -344,7 +450,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'create','pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
 		return Response()
 
-			
+
 
 	@list_route(methods=['post'])
 	def targetEdit(self,request,pk=None):
