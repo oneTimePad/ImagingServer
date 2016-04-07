@@ -472,6 +472,8 @@ class GCSViewset(viewsets.ModelViewSet):
 			target = Target.objects.get(pk=request.data['pk'])
 			os.remove(target.picture.path)
 			target.delete()
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'delete','pk':target.pk})))
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
