@@ -1,19 +1,97 @@
 import math
 import pdb
+import numpy as np
 from matplotlib import pyplot as plt
 
 # Camera information. Nexus 6P in portrait 
 # Field of View angles (1/2 image viewing angles)
+
+# NOTE: measure these empirically, as quick calculations based off 
+#4:3 aspect ratio suggest these values are slightly off
 fovV = 35.0 # Portrait
 fovH = 26.5 # Landscape
 
 # Conversion between meters to GPS coordinate degrees
 # ONLY FOR MARYLAND LOCATION
 # Every 0.8627 meters is about 0.00001 degrees Lat/Lon
-# METER_TO_DEGREE_CONVERSION = 0.00001/0.8627 
-METER_TO_DEGREE_CONVERSION = 1
+METER_TO_DEGREE_CONVERSION = 0.00001/0.8627 
+# METER_TO_DEGREE_CONVERSION = 1
 
 DEBUG = False
+
+def findWorldCoords(size_data, picture_data):
+	x,y = size_data
+	# divide full width / height by 2 cuz we don't need that crap
+	orig_width,orig_height = [num / 2 for num in picture_data]
+	if DEBUG:
+		print('x: %f, y: %f, w: %f,  h:%f' % (x, y, orig_width, orig_height))
+
+	# set (0.0) as center of image
+	x -= orig_width
+	y -= orig_height
+
+	# find location of click point
+	# assume altitude is 1 for now, 
+	# since it gets rescaled later based off rotation
+	tempX = (x / orig_width) * math.tan(math.radians(fovH))
+	tempY = (y / orig_height) * math.tan(math.radians(fovV))
+	if DEBUG:
+		print('new x: %f new y: %f' % (tempX, tempY))
+
+	return np.matrix([[tempX], [tempY], [1]])
+
+def rotateByAngles(worldCoords, angle_data):
+	altitude = angle_data[3]
+	# convert all angles to radians
+	azimuth,pitch,roll,_ = [math.radians(angle) for angle in angle_data]
+
+	# woo wikipedia
+	rotX = np.matrix([ 	[1, 0, 0], 
+				[0, math.cos(pitch), -math.sin(pitch)], 
+				[0, math.sin(pitch), math.cos(pitch)] ])
+
+	rotY = np.matrix([ 	[math.cos(roll), 0, math.sin(roll)], 
+				[0, 1, 0], 
+				[-math.sin(roll), 0, math.cos(roll)] ])
+
+	rotZ = np.matrix([ 	[math.cos(azimuth), -math.sin(azimuth), 0], 
+				[math.sin(azimuth), math.cos(azimuth), 0],
+				[0, 0, 1] ])
+
+	# compose matrix, rotate the world coords using repeated matrix multiplication
+	rotFull = np.dot(rotX, np.dot(rotY, rotZ))
+	rotatedCoords = np.dot(rotFull, worldCoords)
+
+	if DEBUG:
+		print('rot x: %f rot y: %f rot z: %f' % (rotatedCoords[0], rotatedCoords[1], rotatedCoords[2]))
+		pdb.set_trace()
+
+	# rescale so that they touch the ground
+	scaledCoords = []
+	for coord in np.nditer(rotatedCoords):
+		scaledCoords.append(float(altitude / rotatedCoords[2]) * coord)
+
+	return scaledCoords
+
+def newgeotag(size_data,picture_data,angle_data,currPos):
+	gpsLatitude,gpsLongitude = currPos
+
+	# get world coordinates from image coordinates
+	worldCoords = findWorldCoords(size_data, picture_data)
+
+	# rotate worldCoords using rotation matrices
+	rotatedCoords = rotateByAngles(worldCoords, angle_data)
+	latOffset, lonOffset, _ = [METER_TO_DEGREE_CONVERSION * num for num in rotatedCoords]
+
+	if DEBUG:
+		pdb.set_trace()
+
+	# return as differences from pixhawk gps
+	return gpsLatitude + latOffset, gpsLongitude + lonOffset
+
+def printDebug(inStr):
+	if DEBUG:
+		print(inStr)
 
 # Calculates the angle between two points.
 # Used to get the angle between the center GPS location 
@@ -25,10 +103,6 @@ def angle_between_points(pt1, pt2):
 	len1 = math.hypot(x1, y1)
 	len2 = math.hypot(x2, y2)
 	return math.acos(inner_product/(len1*len2))
-
-def printDebug(instr):
-	if DEBUG:
-		print(instr)
 
 def geotag(size_data,picture_data,angle_data,currPos):#right now the gps coordinates are not right, need to change based on the app
 	x,y = size_data
@@ -172,18 +246,19 @@ def main():
 	# orig_width,orig_height = picture_data
 	# azimuth,pitch,roll,altitude = angle_data
 
-	width = 25
-	height = 25
+	width = 45
+	height = 60
 	edgeThresh = 5
 
 	picture_data = [width,height]
-	angle_data = [0.0,0.0,10.0,100.0]
+	alt = 200.0
+	angle_data = [0.0,0.0,0.0,alt]
 	currPos = [width / 2,height / 2]
 
 	orig_x = []
 	orig_y = []
 	res_x = []
-	res_y = []	
+	res_y = []
 
 	for x in range(edgeThresh, width - edgeThresh):
 		for y in range(edgeThresh, height - edgeThresh):
@@ -192,11 +267,13 @@ def main():
 			orig_y.append(y)
 
 			# if x is int(width / 2) and y is int(height / 2):
-			lat,lon = geotag(size_data,picture_data,angle_data,currPos)
+			lat,lon = newgeotag(size_data,picture_data,angle_data,currPos)
 			res_x .append(lat)
 			res_y.append(lon)
 
 	fig, ax = plt.subplots()
+	alt *= 2;
+	ax.axis([-alt, alt, -alt, alt])
 	ax.plot(orig_x, orig_y, 'or')
 	ax.plot(res_x, res_y, 'ob')
 	plt.show()
