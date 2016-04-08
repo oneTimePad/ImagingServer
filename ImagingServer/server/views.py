@@ -32,8 +32,8 @@ import json as simplejson
 from decimal import Decimal
 import csv
 import pika
+import sys
 #telemetry
-from .client import Client, AsyncClient
 from .types import  Telemetry
 from .exceptions import InteropError
 #import requests
@@ -72,114 +72,136 @@ def gcs_logged_in_handler(sender,request,user,**kwargs):
 user_logged_in.connect(gcs_logged_in_handler)
 
 '''
+receive current gcs sessions
 '''
 def gcsSessions():
 	return [ sess.session_id for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
 
 '''
-sends pictures to gcs
+callback to receive N, MQ messages
 '''
+class CountCallback(object):
+	def __init__(self,size,sendNum,picList):
+		#pdb.set_trace()
+		self.picList = picList
+		self.count = (size if sendNum > size else sendNum)
+		self.count = self.count if self.count >0 else 1
+	def __call__(self,ch,method,properties,body):
+		#pdb.set_trace()
+		ch.basic_ack(delivery_tag=method.delivery_tag)
+		self.picList.append(int(body))
+		self.count-=1
+		if self.count == 0:
+			ch.stop_consuming()
+
+#check for drone connection
+def connectionCheck():
+
+	if cache.has_key("checkallowed"):
+
+		if not cache.has_key("android"):
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
+			cache.delete("checkallowed")
 
 
-class TelemetryInteropViewset(viewsets.ModelViewSet):
+#endpoint for mission planner
+class MissionPlannerViewset(viewsets.ModelViewSet):
 	authentication_classes = (JSONWebTokenAuthentication,)
-	permission_classes = (TelemetryAuthentication,)
-	#started writing some telemetry posting STUFF
-	#this is where all the telemetry interop  stuff should go
-	#mission planner requests this endpoint via HTTPS
-	#it firsts needs to login to django
-	#logging in is done via the JSONWEBTOKEN obtain token endpoint
-	#need to add Authorization flag to verify token
+	permission_classes = (MissionPlannerAuthentication,)
+
+	#mp endpoint for getting SDA-obstacles
+	@list_route(methods=['get'])
+	def getObstacles(self,request,pk=None):
+		pass
+
+	#mp endpoint for getting server time
+	@list_route(methods=['get'])
+	def getServerTime(self,request,pk=None):
+		pass
+
+	#posting telemetry endpoint for mission planner
+	#mission planner client logins in and get JWT
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
-		pass
-		'''
+		client = cache.get("InteropClient")
+		telemData = TelemetrySerializer(data = request.data)
 		startTime = time()
-		t = Telemetry(latitude=request.data['lat'],
-            		longitude=request.data['lon'],
-					altitude_msl=request.data['alt'],
-					uas_heading=request.data['heading'])
-					'''
+		t = Telemetry(telemData.validated_data)
+
+		try:
+			#haven't looked at mp client...this might be wrong
+			postTime = time()
+			client.client.post_telemetry(t).result()
+			#print "Time to post: %f" % (time() - postTime)
+			#successful = True
+		except InteropError as e:
+			code,reason,text = e.errorData()
+
+			#response to client accordingly
+			#but keep going...if something fails, respond and ignore it
+			#alert mission planner about the error though
+			if code == 400:
+				return Response("WARNING: Invalid telemetry data. Skipping")
+
+			elif code == 404:
+				return Response("WARNING: Server might be down")
+
+			elif code == 405 or code == 500:
+				return Response("WARNING: Interop Internal Server Error")
+			#EXCEPT FOR THIS
+			elif code == 403:
+				creds = cach.get("creds")
+				times = 5
+				for i in xrange(0,times):
+					try:
+						client.client.post('/api/login', data={'username':creds['username'],'password':creds['password']})
+						return Response("Had to relogin in. Succeeded")
+					except Exception as e:
+						sleep(2)
+						continue
+				code,_,__ = e.errorData()
+				#Everyone should be alerted of this
+				resp = "CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code
+				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'warning':resp})))
+				return Response(resp)
+
+		except requests.ConnectionError:
+			return Response("WARNING: A server at %s was not found. Encountered connection error." % (server))
+
+		except requests.Timeout:
+			return Response("WARNING: The server timed out.")
+
+		#Why would this ever happen?
+		except requests.TooManyRedirects:
+			return Response("WARNING:The URL redirects to itself")
+
+		#This wouldn't happen again...
+		except requests.URLRequired:
+			return Response("The URL is invalid")
+
+		#Not sure how to handle this yet
+		except requests.RequestException as e:
+			# catastrophic error. bail.
+			print e
+			#sys.exit(1)
 		'''
-		#post it
-			#@RUAutonomous-autopilot
-			#might be where exception catching goes, look for a InteropError obj
-			successful = False
-			while not successful:
-				try:
-					postTime = time()
-					self.client.post_telemetry(t).result()
-					print "Time to post: %f" % (time() - postTime)
-					successful = True
-				except InteropError as e:
-					#@RUAutonomous-autopilot
-					#We might need more exceptions here and below
-					code,reason,text = e.errorData()
-					print "POST /api/telmetry has failed."
-					print "Error code : %d Error Reason: %s" %(code,reason)
-					print "Text Reason: \n%s" %(text)
+		except concurrent.futures.CancelledError:
+			print "Multithreading failed. Waiting for a second, then retrying."
+			sleep(1)
 
-					if code == 400:
-						print "Invalid telemetry data. Stopping."
-						sys.exit(1)
+		except concurrent.futures.TimeoutError:
+			print "Multithreading timed out. Waiting for a second, then retrying."
+			sleep(1)
+		'''
 
-					elif code == 404:
-						print "Server Might be down.\n Trying again at 1Hz"
-						sleep(1)
-
-					elif code == 405 or code == 500:
-						print "Internal error (code: %s). Stopping." % (str(code))
-						sys.exit(1)
-
-					elif code == 403:
-						#@RUAutonomous-autopilot
-						# TODO: Ask to reenter credentials after n tries or reset that mysterious cookie
-						print "Server has not authenticated this login. Attempting to relogin."
-						username = os.getenv('INTEROP_USER','testuser')
-						password = os.getenv('INTEROP_PASS','testpass')
-						self.post('/api/login', data={'username': username, 'password': password})
-
-				except requests.ConnectionError:
-					print "A server at %s was not found. Waiting for a second, then retrying." % (server)
-					sleep(1)
-
-				except requests.Timeout:
-					print "The server timed out. Waiting for a second, then retrying."
-					sleep(1)
-
-				except requests.TooManyRedirects:
-					print "The URL redirects to itself; reenter the address:"
-					enterAUVSIServerAddress()
-					self.client.url = os.getenv('INTEROP_SERVER')
-					sleep(1)
-
-				except requests.URLRequired:
-					print "The URL is invalid; reenter the address:"
-					enterAUVSIServerAddress()
-					self.client.url = os.getenv('INTEROP_SERVER')
-					sleep(1)
-
-				except requests.RequestException as e:
-					# catastrophic error. bail.
-					print e
-					sys.exit(1)
-
-				except concurrent.futures.CancelledError:
-					print "Multithreading failed. Waiting for a second, then retrying."
-					sleep(1)
-
-				except concurrent.futures.TimeoutError:
-					print "Multithreading timed out. Waiting for a second, then retrying."
-					sleep(1)
-
-				except:
-					print "Unknown error: %s" % (sys.exc_info()[0])
-					sys.exit(1)
-
-			'''
+		except:
+			return Response("Unknown error: %s" % (sys.exc_info()[0]))
 
 
 
+#endpoint for drone
 class DroneViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (JSONWebTokenAuthentication,)
@@ -306,35 +328,7 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 
 
 
-class CountCallback(object):
-	def __init__(self,size,sendNum,picList):
-		#pdb.set_trace()
-		self.picList = picList
-		self.count = (size if sendNum > size else sendNum)
-		self.count = self.count if self.count >0 else 1
-	def __call__(self,ch,method,properties,body):
-		#pdb.set_trace()
-		ch.basic_ack(delivery_tag=method.delivery_tag)
-		self.picList.append(int(body))
-		self.count-=1
-		if self.count == 0:
-			ch.stop_consuming()
-
-
-
-def connectionCheck():
-
-	if cache.has_key("checkallowed"):
-
-		if not cache.has_key("android"):
-			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
-			cache.delete("checkallowed")
-
-
-'''
-used for GCS endpoints
-'''
+#endpoint for GCS
 class GCSViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (SessionAuthentication,)
@@ -356,12 +350,13 @@ class GCSViewset(viewsets.ModelViewSet):
 			#respond with Error
 			return HttpResponseForbidden("invalid server creds %s",self.errors)
 		#create client
-		client = AsyncClient(*serverCreds.validated_data)
+		client = InteropClient(serverCreds.validated_data)
 		#if it didnot return a client, respnd with error
-		if not isinstance(class,"AsyncClient"):
-			return HttpResponse({"error":client})
+		if not client.client:
+			return HttpResponse({"error":client.error})
 		#success
 		else:
+			cache.set("creds",serverCreds.validated_data)
 			cache.set("InteropClient",client)
 			return HttpResponse({"success":"interopinitialized"})
 
@@ -495,6 +490,17 @@ class GCSViewset(viewsets.ModelViewSet):
 			pass
 		return HttpResponseForbidden()
 
+	@list_route(methods=['post'])
+	def sendTarget(self,request,pk=None):
+		try:
+			target = TargetSerializer(Target.objects.get(pk=int(request.data['pk'])))
+			client = cache.get("InteropClient")
+			try:
+				
+			except
+		except Target.DoesNotExist
+			return HttpResponseForbidden()
+
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
@@ -505,8 +511,6 @@ class GCSViewset(viewsets.ModelViewSet):
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
-
-
 
 	template_name = 'index.html'
 	content_type='text/html'

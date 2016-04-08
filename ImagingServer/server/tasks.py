@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from celery import shared_task
+from django.core.cache import cache
 from .models import Target
 import xmlrpclib
 import pika
@@ -16,11 +17,7 @@ import pika
 # we can't use the context manager...
 @shared_task
 def interopTargets():
-    '''
-    server = xmlrpclib.ServerProxy('http://' + host + ':' + port)
-
-    while True:
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
-        channel = connection.channel()
-        channel.queue_delete(queue='targets')
-        '''
+    client = cachge.get("InteropClient")
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    channel = connection.channel()
+    queue = channel.queue_declare(queue='targets')

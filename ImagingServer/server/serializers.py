@@ -26,6 +26,12 @@ class TargetSerializer(serializers.ModelSerializer):
 
 
 class ServerCredsSerializer(serializers.Serializer):
-        username = serializers.CharField(max_length=100)
-        password = serializers.CharField(max_length=100)
-        server = serializers.CharField(max_length=100)
+        username = serializers.CharField(max_length=100,allow_blank = False)
+        password = serializers.CharField(max_length=100,allow_blank = False)
+        server = serializers.URLField(max_length=100,allow_blank = False)
+
+class TelemetrySerializer(serializers.Serializer):
+        latitude = serializers.FloatField()
+        longitude = serializers.FloatField()
+        altitude_msl = serializers.FloatField()
+        uas_heading = Serializer.FloatField()
