@@ -164,6 +164,9 @@ class Target(models.Model):
 		pitch = float(parent_pic.pitch) # Forward/back angle
 		roll = float(parent_pic.roll) # Left/Right angle
 		altitude = float(parent_pic.alt)
+		gpsLatitude = float(parent_pic.lat)
+		gpsLongitude = float(parent_pic.lon)
+		
 		if not altitude:
 			print('Altitude is 0. Skipping geotagging.')
 			self.save()
