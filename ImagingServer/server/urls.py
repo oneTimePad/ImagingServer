@@ -18,6 +18,14 @@ droneauthentication =[
 
 ]
 
+mpauthentication = [
+    url(r'^mp/login$',obtain_jwt_token),
+    url(r'^mp/refresh$',refresh_jwt_token),
+    url(r'^mp/verify$',verify_jwt_token),
+
+]
+
+
 gcsauthentication = [
     url(r'^gcs/login$',GCSLogin.as_view(),name="gcs-login"),
 ]
@@ -30,6 +38,7 @@ urlpatterns+=router.urls
 router = SimpleRouter(trailing_slash=False)
 router.register(r'gcs',GCSViewset,'gcs')
 urlpatterns+=router.urls
+router.register(r'mp',MissionPlannerViewset,'mp')
 
 '''
 droidpatterns =[

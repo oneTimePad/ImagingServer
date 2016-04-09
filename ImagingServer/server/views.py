@@ -130,11 +130,10 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 		t = Telemetry(telemData.validated_data)
 
 		try:
-			#haven't looked at mp client...this might be wrong
-			postTime = time()
 			client.client.post_telemetry(t).result()
 			#print "Time to post: %f" % (time() - postTime)
 			#successful = True
+			return Response({'time':time()-startTime})
 		except InteropError as e:
 			code,reason,text = e.errorData()
 
@@ -142,44 +141,44 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 			#but keep going...if something fails, respond and ignore it
 			#alert mission planner about the error though
 			if code == 400:
-				return Response("WARNING: Invalid telemetry data. Skipping")
+				return Response({'time':time()-startTime,'error':"WARNING: Invalid telemetry data. Skipping"})
 
 			elif code == 404:
-				return Response("WARNING: Server might be down")
+				return Response({'time':time()-startTime,'error':"WARNING: Server might be down"})
 
 			elif code == 405 or code == 500:
-				return Response("WARNING: Interop Internal Server Error")
+				return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
 			#EXCEPT FOR THIS
-			elif code == 403:
+		elif code == 403:
 				creds = cach.get("creds")
 				times = 5
 				for i in xrange(0,times):
 					try:
 						client.client.post('/api/login', data={'username':creds['username'],'password':creds['password']})
-						return Response("Had to relogin in. Succeeded")
+						return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
 					except Exception as e:
 						sleep(2)
 						continue
 				code,_,__ = e.errorData()
 				#Everyone should be alerted of this
-				resp = "CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code
+				resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
 				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'warning':resp})))
 				return Response(resp)
 
 		except requests.ConnectionError:
-			return Response("WARNING: A server at %s was not found. Encountered connection error." % (server))
+			return Response({'time':time()-startTime,'error':"WARNING: A server at %s was not found. Encountered connection error." % (server)})
 
 		except requests.Timeout:
-			return Response("WARNING: The server timed out.")
+			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
 
 		#Why would this ever happen?
 		except requests.TooManyRedirects:
-			return Response("WARNING:The URL redirects to itself")
+			return Response({'time':time()-startTime,'error':"WARNING:The URL redirects to itself"})
 
 		#This wouldn't happen again...
 		except requests.URLRequired:
-			return Response("The URL is invalid")
+			return Response({'time':time()-startTime,'error':"The URL is invalid"})
 
 		#Not sure how to handle this yet
 		except requests.RequestException as e:
@@ -197,7 +196,7 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 		'''
 
 		except:
-			return Response("Unknown error: %s" % (sys.exc_info()[0]))
+			return Response({'time':time(),'error':"Unknown error: %s" % (sys.exc_info()[0])})
 
 
 
@@ -492,15 +491,20 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def sendTarget(self,request,pk=None):
+		connectionCheck()
 		try:
-			target = TargetSerializer(Target.objects.get(pk=int(request.data['pk'])))
+			#fetch the client
 			client = cache.get("InteropClient")
+			#serialize the target
+			target = TargetSubmissionSerialzer(Target.objects.get(pk=int(request.data['pk'])))
 			try:
-				
-			except
-		except Target.DoesNotExist
+				#post the target
+				client.client.post_target(Target(target.validated_data)).result()
+				return HttpResponse("Success")
+			except Exception:
+				pass
+		except Target.DoesNotExist:
 			return HttpResponseForbidden()
-
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):

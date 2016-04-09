@@ -100,7 +100,7 @@ class Target(models.Model):
 	background_color = models.CharField(max_length=20)
 	alphanumeric = models.CharField(max_length=20)
 	alphanumeric_color = models.CharField(max_length=1)
-
+	autonomous = models.BooleanField(default=False)
 
 	def edit(self,edits):
 		self.ptype = edits['ptype']
