@@ -91,7 +91,7 @@ class Target(models.Model):
 	picture = models.ImageField(storage=fs_targets,default=0)
 
 	#target data
-	ptype = model.CharField(max_length=20)
+	ptype = models.CharField(max_length=20)
 	#latitude and longitude for top left corner of target cropped image
 	latitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	longitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)

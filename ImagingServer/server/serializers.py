@@ -46,4 +46,4 @@ class TelemetrySerializer(serializers.Serializer):
         latitude = serializers.FloatField()
         longitude = serializers.FloatField()
         altitude_msl = serializers.FloatField()
-        uas_heading = Serializer.FloatField()
+        uas_heading = serializers.FloatField()

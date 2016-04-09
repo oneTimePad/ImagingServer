@@ -17,7 +17,7 @@ from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
 #django-rest
 from rest_framework.response import Response
-from .permissions import DroneAuthentication,GCSAuthentication
+from .permissions import DroneAuthentication,GCSAuthentication, MissionPlannerAuthentication
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework import viewsets
@@ -57,6 +57,10 @@ channel = connection.channel()
 channel.queue_delete(queue='pictures')
 connection.close()
 
+class TestSet(viewsets.ModelViewSet):
+	@list_route(methods=['post'])
+	def lol(self,request,pk=None):
+		pdb.set_trace()
 
 '''
 saves session for logged in gcs user
@@ -117,10 +121,10 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 
 	#mp endpoint for getting server time
 	@list_route(methods=['get'])
-	def getServerTime(self,request,pk=None):
+	def getServerInfo(self,request,pk=None):
 		pass
 
-	#posting telemetry endpoint for mission planner
+	#posting telemetry wendpoint for mission planner
 	#mission planner client logins in and get JWT
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
@@ -149,22 +153,22 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 			elif code == 405 or code == 500:
 				return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
 			#EXCEPT FOR THIS
-		elif code == 403:
-				creds = cach.get("creds")
-				times = 5
-				for i in xrange(0,times):
-					try:
-						client.client.post('/api/login', data={'username':creds['username'],'password':creds['password']})
-						return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
-					except Exception as e:
-						sleep(2)
-						continue
-				code,_,__ = e.errorData()
-				#Everyone should be alerted of this
-				resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
-				redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'warning':resp})))
-				return Response(resp)
+			elif code == 403:
+					creds = cach.get("creds")
+					times = 5
+					for i in xrange(0,times):
+						try:
+							client.client.post('/api/login', data={'username':creds['username'],'password':creds['password']})
+							return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
+						except Exception as e:
+							sleep(2)
+							continue
+					code,_,__ = e.errorData()
+					#Everyone should be alerted of this
+					resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
+					redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+					redis_publisher.publish_message(RedisMessage(simplejson.dumps({'warning':resp})))
+					return Response(resp)
 
 		except requests.ConnectionError:
 			return Response({'time':time()-startTime,'error':"WARNING: A server at %s was not found. Encountered connection error." % (server)})
@@ -183,19 +187,9 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 		#Not sure how to handle this yet
 		except requests.RequestException as e:
 			# catastrophic error. bail.
-			print e
-			#sys.exit(1)
-		'''
-		except concurrent.futures.CancelledError:
-			print "Multithreading failed. Waiting for a second, then retrying."
-			sleep(1)
+			print(e)
 
-		except concurrent.futures.TimeoutError:
-			print "Multithreading timed out. Waiting for a second, then retrying."
-			sleep(1)
-		'''
-
-		except:
+		except Exception as e:
 			return Response({'time':time(),'error':"Unknown error: %s" % (sys.exc_info()[0])})
 
 

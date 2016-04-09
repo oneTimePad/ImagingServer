@@ -20,11 +20,10 @@ class InteropError(requests.HTTPError):
                                  code=response.status_code,
                                  reason=response.reason,
                                  message=response.text)
-	self.code = response.status_code
-	self.reason= response.reason
-	self.text = response.text
+        self.code = response.status_code
+        self.reason= response.reason
+        self.text = response.text
         super(InteropError, self).__init__(message, response=response)
 
     def errorData(self):
-	return (self.code,self.reason,self.text)
-
+	       return (self.code,self.reason,self.text)
