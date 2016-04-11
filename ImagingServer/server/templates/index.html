@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <title>Picture Viewer</title>
-<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL}}js/jquery.min.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/ws4redis.js"></script>
+<script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
@@ -18,12 +18,12 @@
 <script>
 	curr = 0; //the id of the picture/target in focus
 	picview = true;//true when a picture is in view, false when a target is in view
-	img_properties = {}; //now using an object as a map since the images are not sent down in order
 	crop = {};
 	NUM_FETCH = 3;
 	image_cache = null; // caches the image strings
 	next_array = null;
 	firstinit = true;
+	selected = []; //array of currently selected targets for data dump
 
 
 	(function(){
@@ -320,7 +320,7 @@ function PictureArray(){
 			inputs.each(function() {
 				input_array[this.name] = this.value;
 			})
-				//if there attributes, send them
+			//if there attributes, send them
 			if(input_array) {
 				if (picview) {
 					input_array['pk'] = curr;
@@ -332,22 +332,6 @@ function PictureArray(){
 						url: "{% url 'gcs-targetCreate'%}",
 						type: "POST",
 						data: input_array,
-						// success: function(json){
-						// 	//adding the target image
-						// 	var div = document.createElement("div");
-						// 	div.className = "thumb-div";
-						// 	image = document.createElement("img");
-						// 	image.className = "thumbnail";
-						// 	image.src = json.image;
-						// 	image.id = json.pk;
-						// 	image.addEventListener("click", function() {
-						// 		picview = false;
-						// 		setFocusedImage(this);
-						// 		return false;
-						// 	})
-						// 	div.appendChild(image);
-						// 	$("#targets").append(div);
-						// }
 					});
 				}
 				else {
@@ -390,11 +374,27 @@ function PictureArray(){
 			image.className = "thumbnail";
 			image.src = json_response.image;
 			image.id = json_response.pk;
-			image.addEventListener("click", function() {
-				picview = false;
-				setFocusedImage(this);
+			image.addEventListener("click", function(e) {
+				console.log(e.ctrlKey)
+				if (e.ctrlKey) {
+					//ctrl+clicking to select/toggle targets to send
+					pk = this.id;
+					index = selected.indexOf(pk);
+					if 	(index == -1) {
+						selected.push(pk);
+						this.border = "4";
+					}
+					else {
+						selected.splice(index,1);
+						this.border = "0";
+					}
+				}
+				else {
+					picview = false;
+					setFocusedImage(this);
+				}
 				return false;
-			})
+			});
 			div.appendChild(image);
 			$("#targets").append(div);
 		}
@@ -515,7 +515,6 @@ function PictureArray(){
 			type:"POST",
 			success: function(response) {
 				targets = JSON.parse(response).targets;
-				console.log(targets)
 				targets.forEach(function(t) {
 					var div = document.createElement("div");
 					div.className = "thumb-div";
@@ -523,11 +522,27 @@ function PictureArray(){
 					image.className = "thumbnail";
 					image.src = t.image;
 					image.id = t.pk;
-					image.addEventListener("click", function() {
-						picview = false;
-						setFocusedImage(this);
+					image.addEventListener("click", function(e) {
+						console.log(e.ctrlKey)
+						if (e.ctrlKey) {
+							//ctrl+clicking to select/toggle targets to send
+							pk = this.id;
+							index = selected.indexOf(pk);
+							if 	(index == -1) {
+								selected.push(pk);
+								this.border = "4";
+							}
+							else {
+								selected.splice(index,1);
+								this.border = "0";
+							}
+						}
+						else {
+							picview = false;
+							setFocusedImage(this);
+						}
 						return false;
-					})
+					});
 					div.appendChild(image);
 					$("#targets").append(div);
 				});
@@ -784,7 +799,17 @@ function PictureArray(){
 		$(this).hide();
 	}
 
-
+function dump_targets() {
+	$.ajax({
+		url:"{%url 'gcs-dumpTargetData' %}",
+		type:"POST",
+		data:{'target_ids':JSON.stringify(selected)},
+		success: function(response) {
+			window.open('data:text/plain;charset=utf-8,'+encodeURIComponent(response.data))
+		}
+	});
+	//deselect targets
+}
 
 
 </script>
@@ -910,15 +935,5 @@ function trigger() {
 			}
 		}
 	})
-}
-
-function dump_targets() {
-	$.ajax({
-		url:"{%url 'gcs-dumpTargetData' %}",
-		type:"POST",
-		success: function(response) {
-			window.open('data:text/plain;charset=utf-8,'+encodeURIComponent(response.data))
-		}
-	});
 }
 </script>

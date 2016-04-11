@@ -97,6 +97,7 @@ nav form {
   max-width: 150px;
   max-height: 200px;
   height: auto;
+  border-color:orange;
 }
 
 label {

@@ -29,8 +29,8 @@ from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
 import os
 from time import time,sleep
 import json as simplejson
+from io import StringIO
 from decimal import Decimal
-import csv
 import pika
 #telemetry
 #import requests
@@ -372,7 +372,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			os.remove(target.picture.path)
 			target.delete()
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'delete','pk':target.pk})))
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'delete','pk':equest.data['pk']})))
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
@@ -382,9 +382,19 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
 		connectionCheck()
-		targets = Target.objects.all()
-		data = ''.join([str(n+1)+'\tSTD\t'+str(targets[n].lat)+'\t'+str(targets[n].lon)+'\t'+targets[n].orientation+'\t'+targets[n].shape+'\t'+targets[n].color+'\t'+targets[n].letter+'\t'+targets[n].lcolor+'\t'+targets[n].picture.url+'\n' for n in range(0,len(targets))])
-		return Response({'data':data})
+		try:
+			target_ids = simplejson.load(StringIO(request.data['target_ids']))
+			data = ''
+			# data = ''.join([str(n+1)+'\tSTD\t'+str(targets[n].lat)+'\t'+str(targets[n].lon)+'\t'+targets[n].orientation+'\t'+targets[n].shape+'\t'+targets[n].color+'\t'+targets[n].letter+'\t'+targets[n].lcolor+'\t'+targets[n].picture.url+'\n' for n in range(0,len(targets))])
+			count = 1
+			for pk in target_ids:
+				target = Target.objects.get(pk = pk)
+				data+=str(count)+'\tSTD\t'+str(target.lat)+'\t'+str(target.lon)+'\t'+target.orientation+'\t'+target.shape+'\t'+target.color+'\t'+target.letter+'\t'+target.lcolor+'\t'+target.picture.url+'\n'
+				count+=1
+			return Response({'data':data})
+		except Target.DoesNotExist:
+			pass
+		return HttpResponseForbidden()
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
