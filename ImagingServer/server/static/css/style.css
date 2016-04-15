@@ -98,11 +98,11 @@ nav form {
   max-height: 200px;
   height: auto;
 }
-img.selected {
-  border: 4px solid orange;
-}
 img.sent {
   border:4px solid gray;
+}
+img.selected {
+  border: 4px solid orange;
 }
 
 

@@ -520,6 +520,9 @@ function PictureArray(){
 					image.className = "thumbnail";
 					image.src = t.image;
 					image.id = t.pk;
+					if (t.sent) {
+						image.className += " sent";
+					}
 					image.addEventListener("click", function(e) {
 						if (e.ctrlKey) {
 							//ctrl+clicking to select/toggle targets to send

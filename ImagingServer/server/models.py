@@ -116,6 +116,9 @@ class Target(models.Model):
 		self.orientation = edits['orientation']
 		self.save()
 
+	def wasSent(self):
+		self.sent = True
+
 	# Calculates the angle between two points.
 	# Used to get the angle between the center GPS location 
 	#  and the cropped location. 

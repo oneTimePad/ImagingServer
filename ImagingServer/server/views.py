@@ -328,7 +328,7 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def getAllTargets(self,request,pk=None):
 		connectionCheck()
-		data = [{'pk':t.pk, 'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg'} for t in Target.objects.all()]
+		data = [{'pk':t.pk, 'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
 		return Response(simplejson.dumps({'targets':data}))
 
 
@@ -383,20 +383,21 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
 		connectionCheck()
-		try:
-			ids = simplejson.load(StringIO(request.data['ids']))
-			data = ''
-			count = 1
-			for pk in ids:
+		ids = simplejson.load(StringIO(request.data['ids']))
+		data = ''
+		count = 1
+		for pk in ids:
+			try:
 				target = Target.objects.get(pk = pk)
-				data+=str(count)+'\tSTD\t'+str(target.lat)+'\t'+str(target.lon)+'\t'+target.orientation+'\t'+target.shape+'\t'+target.color+'\t'+target.letter+'\t'+target.lcolor+'\t'+target.picture.url+'\n'
+				target.wasSent()
+				data+=str(count)+'\t'+str(target.targetType)+'\t'+str(target.lat)+'\t'+str(target.lon)+'\t'+target.orientation+'\t'+target.shape+'\t'+target.color+'\t'+target.letter+'\t'+target.lcolor+'\t'+target.picture.url+'\n'
 				count+=1
-			# websocket response for "sent"
-			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'sent','ids':ids})))
-			return Response({'data':data})
-		except Target.DoesNotExist:
-			pass
+			except Target.DoesNotExist:
+				continue
+		# websocket response for "sent"
+		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+		redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'sent','ids':ids})))
+		return Response({'data':data})
 		return HttpResponseForbidden()
 
 #server webpage
