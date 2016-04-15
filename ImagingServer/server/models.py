@@ -86,6 +86,14 @@ class Target(models.Model):
 		('Star','Star'),
 		('Cross','Cross'),
 	)
+
+	TARGET_TYPES = (
+		('STD','Standard'),
+		('QRC','QR Code'),
+		('OAX','Off-Axis'),
+		('EMG','Emergent')
+	)
+
 	#target data
 	picture = models.ImageField(storage=fs_targets,default=0)
 	color = models.CharField(max_length=20)
@@ -96,6 +104,8 @@ class Target(models.Model):
 	#latitude and longitude for top left corner of target cropped image
 	lat = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	lon = models.DecimalField(max_digits=9, decimal_places=6, default=0)
+	sent = models.BooleanField(default=False)
+	targetType = models.CharField(max_length=3,choices=TARGET_TYPES)
 
 	def edit(self,edits):
 		self.letter=edits['letter']

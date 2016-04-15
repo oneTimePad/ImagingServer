@@ -19,7 +19,7 @@ class TargetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Target
-        fields = ('picture','color','lcolor','orientation','shape','letter','lat','lon')
+        fields = ('picture','color','lcolor','orientation','shape','letter','lat','lon','targetType')
 
     def deserialize(self):
         return Target.objects.create(**self.validated_data)

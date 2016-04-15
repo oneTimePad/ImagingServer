@@ -339,7 +339,8 @@ class GCSViewset(viewsets.ModelViewSet):
 			picture = Picture.objects.get(pk=request.data['pk'])
 		except Picture.DoesNotExist:
 			return HttpResponseForbidden()
-		target = TargetSerializer(data={key : request.data[key] for key in ('color','lcolor','orientation','shape','letter')})
+		target = TargetSerializer(data={key : request.data[key] for key in ('color','lcolor','orientation','shape','letter',
+			'targetType')})
 		if not target.is_valid():
 			return HttpResponseForbidden()
 		sizeData = tuple( request.data[key] for key in ('x','y','scaleWidth','width','height'))
@@ -372,7 +373,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			os.remove(target.picture.path)
 			target.delete()
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'delete','pk':equest.data['pk']})))
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'delete','pk':request.data['pk']})))
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
@@ -383,14 +384,16 @@ class GCSViewset(viewsets.ModelViewSet):
 	def dumpTargetData(self,request,pk=None):
 		connectionCheck()
 		try:
-			target_ids = simplejson.load(StringIO(request.data['target_ids']))
+			ids = simplejson.load(StringIO(request.data['ids']))
 			data = ''
-			# data = ''.join([str(n+1)+'\tSTD\t'+str(targets[n].lat)+'\t'+str(targets[n].lon)+'\t'+targets[n].orientation+'\t'+targets[n].shape+'\t'+targets[n].color+'\t'+targets[n].letter+'\t'+targets[n].lcolor+'\t'+targets[n].picture.url+'\n' for n in range(0,len(targets))])
 			count = 1
-			for pk in target_ids:
+			for pk in ids:
 				target = Target.objects.get(pk = pk)
 				data+=str(count)+'\tSTD\t'+str(target.lat)+'\t'+str(target.lon)+'\t'+target.orientation+'\t'+target.shape+'\t'+target.color+'\t'+target.letter+'\t'+target.lcolor+'\t'+target.picture.url+'\n'
 				count+=1
+			# websocket response for "sent"
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'sent','ids':ids})))
 			return Response({'data':data})
 		except Target.DoesNotExist:
 			pass

@@ -23,7 +23,7 @@
 	image_cache = null; // caches the image strings
 	next_array = null;
 	firstinit = true;
-	selected = []; //array of currently selected targets for data dump
+	// selected = []; //array of currently selected targets for data dump
 
 
 	(function(){
@@ -379,15 +379,7 @@ function PictureArray(){
 				if (e.ctrlKey) {
 					//ctrl+clicking to select/toggle targets to send
 					pk = this.id;
-					index = selected.indexOf(pk);
-					if 	(index == -1) {
-						selected.push(pk);
-						this.border = "4";
-					}
-					else {
-						selected.splice(index,1);
-						this.border = "0";
-					}
+					$("#"+pk).toggleClass("selected");
 				}
 				else {
 					picview = false;
@@ -406,6 +398,12 @@ function PictureArray(){
 				image_cache.curr();
 				$("#back").hide();
 			}
+		}
+		else if (json_response.hasOwnProperty("target") && json_response["target"] == "sent") {
+			ids = JSON.parse(response).ids;
+			ids.forEach(function(element) {
+				$("#"+element).addClass("sent");
+			})
 		}
 	}
 	/*
@@ -523,19 +521,19 @@ function PictureArray(){
 					image.src = t.image;
 					image.id = t.pk;
 					image.addEventListener("click", function(e) {
-						console.log(e.ctrlKey)
 						if (e.ctrlKey) {
 							//ctrl+clicking to select/toggle targets to send
 							pk = this.id;
-							index = selected.indexOf(pk);
-							if 	(index == -1) {
-								selected.push(pk);
-								this.border = "4";
-							}
-							else {
-								selected.splice(index,1);
-								this.border = "0";
-							}
+							$("#"+pk).toggleClass("selected");
+							// index = selected.indexOf(pk);
+							// if 	(index == -1) {
+							// 	selected.push(pk);
+							// 	this.border = "4";
+							// }
+							// else {
+							// 	selected.splice(index,1);
+							// 	this.border = "0";
+							// }
 						}
 						else {
 							picview = false;
@@ -581,14 +579,6 @@ function PictureArray(){
 							url:"{% url 'gcs-deleteTarget'%}",
 							type:"POST",
 							data: {"pk":curr},
-							// success:function(resp){
-							// 	$(".thumbnail").remove("#"+curr);
-							// 	if(image_cache){
-							// 		picview=true;
-							// 		image_cache.curr();
-							// 		$("#back").hide();
-							// 	}
-							// }
 						});
 					}
 					break;
@@ -600,8 +590,6 @@ function PictureArray(){
 		$("#left-panel").css("height", height + "px");
 		$("#picture").css("height", height + "px");
 		$("#targets").css("height", height + "px");
-		// var formheight = $("#form").height();
-		// $("#data").css("max-height", height-formheight + "px");
 	}
 	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
@@ -794,21 +782,22 @@ function PictureArray(){
 		if(image_cache){
 			picview = true;
 			image_cache.curr();
-
 		}
 		$(this).hide();
 	}
 
 function dump_targets() {
+	var selected = $("img.selected[id]").map(function() {return this.id;}).get();
 	$.ajax({
 		url:"{%url 'gcs-dumpTargetData' %}",
 		type:"POST",
-		data:{'target_ids':JSON.stringify(selected)},
+		data:{'ids':JSON.stringify(selected)},
 		success: function(response) {
 			window.open('data:text/plain;charset=utf-8,'+encodeURIComponent(response.data))
 		}
 	});
-	//deselect targets
+	//deselecting targets
+	$("img.selected").removeClass("selected");
 }
 
 
