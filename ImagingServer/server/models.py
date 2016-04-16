@@ -28,7 +28,7 @@ STORAGE_Target = os.getenv("TARGET_STORAGE",'/var/www/html/TARGETS/')
 fs = FileSystemStorage(location=STORAGE)
 fs_targets = FileSystemStorage(location=STORAGE_Target)
 
-# Camera information. Nexus 6P in portrait 
+# Camera information. Nexus 6P in portrait
 # Field of View angles (1/2 image viewing angles)
 fovV = 35.0 # Portrait
 fovH = 26.5 # Landscape
@@ -36,7 +36,7 @@ fovH = 26.5 # Landscape
 # Conversion between meters to GPS coordinate degrees
 # ONLY FOR MARYLAND LOCATION
 # Every 0.8627 meters is about 0.00001 degrees Lat/Lon
-METER_TO_DEGREE_CONVERSION = 0.00001/0.8627 
+METER_TO_DEGREE_CONVERSION = 0.00001/0.8627
 
 class ImagingUser(AbstractUser):
 
@@ -121,10 +121,10 @@ class Target(models.Model):
 		self.sent = True
 
 	# Calculates the angle between two points.
-	# Used to get the angle between the center GPS location 
-	#  and the cropped location. 
+	# Used to get the angle between the center GPS location
+	#  and the cropped location.
 	def angle_between_points(pt1, pt2):
-		x1, y1 = pt1 
+		x1, y1 = pt1
 		x2, y2 = pt2
 		inner_product = x1*x2 + y1*y2
 		len1 = math.hypot(x1, y1)
@@ -187,17 +187,17 @@ class Target(models.Model):
 		totalVDistance = altitude * ( math.tan(math.radians(angle_V_0)) - math.tan(math.radians(angle_V_1)) )
 		totalHDistance = altitude * ( -math.tan(math.radians(angle_H_0)) + math.tan(math.radians(angle_H_1)) )
 
-		# Ratio between the altitude height and the vertical pixel 
+		# Ratio between the altitude height and the vertical pixel
 		# count and vertical distance
 		# Pixels      0 - img_V_pixels
-		# Distance    0 - altitude m 
+		# Distance    0 - altitude m
 		altitude_pixels = (((altitude/totalVDistance)*orig_height) + ((altitude/totalHDistance)*orig_width))/2
 
 		# Calculate the distance from the center of the image to the center of gps
 		deltaYGPS = altitude_pixels * math.sin(math.radians(pitch))
 		deltaXGPS = altitude_pixels * math.sin(math.radians(roll))
 
-		# The pixels for the y direction go "UP" when 
+		# The pixels for the y direction go "UP" when
 		# the pixel goes towards the bottom of the image
 		# REMEMBER top left of image is 0,0
 		#          bottom right of image is max,max
@@ -221,7 +221,7 @@ class Target(models.Model):
 
 		# Use the relative angle from GPS tangent to point
 		# to determine the distance removed from GPS center
-		# Value calculated in pixels 
+		# Value calculated in pixels
 		deltaX = altitude_pixels * math.sin(relXRadian)
 		deltaY = altitude_pixels * math.sin(relYRadian)
 		deltaMagnitude = math.hypot(deltaX, deltaY)

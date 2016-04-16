@@ -17,7 +17,7 @@ from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
 #django-rest
 from rest_framework.response import Response
-from .permissions import DroneAuthentication,GCSAuthentication
+from .permissions import DroneAuthentication,GCSAuthentication, MissionPlannerAuthentication
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework import viewsets
@@ -32,7 +32,10 @@ import json as simplejson
 from io import StringIO
 from decimal import Decimal
 import pika
+import sys
 #telemetry
+from .types import  Telemetry
+from .exceptions import InteropError
 #import requests
 #debug
 import pdb
@@ -54,6 +57,10 @@ channel = connection.channel()
 channel.queue_delete(queue='pictures')
 connection.close()
 
+class TestSet(viewsets.ModelViewSet):
+	@list_route(methods=['post'])
+	def lol(self,request,pk=None):
+		pdb.set_trace()
 
 '''
 saves session for logged in gcs user
@@ -69,16 +76,124 @@ def gcs_logged_in_handler(sender,request,user,**kwargs):
 user_logged_in.connect(gcs_logged_in_handler)
 
 '''
+receive current gcs sessions
 '''
 def gcsSessions():
 	return [ sess.session_id for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
 
 '''
-sends pictures to gcs
+callback to receive N, MQ messages
 '''
+class CountCallback(object):
+	def __init__(self,size,sendNum,picList):
+		#pdb.set_trace()
+		self.picList = picList
+		self.count = (size if sendNum > size else sendNum)
+		self.count = self.count if self.count >0 else 1
+	def __call__(self,ch,method,properties,body):
+		#pdb.set_trace()
+		ch.basic_ack(delivery_tag=method.delivery_tag)
+		self.picList.append(int(body))
+		self.count-=1
+		if self.count == 0:
+			ch.stop_consuming()
+
+#check for drone connection
+def connectionCheck():
+
+	if cache.has_key("checkallowed"):
+		if not cache.has_key("android"):
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
+			cache.delete("checkallowed")
+
+
+#endpoint for mission planner
+class MissionPlannerViewset(viewsets.ModelViewSet):
+	authentication_classes = (JSONWebTokenAuthentication,)
+	permission_classes = (MissionPlannerAuthentication,)
+
+	#mp endpoint for getting SDA-obstacles
+	@list_route(methods=['get'])
+	def getObstacles(self,request,pk=None):
+		pass
+
+	#mp endpoint for getting server time
+	@list_route(methods=['get'])
+	def getServerInfo(self,request,pk=None):
+		pass
+
+	#posting telemetry wendpoint for mission planner
+	#mission planner client logins in and get JWT
+	@list_route(methods=['post'])
+	def postTelemetry(self,request,pk=None):
+		client = cache.get("InteropClient")
+		telemData = TelemetrySerializer(data = request.data)
+		startTime = time()
+		t = Telemetry(telemData.validated_data)
+
+		try:
+			client.client.post_telemetry(t).result()
+			#print "Time to post: %f" % (time() - postTime)
+			#successful = True
+			return Response({'time':time()-startTime})
+		except InteropError as e:
+			code,reason,text = e.errorData()
+
+			#response to client accordingly
+			#but keep going...if something fails, respond and ignore it
+			#alert mission planner about the error though
+			if code == 400:
+				return Response({'time':time()-startTime,'error':"WARNING: Invalid telemetry data. Skipping"})
+
+			elif code == 404:
+				return Response({'time':time()-startTime,'error':"WARNING: Server might be down"})
+
+			elif code == 405 or code == 500:
+				return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
+			#EXCEPT FOR THIS
+			elif code == 403:
+					creds = cach.get("creds")
+					times = 5
+					for i in xrange(0,times):
+						try:
+							client.client.post('/api/login', data={'username':creds['username'],'password':creds['password']})
+							return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
+						except Exception as e:
+							sleep(2)
+							continue
+					code,_,__ = e.errorData()
+					#Everyone should be alerted of this
+					resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
+					redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+					redis_publisher.publish_message(RedisMessage(simplejson.dumps({'warning':resp})))
+					return Response(resp)
+
+		except requests.ConnectionError:
+			return Response({'time':time()-startTime,'error':"WARNING: A server at %s was not found. Encountered connection error." % (server)})
+
+		except requests.Timeout:
+			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
+
+		#Why would this ever happen?
+		except requests.TooManyRedirects:
+			return Response({'time':time()-startTime,'error':"WARNING:The URL redirects to itself"})
+
+		#This wouldn't happen again...
+		except requests.URLRequired:
+			return Response({'time':time()-startTime,'error':"The URL is invalid"})
+
+		#Not sure how to handle this yet
+		except requests.RequestException as e:
+			# catastrophic error. bail.
+			print(e)
+
+		except Exception as e:
+			return Response({'time':time(),'error':"Unknown error: %s" % (sys.exc_info()[0])})
 
 
 
+#endpoint for drone
 class DroneViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (JSONWebTokenAuthentication,)
@@ -130,8 +245,6 @@ class DroneViewset(viewsets.ModelViewSet):
 			elif dataDict['triggering']:
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'triggering':'false'})))
-
-
 
 			#set cache to say that just send pic
 			if cache.has_key(androidId+"pic"):
@@ -205,35 +318,7 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 
 
 
-class CountCallback(object):
-	def __init__(self,size,sendNum,picList):
-		#pdb.set_trace()
-		self.picList = picList
-		self.count = (size if sendNum > size else sendNum)
-		self.count = self.count if self.count >0 else 1
-	def __call__(self,ch,method,properties,body):
-		#pdb.set_trace()
-		ch.basic_ack(delivery_tag=method.delivery_tag)
-		self.picList.append(int(body))
-		self.count-=1
-		if self.count == 0:
-			ch.stop_consuming()
-
-
-
-def connectionCheck():
-
-	if cache.has_key("checkallowed"):
-
-		if not cache.has_key("android"):
-			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
-			cache.delete("checkallowed")
-
-
-'''
-used for GCS endpoints
-'''
+#endpoint for GCS
 class GCSViewset(viewsets.ModelViewSet):
 
 	authentication_classes = (SessionAuthentication,)
@@ -247,6 +332,23 @@ class GCSViewset(viewsets.ModelViewSet):
 		#redirect to login page
 		return redirect(reverse('gcs-login'))
 
+	@list_route(methods=['post'])
+	def initializeInterop(self,request):
+		#validate interop credential data
+		serverCreds = ServerCredsSerializer(data=self.data)
+		if not self.is_valid():
+			#respond with Error
+			return HttpResponseForbidden("invalid server creds %s",self.errors)
+		#create client
+		client = InteropClient(serverCreds.validated_data)
+		#if it didnot return a client, respnd with error
+		if not client.client:
+			return HttpResponse({"error":client.error})
+		#success
+		else:
+			cache.set("creds",serverCreds.validated_data)
+			cache.set("InteropClient",client)
+			return HttpResponse({"success":"interopinitialized"})
 
 
 	@list_route(methods=['post'])
@@ -377,6 +479,22 @@ class GCSViewset(viewsets.ModelViewSet):
 			pass
 		return HttpResponseForbidden()
 
+	@list_route(methods=['post'])
+	def sendTarget(self,request,pk=None):
+		connectionCheck()
+		try:
+			#fetch the client
+			client = cache.get("InteropClient")
+			#serialize the target
+			target = TargetSubmissionSerialzer(Target.objects.get(pk=int(request.data['pk'])))
+			try:
+				#post the target
+				client.client.post_target(Target(target.validated_data)).result()
+				return HttpResponse("Success")
+			except Exception:
+				pass
+		except Target.DoesNotExist:
+			return HttpResponseForbidden()
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
@@ -400,8 +518,6 @@ class GCSViewset(viewsets.ModelViewSet):
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
-
-
 
 	template_name = 'index.html'
 	content_type='text/html'

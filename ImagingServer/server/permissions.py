@@ -13,7 +13,7 @@ class GCSAuthentication(BasePermission):
     def has_permission(self,request,view):
         return request.user and request.user.is_authenticated() and request.user.userType =="gcs"
 
-class TelemetryAuthentication(BasePermission):
-    
+class MissionPlannerAuthentication(BasePermission):
+
     def has_permission(self,request,view):
-        return request.user and request.user.is_authenticated() and request.user.userType =="telemetry"
+        return request.user and request.user.is_authenticated() and request.user.userType =="mp"
