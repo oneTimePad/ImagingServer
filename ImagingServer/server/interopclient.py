@@ -1,5 +1,5 @@
 from .client import AsyncClient
-from .types import InteropError
+from .exceptions import InteropError
 
 
 class InteropClient:
@@ -11,7 +11,7 @@ class InteropClient:
 			self.client = AsyncClient(server,username,password)
 		except InteropError as serverExp:
 			code,reason,text =  serverExp.errorData()
-			
+
 			if code == 400:
 				self.error = "The current user/pass combo (%s, %s) is wrong. Please try again." % (username,password)
 			elif code == 404:
@@ -35,14 +35,5 @@ class InteropClient:
 		except requests.RequestException as e:
 			# catastrophic error. bail.
 			self.error = e.strerror
-		'''
-		except concurrent.futures.CancelledError:
-			print "Multithreading failed. Waiting for a second, then retrying."
-			sleep(1)
-
-		except concurrent.futures.TimeoutError:
-			print "Multithreading timed out. Waiting for a second, then retrying."
-			sleep(1)
-		'''
-		except:
+		except Exception:
 			self.error = "Unknown error: %s" % (sys.exc_info()[0])
