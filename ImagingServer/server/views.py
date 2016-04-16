@@ -127,16 +127,18 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 	#mission planner client logins in and get JWT
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
-		client = cache.get("InteropClient")
+		#client = cache.get("InteropClient")
 		telemData = TelemetrySerializer(data = request.data)
+		if not telemData.is_valid():
+			return Response({'time':time()-startTime,'error':"Invalid data"})
 		startTime = time()
-		t = Telemetry(telemData.validated_data)
+		t = Telemetry(**dict(telemData.validated_data))
 
 		try:
 			client.client.post_telemetry(t).result()
 			#print "Time to post: %f" % (time() - postTime)
 			#successful = True
-			return Response({'time':time()-startTime})
+			return Response({'time':time()-startTime,'error':None})
 		except InteropError as e:
 			code,reason,text = e.errorData()
 
@@ -190,6 +192,8 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 
 		except Exception as e:
 			return Response({'time':time(),'error':"Unknown error: %s" % (sys.exc_info()[0])})
+
+
 
 
 
