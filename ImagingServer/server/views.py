@@ -345,7 +345,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			#respond with Error
 			return HttpResponseForbidden("invalid server creds %s",self.errors)
 		#create client
-		client = InteropClient(serverCreds.validated_data)
+		client = InteropClient(**dict(serverCreds.validated_data))
 		#if it didnot return a client, respnd with error
 		if not client.client:
 			return HttpResponse({"error":client.error})
@@ -494,7 +494,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			target = TargetSubmissionSerialzer(Target.objects.get(pk=int(request.data['pk'])))
 			try:
 				#post the target
-				client.client.post_target(Target(target.validated_data)).result()
+				client.client.post_target(Target(**dict(target.validated_data))).result()
 				return HttpResponse("Success")
 			except Exception:
 				pass
