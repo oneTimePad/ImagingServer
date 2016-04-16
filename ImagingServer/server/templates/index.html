@@ -23,7 +23,6 @@
 	image_cache = null; // caches the image strings
 	next_array = null;
 	firstinit = true;
-	// selected = []; //array of currently selected targets for data dump
 
 
 	(function(){
@@ -375,7 +374,6 @@ function PictureArray(){
 			image.src = json_response.image;
 			image.id = json_response.pk;
 			image.addEventListener("click", function(e) {
-				console.log(e.ctrlKey)
 				if (e.ctrlKey) {
 					//ctrl+clicking to select/toggle targets to send
 					pk = this.id;
@@ -392,7 +390,6 @@ function PictureArray(){
 		}
 		else if (json_response.hasOwnProperty("target") && json_response["target"] == "delete") {
 			$("#"+json_response["pk"]).parent().remove();
-			console.log("Removing thumbnail with #"+json_response["pk"])
 			if(image_cache){
 				picview=true;
 				image_cache.curr();
@@ -528,15 +525,6 @@ function PictureArray(){
 							//ctrl+clicking to select/toggle targets to send
 							pk = this.id;
 							$("#"+pk).toggleClass("selected");
-							// index = selected.indexOf(pk);
-							// if 	(index == -1) {
-							// 	selected.push(pk);
-							// 	this.border = "4";
-							// }
-							// else {
-							// 	selected.splice(index,1);
-							// 	this.border = "0";
-							// }
 						}
 						else {
 							picview = false;
@@ -654,6 +642,7 @@ function PictureArray(){
 					.append("<tr><td>Letter</td><td>"+json.letter+"</td></tr>")
 					.append("<tr><td>Latitude</td><td>"+json.lat+"</td></tr>")
 					.append("<tr><td>Longitude</td><td>"+json.lon+"</td></tr>");
+					.append("<tr><td><button id='targsubmit' action='tsubmit(" + pk+");' class='btn btn-primary'>Submit Target</button></td></tr>")
 				$("#lpalette").val(json.lcolor);
 				$("#palette").val(json.color);
 				$("#orientation").val(json.orientation);
@@ -662,6 +651,20 @@ function PictureArray(){
 			}
 		})
 	}
+
+	function tsubmit(pk){
+		$.ajax({
+			url:"{% url 'gcs-sendTarget'%}",
+			type:"POST",
+			data: {"pk":pk},
+			success:function(resp){
+					bootbox.alert("Target Submited");
+			}
+		});
+
+	}
+
+
 	//sets the canvas width and height and allows it to listen for cropping
 	function canvasinit() {
 		var p1;
@@ -834,11 +837,11 @@ function dump_targets() {
 				<table>
 					<tr>
 						<th><label for="palette">Background Color</label></th>
-						<td><input name="color" value="black" type="text" id="palette"/></td>
+						<td><input name="background_color" value="black" type="text" id="palette"/></td>
 					</tr>
 					<tr>
 						<th><label for="lpalette">Letter Color</label></th>
-						<td><input name="lcolor" type="text" value="black" id="lpalette"/></td>
+						<td><input name="alphanumeric_color" type="text" value="black" id="lpalette"/></td>
 					</tr>
 					{{form.as_table}}
 				</table>

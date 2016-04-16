@@ -72,19 +72,19 @@ class Target(models.Model):
 	)
 
 	SHAPE_CHOICES = (
-		('Circle','Circle'),
-		('Semicircle','Semicircle'),
-		('Quarter Circle','Quarter Circle'),
-		('Triangle','Triangle'),
-		('Square','Square'),
-		('Rectangle','Rectangle'),
-		('Trapezoid','Trapezoid'),
-		('Pentagon','Pentagon'),
-		('Hexagon','Hexagon'),
-		('Heptagon','Heptagon'),
-		('Octagon','Octagon'),
-		('Star','Star'),
-		('Cross','Cross'),
+		('circle','circle'),
+		('semicircle','semicircle'),
+		('quarter circle','quarter circle'),
+		('triangle','triangle'),
+		('square','square'),
+		('rectangle','rectangle'),
+		('trapezoid','trapezoid'),
+		('pentagon','pentagon'),
+		('hexagon','hexagon'),
+		('heptagon','heptagon'),
+		('octagon','octagon'),
+		('star','star'),
+		('cross','cross'),
 	)
 
 	TARGET_TYPES = (
@@ -94,26 +94,27 @@ class Target(models.Model):
 		('EMG','Emergent')
 	)
 
-	#target data
 	picture = models.ImageField(storage=fs_targets,default=0)
-	color = models.CharField(max_length=20)
-	lcolor = models.CharField(max_length=20)
+	#target data
+	ptype = models.CharField(max_length=20,choices=TARGET_TYPES)
+	sent = models.BooleanField(default=False)
+	#latitude and longitude for top left corner of target cropped image
+	latitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
+	longitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	orientation = models.CharField(max_length=2,choices=ORIENTATION_CHOICES)
 	shape = models.CharField(max_length=14,choices=SHAPE_CHOICES)
-	letter = models.CharField(max_length=1)
-	#latitude and longitude for top left corner of target cropped image
-	lat = models.DecimalField(max_digits=9, decimal_places=6, default=0)
-	lon = models.DecimalField(max_digits=9, decimal_places=6, default=0)
-	sent = models.BooleanField(default=False)
-	targetType = models.CharField(max_length=3,choices=TARGET_TYPES)
+	background_color = models.CharField(max_length=20)
+	alphanumeric = models.CharField(max_length=1)
+	alphanumeric_color = models.CharField(max_length=20)
 
 	def edit(self,edits):
-		self.letter=edits['letter']
-		self.color = edits['color']
-		self.lcolor = edits['lcolor']
+		self.alphanumeric=edits['alphanumeric']
+		self.alphanumeric_color = edits['alphanumeric_color']
+		self.background_color = edits['background_color']
 		shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
 		self.shape = str(shapeChoices[edits['shape']])
 		self.orientation = edits['orientation']
+		self.ptype = edits['ptype']
 		self.save()
 
 	def wasSent(self):
@@ -147,16 +148,6 @@ class Target(models.Model):
 		if not scale_width or not orig_width or not orig_height:
 			print('Data is screwy. Exiting early.')
 			return
-		# x = int(x)
-		# y = int(y)
-		# height = int(height)
-		# width = int(width)
-		# scale_width = int(scale_width)
-
-		# x = int(x*orig_width/scale_width)
-		# y = int(y*orig_width/scale_width)
-		# width = int(width*orig_width/scale_width)
-		# height = int(height*orig_width/scale_width)
 
 		cropped_image = original_image.crop((x,y,x+width,y+height))
 
@@ -266,8 +257,8 @@ class Target(models.Model):
 
 		# ************************* MOST IMPORTANT INFORMATION ******************************
 		# This is the calculated Latitude, Longitude of the point
-		self.lat = (ptY_meters * METER_TO_DEGREE_CONVERSION) + gpsLatitude
-		self.lon = (ptX_meters * METER_TO_DEGREE_CONVERSION) + gpsLongitude
+		self.latitude = (ptY_meters * METER_TO_DEGREE_CONVERSION) + gpsLatitude
+		self.longitude = (ptX_meters * METER_TO_DEGREE_CONVERSION) + gpsLongitude
 
 		#save to db
 		self.save()
