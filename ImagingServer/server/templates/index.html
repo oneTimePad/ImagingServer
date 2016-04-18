@@ -807,6 +807,9 @@ function dump_targets() {
 	$("img.selected").removeClass("selected");
 }
 
+function interop_login() {
+	window.open('/interoplogin')
+}
 
 </script>
 </head>
@@ -820,6 +823,7 @@ function dump_targets() {
 				<label for="time_interval">Trigger Time</label>
 				<input id="time_interval" type="text" value="0"/>
 				<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+				<button onlick="interop_login();return false;" class="btn btn-primary">Interop Login</button>
 				<button onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
 				<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
 				<!--<button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>-->

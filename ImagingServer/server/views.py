@@ -322,6 +322,29 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		return self.render_to_response(self.get_context_data())
 
 
+class InteropLogin(View,TemplateResponseMixin,ContentMixin):
+	template_name = 'interoplogin.html'
+	content_type = 'text/html'
+
+	def post(self,request,format=None):
+		#validate interop credential data
+		serverCreds = ServerCredsSerializer(data=request.data)
+		if not serverCreds.is_valid():
+			#respond with Error
+			return HttpResponseForbidden("invalid server creds %s",serverCreds.errors)
+		#create client
+		client = InteropClient(**dict(serverCreds.validated_data))
+		#if it did not return a client, respnd with error
+		if not client.client:
+			return HttpResponse({"error":client.error})
+		#success
+		else:
+			cache.set("creds",serverCreds.validated_data)
+			cache.set("InteropClient",client)
+			return HttpResponse('Success')
+
+	def get(self,request):
+		return self.render_to_response(self.get_context_data)
 
 #endpoint for GCS
 class GCSViewset(viewsets.ModelViewSet):
@@ -336,24 +359,6 @@ class GCSViewset(viewsets.ModelViewSet):
 		logout(request)
 		#redirect to login page
 		return redirect(reverse('gcs-login'))
-
-	@list_route(methods=['post'])
-	def initializeInterop(self,request):
-		#validate interop credential data
-		serverCreds = ServerCredsSerializer(data=self.data)
-		if not self.is_valid():
-			#respond with Error
-			return HttpResponseForbidden("invalid server creds %s",self.errors)
-		#create client
-		client = InteropClient(**dict(serverCreds.validated_data))
-		#if it didnot return a client, respnd with error
-		if not client.client:
-			return HttpResponse({"error":client.error})
-		#success
-		else:
-			cache.set("creds",serverCreds.validated_data)
-			cache.set("InteropClient",client)
-			return HttpResponse({"success":"interopinitialized"})
 
 
 	@list_route(methods=['post'])
@@ -491,7 +496,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			#fetch the client
 			client = cache.get("InteropClient")
 			#serialize the target
-			target = TargetSubmissionSerialzer(Target.objects.get(pk=int(request.data['pk'])))
+			target = TargetSubmissionSerializer(Target.objects.get(pk=int(request.data['pk'])))
 			try:
 				#post the target
 				client.client.post_target(Target(**dict(target.validated_data))).result()
