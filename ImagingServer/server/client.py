@@ -224,6 +224,20 @@ class Client(object):
         """
         self.delete('/api/targets/%d' % target_id)
 
+    def post_target_image(self, target_id, image_binary):
+        """ADDS or UPDATES the target image thumbnail
+
+        Args: 
+            Content-Type: image/jpeg or image/png
+            raw image information
+        Raises:
+            400 Bad Request: Request was not a valid JPEG or PNG image.
+            403 Forbidden: User not authenticated. 
+            404 Not Found: Target not found. Check target ID.
+            413 Request Entity Too Large: Image exceeded 1MB in size.
+        """
+        self.post('api/targets/%d/image' % target_id, data=image_binary)
+
 
 class AsyncClient(object):
     """Client which uses the base to be more performant.

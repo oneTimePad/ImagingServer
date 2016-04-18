@@ -497,9 +497,14 @@ class GCSViewset(viewsets.ModelViewSet):
 			client = cache.get("InteropClient")
 			#serialize the target
 			target = TargetSubmissionSerializer(Target.objects.get(pk=int(request.data['pk'])))
+			data = None
 			try:
 				#post the target
-				client.client.post_target(Target(**dict(target.validated_data))).result()
+				data = client.client.post_target(Target(**dict(target.validated_data))).result()
+				pid = data.get('id')
+				f = open(target.picture.path, 'r')
+				picData = f.read()
+				client.client.post_target(pid, picData)
 				return HttpResponse("Success")
 			except Exception:
 				pass
