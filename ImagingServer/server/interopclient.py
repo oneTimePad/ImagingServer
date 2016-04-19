@@ -1,6 +1,6 @@
 from .client import AsyncClient
 from .exceptions import InteropError
-
+import requests
 
 class InteropClient:
 

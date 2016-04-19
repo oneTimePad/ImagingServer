@@ -37,7 +37,7 @@ import sys
 from .types import  Telemetry
 from .exceptions import InteropError
 from .interopclient import InteropClient
-#import requests
+import requests
 #debug
 import pdb
 
@@ -108,7 +108,7 @@ def connectionCheck():
 			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
 			cache.delete("checkallowed")
 
-
+client = None
 #endpoint for mission planner
 class MissionPlannerViewset(viewsets.ModelViewSet):
 	authentication_classes = (JSONWebTokenAuthentication,)
@@ -128,7 +128,23 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 	#mission planner client logins in and get JWT
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
+		global client
 		#client = cache.get("InteropClient")
+		#pdb.set_trace()
+		creds = {"username":"testuser","password":"testpass","server":"http://192.168.43.38:80"}
+
+		if not cache.has_key("loggedin"):
+			cache.set("loggedin",1)
+			serverCreds = ServerCredsSerializer(data=creds)
+			if not serverCreds.is_valid():
+				#respond with Error
+				return HttpResponseForbidden("invalid server creds %s",serverCreds.errors)
+			#create client
+			client = InteropClient(**dict(serverCreds.validated_data))
+			#cache.set("InteropClient",client)
+		#client = cache.get("InteropClient")
+
+
 		telemData = TelemetrySerializer(data = request.data)
 		if not telemData.is_valid():
 			return Response({'time':time()-startTime,'error':"Invalid data"})
@@ -173,7 +189,7 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 					return Response(resp)
 
 		except requests.ConnectionError:
-			return Response({'time':time()-startTime,'error':"WARNING: A server at %s was not found. Encountered connection error." % (server)})
+			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
 
 		except requests.Timeout:
 			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
@@ -322,7 +338,7 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		return self.render_to_response(self.get_context_data())
 
 
-class InteropLogin(View,TemplateResponseMixin,ContentMixin):
+class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 	template_name = 'interoplogin.html'
 	content_type = 'text/html'
 
