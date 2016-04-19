@@ -504,7 +504,7 @@ class GCSViewset(viewsets.ModelViewSet):
 				pid = data.get('id')
 				f = open(target.picture.path, 'r')
 				picData = f.read()
-				client.client.post_target(pid, picData)
+				client.client.post_target_image(pid, picData)
 				return HttpResponse("Success")
 			except Exception:
 				pass
