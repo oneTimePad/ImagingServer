@@ -470,7 +470,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		target = TargetSerializer(data={key : request.data[key] for key in ('background_color','alphanumeric_color','orientation','shape','alphanumeric','ptype')})
 		if not target.is_valid():
 			return HttpResponseForbidden()
-		sizeData = tuple( request.data[key] for key in ('x','y','scaleWidth','width','height'))
+		sizeData = request.data
 		target = target.deserialize()
 		target.crop(size_data=sizeData,parent_pic=picture)
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
