@@ -121,7 +121,6 @@ class Target(models.Model):
 		self.sent = True
 
 	def findWorldCoords(self,x,y,orig_width,orig_height):
-		x,y = size_data
 		# divide full width / height by 2 cuz we don't need that crap
 		orig_width = orig_width / 2
 		orig_height = orig_height / 2
@@ -152,7 +151,7 @@ class Target(models.Model):
 					[math.sin(azimuth), math.cos(azimuth), 0],
 					[0, 0, 1] ])
 
-		# compose matrix, rotate the world coords using repeated matrix multiplication
+		# compose matrix, rotate the world coords
 		rotFull = np.dot(rotX, np.dot(rotY, rotZ))
 		rotatedCoords = np.dot(rotFull, worldCoords)
 
