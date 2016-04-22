@@ -17,7 +17,7 @@ from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
 #django-rest
 from rest_framework.response import Response
-from .permissions import DroneAuthentication,GCSAuthentication, MissionPlannerAuthentication
+from .permissions import DroneAuthentication,GCSAuthentication, InteroperabilityAuthentication
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework import viewsets
@@ -36,7 +36,7 @@ import sys
 #telemetry
 from .types import  Telemetry
 from .exceptions import InteropError
-from .interopclient import InteropClient
+from .interopmethods import interop_login,get_obstacles,post_telemetry,post_target_image,post_target,get_server_info
 import requests
 #debug
 import pdb
@@ -108,11 +108,10 @@ def connectionCheck():
 			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
 			cache.delete("checkallowed")
 
-client = None
-#endpoint for mission planner
-class MissionPlannerViewset(viewsets.ModelViewSet):
+#endpoint for interoperability
+class InteroperabilityViewset(viewsets.ModelViewSet):
 	authentication_classes = (JSONWebTokenAuthentication,)
-	permission_classes = (MissionPlannerAuthentication,)
+	permission_classes = (InteroperabilityAuthentication,)
 
 	#mp endpoint for getting SDA-obstacles
 	@list_route(methods=['get'])
@@ -128,33 +127,24 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 	#mission planner client logins in and get JWT
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
-		global client
-		#client = cache.get("InteropClient")
-		#pdb.set_trace()
-		creds = {"username":"testuser","password":"testpass","server":"http://192.168.43.38:80"}
-
-		if not cache.has_key("loggedin"):
-			cache.set("loggedin",1)
-			serverCreds = ServerCredsSerializer(data=creds)
-			if not serverCreds.is_valid():
-				#respond with Error
-				return HttpResponseForbidden("invalid server creds %s",serverCreds.errors)
-			#create client
-			client = InteropClient(**dict(serverCreds.validated_data))
-			#cache.set("InteropClient",client)
-		#client = cache.get("InteropClient")
+		pdb.set_trace()
 
 
+		startTime = time()
+		#fetch cached info
+		session = cache.get("InteropClient")
+		server = cache.get("Server")
+
+		#verify telemtry data
 		telemData = TelemetrySerializer(data = request.data)
 		if not telemData.is_valid():
 			return Response({'time':time()-startTime,'error':"Invalid data"})
-		startTime = time()
+
+		#create telemtry data
 		t = Telemetry(**dict(telemData.validated_data))
 
 		try:
-			client.client.post_telemetry(t).result()
-			#print "Time to post: %f" % (time() - postTime)
-			#successful = True
+			post_telemetry(session,server,tout=5,telem=t)
 			return Response({'time':time()-startTime,'error':None})
 		except InteropError as e:
 			code,reason,text = e.errorData()
@@ -172,11 +162,11 @@ class MissionPlannerViewset(viewsets.ModelViewSet):
 				return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
 			#EXCEPT FOR THIS
 			elif code == 403:
-					creds = cach.get("creds")
+					creds = cach.get("Creds")
 					times = 5
 					for i in xrange(0,times):
 						try:
-							client.client.post('/api/login', data={'username':creds['username'],'password':creds['password']})
+							interop_login(username=creds['username'],password=creds['password'],server=creds['server'],tout=5)
 							return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
 						except Exception as e:
 							sleep(2)
@@ -349,14 +339,18 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 			#respond with Error
 			return HttpResponseForbidden("invalid server creds %s",serverCreds.errors)
 		#create client
-		client = InteropClient(**dict(serverCreds.validated_data))
+		session = interop_login(**dict(serverCreds.validated_data))
+
 		#if it did not return a client, respnd with error
-		if not client.client:
-			return HttpResponse({"error":client.error})
+		if not isinstance(session,requests.Session):
+			#responsd with error
+			return HttpResponse(session)
 		#success
 		else:
-			cache.set("creds",serverCreds.validated_data)
-			cache.set("InteropClient",client)
+			#save session and server route
+			cache.set("Creds",ServerCreds)
+			cache.set("InteropClient",session)
+			cache.set("Server",server)
 			return HttpResponse('Success')
 
 	def get(self,request):
@@ -510,22 +504,35 @@ class GCSViewset(viewsets.ModelViewSet):
 		connectionCheck()
 		try:
 			#fetch the client
-			client = cache.get("InteropClient")
+			session = cache.get("InteropClient")
+			server = cache.get("Server")
 			#serialize the target
 			target = TargetSubmissionSerializer(Target.objects.get(pk=int(request.data['pk'])))
 			data = None
 			try:
 				#post the target
-				data = client.client.post_target(Target(**dict(target.validated_data))).result()
+				data = post_target(session,server,Target(**dict(target.validated_data)),tout=5)
+				#test for interop error and respond accordingly
+				if isinstance(data,InteropError):
+					code, reason,text = data.errorData()
+					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
+					return Response({'error':errorStr})
+				#retrieve image binary for sent image
 				pid = data.get('id')
 				f = open(target.picture.path, 'r')
 				picData = f.read()
-				client.client.post_target_image(pid, picData)
-				return HttpResponse("Success")
+
+				resp = post_target_image(session,server,tout =5,target_id=pid, image_binary=picData)
+				#test for interop error and respond accordingly
+				if isinstance(resp,InteropError):
+					code, reason,text = redis_publisher.errorData()
+					errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
+					return Response({'error':errorStr})
+				return Response({'response':"Success"})
 			except Exception:
-				pass
+				return Response({'error':"Received Internal Error"})
 		except Target.DoesNotExist:
-			return HttpResponseForbidden()
+			return Response({'error':'Image does not exist'})
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):

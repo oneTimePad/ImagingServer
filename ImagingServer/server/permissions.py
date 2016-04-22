@@ -13,7 +13,7 @@ class GCSAuthentication(BasePermission):
     def has_permission(self,request,view):
         return request.user and request.user.is_authenticated() and request.user.userType =="gcs"
 
-class MissionPlannerAuthentication(BasePermission):
+class InteroperabilityAuthentication(BasePermission):
 
     def has_permission(self,request,view):
-        return request.user and request.user.is_authenticated() and request.user.userType =="mp"
+        return request.user and request.user.is_authenticated() and request.user.userType =="intr"
