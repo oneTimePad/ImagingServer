@@ -43,6 +43,3 @@ urlpatterns+=router.urls
 router = SimpleRouter(trailing_slash=False)
 router.register(r'interop',InteroperabilityViewset,'mp')
 urlpatterns+=router.urls
-router = SimpleRouter(trailing_slash=False)
-router.register(r'test',TestSet,'test')
-urlpatterns+=router.urls

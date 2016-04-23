@@ -15,14 +15,8 @@
 - OpenCV3
 	-use .so file in repo. add it to site-packages
 
-###CheckList:
-- [X] drone login form
-- [X] gui login form
-- [X] drone side authentication
-- [X] gui side authentication
-- [ ] image data dump to competition electronic format in real-time
-- [ ] deploy to apache2 with TLS
-- [X] HTML/CSS to viewer and login
-	- nicer gallery, etc...
-- [ ] geotagging
-- [ ] fix cropper
+#Users
+- username: viewer1, password: ruautonomous [user for image gui]
+- username: drone, password: ruautonomous [user for phone]
+- username: telemuser, password: ruautonomous [user for posting telemetry]
+- username: serverobstaclesuser, password: ruautonomous [user for fetching obstacles and getting server time]

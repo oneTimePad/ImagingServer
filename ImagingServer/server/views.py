@@ -53,15 +53,13 @@ TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 20
 EXPIRATION = 10
+#can be removed for compeition
 connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
 channel = connection.channel()
 channel.queue_delete(queue='pictures')
 connection.close()
 
-class TestSet(viewsets.ModelViewSet):
-	@list_route(methods=['post'])
-	def lol(self,request,pk=None):
-		pdb.set_trace()
+
 
 '''
 saves session for logged in gcs user
@@ -354,7 +352,7 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 			return HttpResponse('Success')
 
 	def get(self,request):
-		return self.render_to_response(self.get_context_data)
+		return self.render_to_response(self.get_context_data())
 
 #endpoint for GCS
 class GCSViewset(viewsets.ModelViewSet):
