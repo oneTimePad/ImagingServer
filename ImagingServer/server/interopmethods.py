@@ -52,7 +52,7 @@ def get_server_info(session,server, tout):
         requests.Timeout: Request timeout.
         ValueError or AttributeError: Malformed response from server.
     """
-    r = session.get(server+'/api/server_info', timeout=tout, **kwargs)
+    r = session.get(server+'/api/server_info', timeout=tout)
     if not r.ok:
         raise InteropError(r)
 
@@ -67,12 +67,12 @@ def post_telemetry(session,server,tout, telem):
         InteropError: Error from server.
         requests.Timeout: Request timeout.
     """
-    r = session.post(server+'/api/telemetry', timeout=tout, data=telem.serialize(), **kwargs)
+    r = session.post(server+'/api/telemetry', timeout=tout, data=telem.serialize())
     if not r.ok:
         raise InteropError(r)
     return r
 
-def get_obstacles(session,server,tout,kwargs):
+def get_obstacles(session,server,tout):
     """GET obstacles.
 
     Returns:
@@ -83,7 +83,7 @@ def get_obstacles(session,server,tout,kwargs):
         requests.Timeout: Request timeout.
         ValueError or AttributeError: Malformed response from server.
     """
-    r = session.get(server+'/api/obstacles', timeout=tout, **kwargs)
+    r = session.get(server+'/api/obstacles', timeout=tout)
     if not r.ok:
         raise InteropError(r)
 
@@ -100,7 +100,7 @@ def get_obstacles(session,server,tout,kwargs):
     return stationary, moving
 
 
-def post_target(session,server, tout,target,kwargs):
+def post_target(session,server, tout,target):
     """POST target.
 
     Args:
@@ -118,7 +118,7 @@ def post_target(session,server, tout,target,kwargs):
     return Target.deserialize(r.json())
 
 
-def post_target_image(session,server,tout, target_id, image_binary,kwargs):
+def post_target_image(session,server,tout, target_id, image_binary):
     """ADDS or UPDATES the target image thumbnail
 
     Args:

@@ -331,13 +331,16 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 	content_type = 'text/html'
 
 	def post(self,request,format=None):
+	
 		#validate interop credential data
-		serverCreds = ServerCredsSerializer(data=request.data)
+		serverCreds = ServerCredsSerializer(data=request.POST)
 		if not serverCreds.is_valid():
 			#respond with Error
 			return HttpResponseForbidden("invalid server creds %s",serverCreds.errors)
+		login_data = dict(serverCreds.validated_data)
+		login_data.update({"tout":5})
 		#create client
-		session = interop_login(**dict(serverCreds.validated_data))
+		session = interop_login(**(login_data))
 
 		#if it did not return a client, respnd with error
 		if not isinstance(session,requests.Session):
@@ -346,9 +349,9 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 		#success
 		else:
 			#save session and server route
-			cache.set("Creds",ServerCreds)
+			cache.set("Creds",serverCreds)
 			cache.set("InteropClient",session)
-			cache.set("Server",server)
+			cache.set("Server",serverCreds.validated_data['server'])
 			return HttpResponse('Success')
 
 	def get(self,request):

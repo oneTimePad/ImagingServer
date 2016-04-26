@@ -651,6 +651,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                     osW.write(requestData.toString());
                     osW.flush();
                     osW.close();
+		    osC.flush();
+                    osC.close();
 
 
                     int status = con.getResponseCode();

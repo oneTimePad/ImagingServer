@@ -41,5 +41,5 @@ router = SimpleRouter(trailing_slash=False)
 router.register(r'gcs',GCSViewset,'gcs')
 urlpatterns+=router.urls
 router = SimpleRouter(trailing_slash=False)
-router.register(r'interop',InteroperabilityViewset,'mp')
+router.register(r'interop',InteroperabilityViewset,'interop')
 urlpatterns+=router.urls
