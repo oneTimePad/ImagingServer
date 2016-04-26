@@ -88,10 +88,10 @@ class Target(models.Model):
 	)
 
 	TARGET_TYPES = (
-		('STD','Standard'),
-		('QRC','QR Code'),
-		('OAX','Off-Axis'),
-		('EMG','Emergent')
+		('standard','Standard'),
+		('qrc','QR Code'),
+		('off_axis','Off-Axis'),
+		('emergent','Emergent')
 	)
 
 	picture = models.ImageField(storage=fs_targets,default=0)
@@ -173,11 +173,11 @@ class Target(models.Model):
 		orig_width,orig_height = original_image.size #1020 for AUVSI camera
 
 		#unpackage crop data
-		scaleWidth = int(size_data['scaleWidth'])
-		x = int(size_data['x'] * orig_width / scaleWidth)
-		y = int(size_data['y'] * orig_width / scaleWidth)
-		width = int(size_data['width'] * orig_width / scaleWidth)
-		height = int(size_data['height'] * orig_width / scaleWidth)
+		scale_width = int(size_data['scaleWidth'])
+		x = int(int(size_data['x']) * orig_width / scale_width)
+		y = int(int(size_data['y']) * orig_width / scale_width)
+		width = int(int(size_data['width']) * orig_width / scale_width)
+		height = int(int(size_data['height']) * orig_width / scale_width)
 
 		if not scale_width or not orig_width or not orig_height:
 			print('Data is screwy. Exiting early.')

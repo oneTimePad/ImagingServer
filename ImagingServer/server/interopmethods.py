@@ -1,5 +1,6 @@
 from .exceptions import InteropError
 import requests
+import json
 
 def interop_login(username,password,server,tout):
     session = None
@@ -100,7 +101,7 @@ def get_obstacles(session,server,tout):
     return stationary, moving
 
 
-def post_target(session,server, tout,target):
+def post_target(session,server,target,tout):
     """POST target.
 
     Args:

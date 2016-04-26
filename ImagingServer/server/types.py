@@ -138,7 +138,7 @@ class MovingObstacle(ClientBaseType):
         self.sphere_radius = float(sphere_radius)
 
 
-class Target(ClientBaseType):
+class AUVSITarget(ClientBaseType):
     """A target.
 
     Attributes:

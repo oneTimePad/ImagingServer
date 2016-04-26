@@ -28,13 +28,13 @@ from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
 #general
 import os
 from time import time,sleep
-import json as simplejson
+import json
 from decimal import Decimal
 import csv
 import pika
 import sys
 #telemetry
-from .types import  Telemetry
+from .types import  Telemetry,AUVSITarget
 from .exceptions import InteropError
 from .interopmethods import interop_login,get_obstacles,post_telemetry,post_target_image,post_target,get_server_info
 import requests
@@ -103,7 +103,7 @@ def connectionCheck():
 	if cache.has_key("checkallowed"):
 		if not cache.has_key("android"):
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'disconnected':'disconnected'})))
+			redis_publisher.publish_message(RedisMessage(json.dumps({'disconnected':'disconnected'})))
 			cache.delete("checkallowed")
 
 #endpoint for interoperability
@@ -173,7 +173,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 					#Everyone should be alerted of this
 					resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
 					redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-					redis_publisher.publish_message(RedisMessage(simplejson.dumps({'warning':resp})))
+					redis_publisher.publish_message(RedisMessage(json.dumps({'warning':resp})))
 					return Response(resp)
 
 		except requests.ConnectionError:
@@ -223,7 +223,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			androidId = dataDict['id']
 		except MultiValueDictKeyError:
 
-			dataDict =  simplejson.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
+			dataDict =  json.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
 			androidId = dataDict['id']
 
 
@@ -232,7 +232,7 @@ class DroneViewset(viewsets.ModelViewSet):
         #determine if drone has contacted before
 		if not cache.has_key("android"):
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'connected':'connected'})))
+			redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
 			cache.set("checkallowed",True)
             #if no set its cache entry
 			cache.set("android",requestTime,EXPIRATION)
@@ -250,10 +250,10 @@ class DroneViewset(viewsets.ModelViewSet):
 
 			if dataDict['triggering'] == 'true':
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'triggering':'true'})))
+				redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true'})))
 			elif dataDict['triggering']:
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-				redis_publisher.publish_message(RedisMessage(simplejson.dumps({'triggering':'false'})))
+				redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
 			#set cache to say that just send pic
 			if cache.has_key(androidId+"pic"):
@@ -336,7 +336,7 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 		serverCreds = ServerCredsSerializer(data=request.POST)
 		if not serverCreds.is_valid():
 			#respond with Error
-			return HttpResponseForbidden("invalid server creds %s",serverCreds.errors)
+			return HttpResponseForbidden("invalid server creds %s" % serverCreds.errors)
 		login_data = dict(serverCreds.validated_data)
 		login_data.update({"tout":5})
 		#create client
@@ -452,7 +452,7 @@ class GCSViewset(viewsets.ModelViewSet):
 	def getAllTargets(self,request,pk=None):
 		connectionCheck()
 		data = [{'pk':t.pk, 'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
-		return Response(simplejson.dumps({'targets':data}))
+		return Response(json.dumps({'targets':data}))
 
 
 	@list_route(methods=['post'])
@@ -469,7 +469,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		target = target.deserialize()
 		target.crop(size_data=sizeData,parent_pic=picture)
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'create','pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
+		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
 		return Response()
 
 
@@ -494,7 +494,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			os.remove(target.picture.path)
 			target.delete()
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'delete','pk':request.data['pk']})))
+			redis_publisher.publish_message(RedisMessage(json.dumps({'target':'delete','pk':request.data['pk']})))
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
@@ -507,12 +507,19 @@ class GCSViewset(viewsets.ModelViewSet):
 			#fetch the client
 			session = cache.get("InteropClient")
 			server = cache.get("Server")
+			targatAtPk = Target.objects.get(pk=int(request.data['pk']))
 			#serialize the target
-			target = TargetSubmissionSerializer(Target.objects.get(pk=int(request.data['pk'])))
+			pretarget = TargetSubmissionSerializer(targatAtPk)
+			#if not target.is_valid():
+				#return Response({'error':'invalid target data'})
 			data = None
 			try:
+				pdb.set_trace()
+				dataDict = dict(pretarget.data)
+				dataDict['type'] = dataDict.pop('ptype')
+				target = AUVSITarget(**dataDict)
 				#post the target
-				data = post_target(session,server,Target(**dict(target.validated_data)),tout=5)
+				data = post_target(session,server,target,tout=5)
 				#test for interop error and respond accordingly
 				if isinstance(data,InteropError):
 					code, reason,text = data.errorData()
@@ -530,7 +537,8 @@ class GCSViewset(viewsets.ModelViewSet):
 					errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
 					return Response({'error':errorStr})
 				return Response({'response':"Success"})
-			except Exception:
+			except Exception as e:
+				print(e)
 				return Response({'error':"Received Internal Error"})
 		except Target.DoesNotExist:
 			return Response({'error':'Image does not exist'})
@@ -538,22 +546,21 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
 		connectionCheck()
-		ids = simplejson.load(StringIO(request.data['ids']))
+		ids = json.loads(request.data['ids'])
 		data = ''
 		count = 1
 		for pk in ids:
 			try:
 				target = Target.objects.get(pk = pk)
 				target.wasSent()
-				data+=str(count)+'\t'+str(target.targetType)+'\t'+str(target.lat)+'\t'+str(target.lon)+'\t'+target.orientation+'\t'+target.shape+'\t'+target.color+'\t'+target.letter+'\t'+target.lcolor+'\t'+target.picture.url+'\n'
+				data+=str(count)+'\t'+str(target.ptype)+'\t'+str(target.latitude)+'\t'+str(target.longitude)+'\t'+target.orientation+'\t'+target.shape+'\t'+target.background_color+'\t'+target.alphanumeric+'\t'+target.alphanumeric_color+'\t'+target.picture.url+'\n'
 				count+=1
 			except Target.DoesNotExist:
 				continue
 		# websocket response for "sent"
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(simplejson.dumps({'target':'sent','ids':ids})))
+		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'sent','ids':ids})))
 		return Response({'data':data})
-		return HttpResponseForbidden()
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):

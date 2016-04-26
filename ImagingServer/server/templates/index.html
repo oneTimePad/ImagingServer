@@ -642,24 +642,30 @@ function PictureArray(){
 					.append("<tr><td>Letter</td><td>"+json.letter+"</td></tr>")
 					.append("<tr><td>Latitude</td><td>"+json.lat+"</td></tr>")
 					.append("<tr><td>Longitude</td><td>"+json.lon+"</td></tr>")
-					.append("<tr><td><button id='targsubmit' action='tsubmit(" + pk+");' class='btn btn-primary'>Submit Target</button></td></tr>");
+					.append("<tr><td><button id='targsubmit' onclick='tsubmit(" + pk+");' class='btn btn-primary'>Submit Target</button></td></tr>");
 				$("#lpalette").val(json.lcolor);
 				$("#palette").val(json.color);
 				$("#orientation").val(json.orientation);
 				$("#shape").val(json.shape);
-				$("#letter").val(json.letter);
+				$("#letter").val(json.letter); //fix here
 
 			}
 		})
 	}
 
 	function tsubmit(pk){
+		console.log("submit")
 		$.ajax({
 			url:"{% url 'gcs-sendTarget'%}",
 			type:"POST",
 			data: {"pk":pk},
 			success:function(resp){
+				if (resp.hasOwnProperty('error')) {
+					bootbox.alert("Submission Failure");
+				}
+				else {
 					bootbox.alert("Target Submited");
+				}
 			}
 		});
 
