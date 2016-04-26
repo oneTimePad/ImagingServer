@@ -96,6 +96,39 @@ class CountCallback(object):
 		self.count-=1
 		if self.count == 0:
 			ch.stop_consuming()
+def interop_error_handler(error):
+	code,reason,text = error.errorData()
+
+	#response to client accordingly
+	#but keep going...if something fails, respond and ignore it
+	#alert mission planner about the error though
+	if code == 400:
+		return Response({'time':time()-startTime,'error':"WARNING: Invalid telemetry data. Skipping"})
+
+	elif code == 404:
+		return Response({'time':time()-startTime,'error':"WARNING: Server might be down"})
+
+	elif code == 405 or code == 500:
+		return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
+	#EXCEPT FOR THIS
+	elif code == 403:
+			creds = cach.get("Creds")
+			times = 5
+			for i in xrange(0,times):
+				try:
+					interop_login(username=creds['username'],password=creds['password'],server=creds['server'],tout=5)
+					return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
+				except Exception as e:
+					sleep(2)
+					continue
+			code,_,__ = e.errorData()
+			#Everyone should be alerted of this
+			resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
+			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(json.dumps({'warning':resp})))
+			return Response(resp)
+
+
 
 #check for drone connection
 def connectionCheck():
@@ -111,15 +144,87 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 	authentication_classes = (JSONWebTokenAuthentication,)
 	permission_classes = (InteroperabilityAuthentication,)
 
-	#mp endpoint for getting SDA-obstacles
+	#mavclient endpoint for getting SDA-obstacles
 	@list_route(methods=['get'])
 	def getObstacles(self,request,pk=None):
-		pass
+		#fetch the current time, technically not needed, can be handed by client
+		#ignore it if you want
+		startTime = time()
+		#fetch interop server info
+		session = cache.get("InteropClient")
+		server = cache.get("Server")
+		try:
+			#attempt to fetch obstacles
+			serverInfo = get_obstacles(session,server,tout=5)
+			#return a json response with the time diff(again ignore if you want)
+			#json version of data (i.e. obstacles)
+			#there is no error, filled in if there is an error
+			return Response({'time':time()-startTime,'data':json.dumps(serverInfo),'error':None})
+		except InteropError as e:
+			#interop errors are handled differently
+			#this returns something in side
+			interop_error_handler(e)
+			#never comes here
+		#handler all connection errors
+		except requests.ConnectionError:
+			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
 
-	#mp endpoint for getting server time
+		except requests.Timeout:
+			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
+
+		#Why would this ever happen?
+		except requests.TooManyRedirects:
+			return Response({'time':time()-startTime,'error':"WARNING:The URL redirects to itself"})
+
+		#This wouldn't happen again...
+		except requests.URLRequired:
+			return Response({'time':time()-startTime,'error':"The URL is invalid"})
+
+
+		except requests.RequestException as e:
+			# catastrophic error. bail.
+			return Response({'time':time()-startTime,'error':e})
+
+		except Exception as e:
+			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (sys.exc_info()[0])})
+
+
+
+	#mavclient endpoint for getting server time
 	@list_route(methods=['get'])
 	def getServerInfo(self,request,pk=None):
-		pass
+		startTime = time()
+		session = cache.get("InteropClient")
+		server = cache.get("Server")
+		try:
+			serverInfo = get_server_info(session,server,tout=5)
+			return Response({'time':time()-startTime,'data':json.dumps(serverInfo),'error':None})
+		except InteropError as e:
+			interop_error_handler(e)
+
+		except requests.ConnectionError:
+			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
+
+		except requests.Timeout:
+			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
+
+		#Why would this ever happen?
+		except requests.TooManyRedirects:
+			return Response({'time':time()-startTime,'error':"WARNING:The URL redirects to itself"})
+
+		#This wouldn't happen again...
+		except requests.URLRequired:
+			return Response({'time':time()-startTime,'error':"The URL is invalid"})
+
+
+		except requests.RequestException as e:
+			# catastrophic error. bail.
+			return Response({'time':time()-startTime,'error':e})
+
+		except Exception as e:
+			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (sys.exc_info()[0])})
+
+
 
 	#posting telemetry wendpoint for mission planner
 	#mission planner client logins in and get JWT
@@ -145,36 +250,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			post_telemetry(session,server,tout=5,telem=t)
 			return Response({'time':time()-startTime,'error':None})
 		except InteropError as e:
-			code,reason,text = e.errorData()
-
-			#response to client accordingly
-			#but keep going...if something fails, respond and ignore it
-			#alert mission planner about the error though
-			if code == 400:
-				return Response({'time':time()-startTime,'error':"WARNING: Invalid telemetry data. Skipping"})
-
-			elif code == 404:
-				return Response({'time':time()-startTime,'error':"WARNING: Server might be down"})
-
-			elif code == 405 or code == 500:
-				return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
-			#EXCEPT FOR THIS
-			elif code == 403:
-					creds = cach.get("Creds")
-					times = 5
-					for i in xrange(0,times):
-						try:
-							interop_login(username=creds['username'],password=creds['password'],server=creds['server'],tout=5)
-							return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
-						except Exception as e:
-							sleep(2)
-							continue
-					code,_,__ = e.errorData()
-					#Everyone should be alerted of this
-					resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
-					redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-					redis_publisher.publish_message(RedisMessage(json.dumps({'warning':resp})))
-					return Response(resp)
+			interop_error_handler(e)
 
 		except requests.ConnectionError:
 			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
@@ -190,13 +266,13 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 		except requests.URLRequired:
 			return Response({'time':time()-startTime,'error':"The URL is invalid"})
 
-		#Not sure how to handle this yet
+
 		except requests.RequestException as e:
 			# catastrophic error. bail.
-			print(e)
+			return Response({'time':time()-startTime,'error':e})
 
 		except Exception as e:
-			return Response({'time':time(),'error':"Unknown error: %s" % (sys.exc_info()[0])})
+			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (sys.exc_info()[0])})
 
 
 
@@ -331,7 +407,7 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 	content_type = 'text/html'
 
 	def post(self,request,format=None):
-	
+
 		#validate interop credential data
 		serverCreds = ServerCredsSerializer(data=request.POST)
 		if not serverCreds.is_valid():
@@ -498,7 +574,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
-		return HttpResponseForbidden()
+		return HttpResponseForbidden("Target does not exist")
 
 	@list_route(methods=['post'])
 	def sendTarget(self,request,pk=None):
@@ -510,11 +586,9 @@ class GCSViewset(viewsets.ModelViewSet):
 			targatAtPk = Target.objects.get(pk=int(request.data['pk']))
 			#serialize the target
 			pretarget = TargetSubmissionSerializer(targatAtPk)
-			#if not target.is_valid():
-				#return Response({'error':'invalid target data'})
 			data = None
 			try:
-				pdb.set_trace()
+				#create dictionary to use to create AUVSITarget
 				dataDict = dict(pretarget.data)
 				dataDict['type'] = dataDict.pop('ptype')
 				target = AUVSITarget(**dataDict)
@@ -538,8 +612,7 @@ class GCSViewset(viewsets.ModelViewSet):
 					return Response({'error':errorStr})
 				return Response({'response':"Success"})
 			except Exception as e:
-				print(e)
-				return Response({'error':"Received Internal Error"})
+				return Response({'error':e})
 		except Target.DoesNotExist:
 			return Response({'error':'Image does not exist'})
 
