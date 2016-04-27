@@ -363,7 +363,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			cache.set("trigger",0)
 		if not cache.has_key('time'):
 			cache.set("time",0)
-		pdb.set_trace()
+
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true'})))
@@ -610,6 +610,7 @@ class GCSViewset(viewsets.ModelViewSet):
 				dataDict = dict(pretarget.data)
 				dataDict['type'] = dataDict.pop('ptype')
 				target = AUVSITarget(**dataDict)
+				target.user = cache.get("Creds").validated_data['username']
 				#post the target
 				data = post_target(session,server,target,tout=5)
 				#test for interop error and respond accordingly
