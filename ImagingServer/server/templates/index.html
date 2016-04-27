@@ -627,6 +627,7 @@ function PictureArray(){
 			showTargetData(image);
 		}
 	}
+
 	function showTargetData(image) {
 		pk = parseInt(image.id);
 		$.ajax({
@@ -636,20 +637,22 @@ function PictureArray(){
 			data: {"pk": pk},
 			success: function(json) {
 				$("#focus-data").empty()
-					.append("<tr><td>Color</td><td>"+json.color+"</td></tr>")
-					.append("<tr><td>Letter Color</td><td>"+json.lcolor+"</td></tr>")
-					.append("<tr><td>Orientation</td><td>"+json.orientation+"</td></tr>")
 					.append("<tr><td>Shape</td><td>"+json.shape+"</td></tr>")
-					.append("<tr><td>Letter</td><td>"+json.letter+"</td></tr>")
-					.append("<tr><td>Latitude</td><td>"+json.lat+"</td></tr>")
-					.append("<tr><td>Longitude</td><td>"+json.lon+"</td></tr>")
+					.append("<tr><td>Letter</td><td>"+json.alphanumeric+"</td></tr>")
+					.append("<tr><td>Color</td><td>"+json.background_color+"</td></tr>")
+					.append("<tr><td>Letter Color</td><td>"+json.alphanumeric_color+"</td></tr>")
+					.append("<tr><td>Orientation</td><td>"+json.orientation+"</td></tr>")
+					.append("<tr><td>Latitude</td><td>"+json.latitude+"</td></tr>")
+					.append("<tr><td>Longitude</td><td>"+json.longitude+"</td></tr>")
+					.append("<tr><td>Type</td><td>"+json.ptype+"</td></tr>")
+					.append("<tr><td>Description</td><td>"+json.description+"</td></tr>")
 					.append("<tr><td><button id='targsubmit' onclick='tsubmit(" + pk+");' class='btn btn-primary'>Submit Target</button></td></tr>");
-				$("#lpalette").val(json.lcolor);
-				$("#palette").val(json.color);
+				$("#lpalette").val(json.alphanumeric_color);
+				$("#palette").val(json.background_color);
 				$("#orientation").val(json.orientation);
 				$("#shape").val(json.shape);
-				$("#letter").val(json.letter); //fix here
-
+				$("#alphanumeric").val(json.alphanumeric);
+				$("#description").val(json.description);
 			}
 		})
 	}
@@ -675,113 +678,115 @@ function PictureArray(){
 
 	//sets the canvas width and height and allows it to listen for cropping
 	function canvasinit() {
-		var p1;
-		var p2;
-		var cropinit = false;
-		var panning = true;
-		var corner = [];
-		var boxW;
-		var boxH;
-		var zoom = 5;
-		//set canvas to image params
-		var canvas = document.getElementById("selector");
-		canvas.width = $("#focused").width();
-		canvas.height = $("#focused").height();
-		canvas.style.display = "block";
-		var ctx = canvas.getContext("2d");
+		if (picview) {
+			var p1;
+			var p2;
+			var cropinit = false;
+			var panning = true;
+			var corner = [];
+			var boxW;
+			var boxH;
+			var zoom = 5;
+			//set canvas to image params
+			var canvas = document.getElementById("selector");
+			canvas.width = $("#focused").width();
+			canvas.height = $("#focused").height();
+			canvas.style.display = "block";
+			var ctx = canvas.getContext("2d");
 
-		ctx.fillStyle="rgba(210,220,255,0.6)";
-		function setBox() {
-			boxW = p1[0]-p2[0];
-			boxH = p1[1]-p2[1];
-			//finding the top left corner
-			if (boxW<0) {
-				corner[0] = p1[0];
-				boxW = -boxW;
-			}
-			else {
-				corner[0] = p2[0];
-			}
-			if (boxH<0) {
-				corner[1] = p1[1];
-				boxH = -boxH;
-			}
-			else {
-				corner[1] = p2[1];
-			}
-			ctx.clearRect(0,0,canvas.width,canvas.height);
-			ctx.fillRect(corner[0],corner[1],boxW,boxH);
-		}
-		function finalizeBox() {
-			var transform = $("#focused").css("transform").replace("matrix(","").replace(")","").split(",");
-			var scale = parseInt(transform[0]);
-			var transx = parseInt(transform[4]);
-			var transy = parseInt(transform[5]);
-			var factor = parseInt((scale-1)/2);
-			var width = $("#focused").width();
-			var height = $("#focused").height()
-			crop.x = parseInt((width*factor + corner[0]-transx)/scale);
-			crop.y = parseInt((height*factor + corner[1]-transy)/scale);
-			crop.width = parseInt(boxW/scale);
-			crop.height = parseInt(boxH/scale);
-			crop.scaleWidth = width;
-			//console.log("crop "+crop.x+" "+crop.y+" "+crop.width+" "+crop.height+" "+crop.scaleWidth+" "+height)
-		}
-		if (firstinit) {
-			firstinit = false;
-			canvas.addEventListener("dblclick", function toggle(event) {
-				panning = !panning;
-				cropinit = false;
-				//console.log("dblclick "+panning+" "+cropinit);
-			});
-			canvas.addEventListener("mousedown", function setP1(event) {
-				if (!panning) {
-					p1 = [event.layerX, event.layerY];
-					cropinit = true;
-				}
-				//console.log("mousedown "+panning+" "+cropinit);
-			});
-			//so that if the user releases the mouse after it leaves the canvas, the crop completes
-			canvas.addEventListener("mouseleave", function() {
-				if (panning) {
-					$("#focused").css("transform", "scale(1,1)");
+			ctx.fillStyle="rgba(210,220,255,0.6)";
+			function setBox() {
+				boxW = p1[0]-p2[0];
+				boxH = p1[1]-p2[1];
+				//finding the top left corner
+				if (boxW<0) {
+					corner[0] = p1[0];
+					boxW = -boxW;
 				}
 				else {
-					finalizeBox();
+					corner[0] = p2[0];
+				}
+				if (boxH<0) {
+					corner[1] = p1[1];
+					boxH = -boxH;
+				}
+				else {
+					corner[1] = p2[1];
+				}
+				ctx.clearRect(0,0,canvas.width,canvas.height);
+				ctx.fillRect(corner[0],corner[1],boxW,boxH);
+			}
+			function finalizeBox() {
+				var transform = $("#focused").css("transform").replace("matrix(","").replace(")","").split(",");
+				var scale = parseInt(transform[0]);
+				var transx = parseInt(transform[4]);
+				var transy = parseInt(transform[5]);
+				var factor = parseInt((scale-1)/2);
+				var width = $("#focused").width();
+				var height = $("#focused").height()
+				crop.x = parseInt((width*factor + corner[0]-transx)/scale);
+				crop.y = parseInt((height*factor + corner[1]-transy)/scale);
+				crop.width = parseInt(boxW/scale);
+				crop.height = parseInt(boxH/scale);
+				crop.scaleWidth = width;
+				//console.log("crop "+crop.x+" "+crop.y+" "+crop.width+" "+crop.height+" "+crop.scaleWidth+" "+height)
+			}
+			if (firstinit) {
+				firstinit = false;
+				canvas.addEventListener("dblclick", function toggle(event) {
+					panning = !panning;
 					cropinit = false;
-				}
-				//console.log("mouseleave "+panning+" "+cropinit);
-			});
-			canvas.addEventListener("mousemove", function drawBox(event) {
-				if (panning) {
-					var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
-					if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
-					if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
-					var ty = this.height/2 - event.layerY;
-					if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
-					if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
-					$("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
-				}
-				else if (cropinit) {
-					p2 = [event.layerX, event.layerY];
-					setBox();
-				}
-				//console.log("mousemove "+panning+" "+cropinit);
-			});
-			canvas.addEventListener("mouseup", function finishBox(event) {
-				if (cropinit) {
-					p2=[event.layerX, event.layerY];
-					setBox();
-					finalizeBox();
-					cropinit = false;
-				}
-				//console.log("mouseup "+panning+" "+cropinit);
-			});
-		}
-		else {
-			$("#focused").css("transform", "scale(1,1)");
-			panning = true;
-			cropinit = false;
+					//console.log("dblclick "+panning+" "+cropinit);
+				});
+				canvas.addEventListener("mousedown", function setP1(event) {
+					if (!panning) {
+						p1 = [event.layerX, event.layerY];
+						cropinit = true;
+					}
+					//console.log("mousedown "+panning+" "+cropinit);
+				});
+				//so that if the user releases the mouse after it leaves the canvas, the crop completes
+				canvas.addEventListener("mouseleave", function() {
+					if (panning) {
+						$("#focused").css("transform", "scale(1,1)");
+					}
+					else {
+						finalizeBox();
+						cropinit = false;
+					}
+					//console.log("mouseleave "+panning+" "+cropinit);
+				});
+				canvas.addEventListener("mousemove", function drawBox(event) {
+					if (panning) {
+						var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
+						if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
+						if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
+						var ty = this.height/2 - event.layerY;
+						if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
+						if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
+						$("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
+					}
+					else if (cropinit) {
+						p2 = [event.layerX, event.layerY];
+						setBox();
+					}
+					//console.log("mousemove "+panning+" "+cropinit);
+				});
+				canvas.addEventListener("mouseup", function finishBox(event) {
+					if (cropinit) {
+						p2=[event.layerX, event.layerY];
+						setBox();
+						finalizeBox();
+						cropinit = false;
+					}
+					//console.log("mouseup "+panning+" "+cropinit);
+				});
+			}
+			else {
+				$("#focused").css("transform", "scale(1,1)");
+				panning = true;
+				cropinit = false;
+			}
 		}
 	}
 	//clear storage on logout to avoid attempting to grab
@@ -802,6 +807,9 @@ function PictureArray(){
 
 function dump_targets() {
 	var selected = $("img.selected[id]").map(function() {return this.id;}).get();
+	if (selected==null || selected.length==0) {
+		return
+	}
 	$.ajax({
 		url:"{%url 'gcs-dumpTargetData' %}",
 		type:"POST",
