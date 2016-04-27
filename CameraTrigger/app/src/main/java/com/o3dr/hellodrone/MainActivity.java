@@ -188,9 +188,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         android_id=Settings.Secure.getString(getApplicationContext().getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
-        final Context context = getApplicationContext();
+
         //get the drone
-        drone = new Drone(context);
+        drone = new Drone();
 
         //initialize picnum
         picNum = 0;
@@ -300,6 +300,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
                 didPause = true;
+                synchronized (triggerOn){
+                    triggerOn.set(false);
+                }
             }
         });
 
@@ -313,7 +316,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         super.onResume();
         //app was zoomed out. Can't recover from this...just start over
         //in practice this will never happen as long as phone is sleeping
-        if(didPause){ alertUser("App was paused. Please close and restart");}
+        //if(didPause){ alertUser("App was paused. Please close and restart");}
+        didPause=false;
         //connect to tower
         this.controlTower.connect(this);
         //create the uploader thread
@@ -797,12 +801,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         JSONObject requestData = new JSONObject();
                         //we are asking to trigger
                         requestData.put("id", android_id);
-                        requestData.put("timeCache", getTime());
+                        //requestData.put("timeCache", getTime());
                         synchronized (triggerOn) {
-                            requestData.put("status", triggerOn.get() + "");
+                            requestData.put("triggering", triggerOn.get() + "");
                         }
 
-                        requestData.put("triggering", triggerOn.get()+"");
+                        //requestData.put("triggering", triggerOn.get()+"");
                         //attempt to check for an image and send it
                         try{
                             Data imageData;
@@ -910,6 +914,44 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             case 200:
                                 //encode response as a jsonobject
                                 JSONObject response = new JSONEncoder(con.getInputStream()).encodeJSON();
+
+                                Log.i("trigger",response.getInt("trigger")+"");
+                                if(!didPause) {
+                                    if (response.has("trigger")) {
+                                        if (response.getInt("trigger") == 1) {
+                                            boolean triggering = false;
+                                            synchronized (triggerOn) {
+                                                triggering = triggerOn.get();
+                                            }
+                                            if (!triggering) {
+                                                synchronized (triggerOn) {
+                                                    triggerOn.set(true);
+                                                }
+                                                synchronized (tThread) {
+                                                    tThread.setCapture(Double.parseDouble(response.get("time").toString()));
+                                                }
+                                                tThread.capture();
+                                            }
+
+                                        } else if (response.getInt("trigger") == 0) {
+                                            boolean triggering = false;
+                                            synchronized (triggerOn) {
+                                                triggering = triggerOn.get();
+                                            }
+                                            if (triggering) {
+
+                                                synchronized (triggerOn) {
+                                                    triggerOn.set(false);
+                                                }
+
+                                            }
+                                        }
+
+
+                                    }
+                                }
+
+                                /*
                                 //if the gcs said to trigger
                                 if(response.has("time")){
                                     //tell capture thread to start triggering at 'time'
@@ -933,7 +975,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                                 //just a normal response
                                 else if(response.has("NOINFO")){
                                         //do nothing
-                                }
+                                }*/
 
                                 break;
                             default:

@@ -19,7 +19,7 @@ class TargetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Target
-        fields = ('picture','ptype','latitude','longitude','orientation','shape','background_color','alphanumeric','alphanumeric_color')
+        fields = ('picture','ptype','latitude','longitude','orientation','shape','background_color','alphanumeric','alphanumeric_color','description')
 
     def deserialize(self):
         return Target.objects.create(**self.validated_data)
@@ -27,17 +27,8 @@ class TargetSerializer(serializers.ModelSerializer):
 class TargetSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Target
-        fields = ('ptype','latitude','longitude','orientation','shape','background_color','alphanumeric','alphanumeric_color')
-    '''
-        ptype = serializers.CharField(max_length=20)
-        latitude = serializers.FloatField()
-        longitude = serializers.FloatField()
-        orientation = serializers.CharField(max_length=1)
-        shape = serializers.CharField(max_length=20)
-        background_color = serializers.CharField(max_length=20)
-        alphanumeric = serializers.CharField(max_length=20)
-        alphanumeric_color = serializers.CharField(max_length=20)
-'''
+        fields = ('ptype','latitude','longitude','orientation','shape','background_color','alphanumeric','alphanumeric_color','description')
+
 
 
 

@@ -358,6 +358,7 @@ function PictureArray(){
 		else if (json_response.hasOwnProperty("connected")) {
 			bootbox.alert("Android Device Connected");
 		}
+
 		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
 			$("#trigger_on").html("Stop Triggering");
 			document.getElementById("trigger_on").value = 0;
@@ -846,6 +847,7 @@ function interop_login() {
 			{% csrf_token %}
 			<form id="attr_form">
 				<table>
+					{{form.as_table}}
 					<tr>
 						<th><label for="palette">Background Color</label></th>
 						<td><input name="background_color" value="black" type="text" id="palette"/></td>
@@ -854,7 +856,7 @@ function interop_login() {
 						<th><label for="lpalette">Letter Color</label></th>
 						<td><input name="alphanumeric_color" type="text" value="black" id="lpalette"/></td>
 					</tr>
-					{{form.as_table}}
+
 				</table>
 				<button type="button" class="btn btn-primary" id="submit"/>Submit</button>
 			</form>

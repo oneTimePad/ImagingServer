@@ -106,6 +106,7 @@ class Target(models.Model):
 	background_color = models.CharField(max_length=20)
 	alphanumeric = models.CharField(max_length=1)
 	alphanumeric_color = models.CharField(max_length=20)
+	description = models.CharField(max_length=200,default=None)
 
 	def edit(self,edits):
 		self.alphanumeric=edits['alphanumeric']
@@ -115,6 +116,7 @@ class Target(models.Model):
 		self.shape = str(shapeChoices[edits['shape']])
 		self.orientation = edits['orientation']
 		self.ptype = edits['ptype']
+		self.description = edits['description']
 		self.save()
 
 	def wasSent(self):
@@ -130,7 +132,7 @@ class Target(models.Model):
 		y -= orig_height
 
 		# find real-life location of click point
-		# assume altitude is 1 for now, 
+		# assume altitude is 1 for now,
 		# since it gets rescaled later based off rotation
 		tempX = (x / orig_width) * math.tan(math.radians(fovH))
 		tempY = (y / orig_height) * math.tan(math.radians(fovV))
@@ -139,15 +141,15 @@ class Target(models.Model):
 
 	def rotateByAngles(self, worldCoords, altitude, azimuth, pitch, roll):
 		# woo wikipedia
-		rotX = np.matrix([ 	[1, 0, 0], 
-					[0, math.cos(pitch), -math.sin(pitch)], 
+		rotX = np.matrix([ 	[1, 0, 0],
+					[0, math.cos(pitch), -math.sin(pitch)],
 					[0, math.sin(pitch), math.cos(pitch)] ])
 
-		rotY = np.matrix([ 	[math.cos(roll), 0, math.sin(roll)], 
-					[0, 1, 0], 
+		rotY = np.matrix([ 	[math.cos(roll), 0, math.sin(roll)],
+					[0, 1, 0],
 					[-math.sin(roll), 0, math.cos(roll)] ])
 
-		rotZ = np.matrix([ 	[math.cos(azimuth), -math.sin(azimuth), 0], 
+		rotZ = np.matrix([ 	[math.cos(azimuth), -math.sin(azimuth), 0],
 					[math.sin(azimuth), math.cos(azimuth), 0],
 					[0, 0, 1] ])
 
@@ -204,7 +206,7 @@ class Target(models.Model):
 		altitude = float(parent_pic.alt)
 		gpsLatitude = float(parent_pic.lat)
 		gpsLongitude = float(parent_pic.lon)
-		
+
 		if not altitude:
 			print('Altitude is 0. Skipping geotagging.')
 			self.save()

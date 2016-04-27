@@ -298,32 +298,31 @@ class DroneViewset(viewsets.ModelViewSet):
 			dataDict = request.data
 			androidId = dataDict['id']
 		except MultiValueDictKeyError:
-
 			dataDict =  json.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
 			androidId = dataDict['id']
 
 
 
-		requestTime = dataDict['timeCache']
+		#requestTime = dataDict['timeCache']
         #determine if drone has contacted before
 		if not cache.has_key("android"):
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
 			cache.set("checkallowed",True)
             #if no set its cache entry
-			cache.set("android",requestTime,EXPIRATION)
+			cache.set("android","contacted",EXPIRATION)
 		else:
             #else delete the old one
 			cache.delete("android")
             #create a new one
-			cache.set("android",requestTime,EXPIRATION)
+			cache.set("android","contacted",EXPIRATION)
 
 
 
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
-
+			'''
 			if dataDict['triggering'] == 'true':
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 				redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true'})))
@@ -334,6 +333,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			#set cache to say that just send pic
 			if cache.has_key(androidId+"pic"):
 				cache.delete(androidId+"pic")
+			'''
             #form image dict
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt')}
 			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
@@ -358,6 +358,23 @@ class DroneViewset(viewsets.ModelViewSet):
             #there was no picture sent
 			pass
 
+
+		if not cache.has_key('trigger'):
+			cache.set("trigger",0)
+		if not cache.has_key('time'):
+			cache.set("time",0)
+		pdb.set_trace()
+		if cache.get('trigger') == 1:
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true'})))
+		elif cache.get('trigger')== 0:
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
+
+
+
+		return Response({'trigger':cache.get("trigger"),'time':cache.get("time")})
+		'''
         #check if drone is allowed to trigger
 		if cache.has_key('trigger'):
 
@@ -375,6 +392,7 @@ class DroneViewset(viewsets.ModelViewSet):
 				return Response({'STOP':'1'})
         #no info to send
 		return Response({'NOINFO':'1'})
+		'''
 
 '''
 Used for logging in GCS station via session auth
