@@ -101,11 +101,11 @@ class Target(models.Model):
 	#latitude and longitude for top left corner of target cropped image
 	latitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	longitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
-	orientation = models.CharField(max_length=2,choices=ORIENTATION_CHOICES)
-	shape = models.CharField(max_length=14,choices=SHAPE_CHOICES)
-	background_color = models.CharField(max_length=20)
-	alphanumeric = models.CharField(max_length=1)
-	alphanumeric_color = models.CharField(max_length=20)
+	orientation = models.CharField(max_length=2,choices=ORIENTATION_CHOICES,null=True,blank=True)
+	shape = models.CharField(max_length=14,choices=SHAPE_CHOICES,null=True,blank=True)
+	background_color = models.CharField(max_length=20,null=True,blank=True)
+	alphanumeric = models.CharField(max_length=1,null=True,blank=True)
+	alphanumeric_color = models.CharField(max_length=20,null=True,blank=True)
 	description = models.CharField(max_length=200,null=True,blank=True)
 
 	def edit(self,edits):
