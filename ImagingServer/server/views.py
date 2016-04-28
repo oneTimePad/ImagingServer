@@ -33,6 +33,7 @@ from decimal import Decimal
 import csv
 import pika
 import sys
+import qrtools
 #telemetry
 from .types import  Telemetry,AUVSITarget
 from .exceptions import InteropError
@@ -561,6 +562,17 @@ class GCSViewset(viewsets.ModelViewSet):
 		sizeData = request.data
 		target = target.deserialize()
 		target.crop(size_data=sizeData,parent_pic=picture)
+		if target.ptype == "qrc":
+			#attempt to decode qrc/ NOT TESTED
+			try:
+				qr = qrtools.QR()
+				code = qr.decode(target.picture.path)
+				target.description = code
+				target.save()
+			#if it fails, just no description
+			except Expcetion as e:
+				pass
+
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
 		return Response()
@@ -613,7 +625,7 @@ class GCSViewset(viewsets.ModelViewSet):
 				target.user = cache.get("Creds").validated_data['username']
 				#post the target
 				data = post_target(session,server,target,tout=5)
-				#test for interop error and respond accordingly
+				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
 				if isinstance(data,InteropError):
 					code, reason,text = data.errorData()
 					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
@@ -631,7 +643,7 @@ class GCSViewset(viewsets.ModelViewSet):
 					return Response({'error':errorStr})
 				return Response({'response':"Success"})
 			except Exception as e:
-				return Response({'error':e})
+				return Response({'error':str(e)})
 		except Target.DoesNotExist:
 			return Response({'error':'Image does not exist'})
 
