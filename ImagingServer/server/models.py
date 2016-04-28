@@ -16,6 +16,7 @@ from django.core.files.storage import FileSystemStorage
 from django.contrib.auth.models import AbstractUser
 from django.contrib.sessions.models import Session
 from django.conf import settings
+from sanitizer.models import SanitizedCharField
 
 #django-rest
 from rest_framework.authtoken.models import Token
@@ -102,11 +103,11 @@ class Target(models.Model):
 	latitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	longitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	orientation = models.CharField(max_length=2,null=True,blank=True,choices=ORIENTATION_CHOICES)
-	shape = models.CharField(max_length=14,null=True,blank=True,choices=SHAPE_CHOICES)
-	background_color = models.CharField(max_length=20,null=True,blank=True)
-	alphanumeric = models.CharField(max_length=1,null=True,blank=True)
-	alphanumeric_color = models.CharField(max_length=20,null=True,blank=True)
-	description = models.CharField(max_length=200,null=True,blank=True)
+	shape = SanitizedCharField(max_length=14,null=True,blank=True,choices=SHAPE_CHOICES)
+	background_color = SanitizedCharField(max_length=20,null=True,blank=True)
+	alphanumeric = SanitizedCharField(max_length=1,null=True,blank=True)
+	alphanumeric_color = SanitizedCharField(max_length=20,null=True,blank=True)
+	description = SanitizedCharField(max_length=200,null=True,blank=True)
 
 	def edit(self,edits):
 		self.alphanumeric=edits['alphanumeric']
