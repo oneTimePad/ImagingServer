@@ -231,7 +231,6 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 	#mission planner client logins in and get JWT
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
-		pdb.set_trace()
 
 
 		startTime = time()
@@ -598,6 +597,7 @@ class GCSViewset(viewsets.ModelViewSet):
 	def sendTarget(self,request,pk=None):
 		connectionCheck()
 		try:
+
 			#fetch the client
 			session = cache.get("InteropClient")
 			server = cache.get("Server")
@@ -619,8 +619,8 @@ class GCSViewset(viewsets.ModelViewSet):
 					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
 					return Response({'error':errorStr})
 				#retrieve image binary for sent image
-				pid = data.get('id')
-				f = open(target.picture.path, 'r')
+				pid = data['id']
+				f = open(targatAtPk.picture.path, 'rb')
 				picData = f.read()
 
 				resp = post_target_image(session,server,tout =5,target_id=pid, image_binary=picData)

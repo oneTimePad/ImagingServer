@@ -1,7 +1,8 @@
 from .exceptions import InteropError
+from .types import AUVSITarget
 import requests
 import json
-
+import pdb
 def interop_login(username,password,server,tout):
     session = None
     try:
@@ -113,10 +114,11 @@ def post_target(session,server,target,tout):
         requests.Timeout: Request timeout.
         ValueError or AttributeError: Malformed response from server.
     """
+    pdb.set_trace()
     r = session.post(server+'/api/targets', timeout = tout,data=json.dumps(target.serialize()))
     if not r.ok:
-        raise InteropError(r)
-    return Target.deserialize(r.json())
+        return InteropError(r)
+    return r.json()
 
 
 def post_target_image(session,server,tout, target_id, image_binary):
@@ -131,7 +133,7 @@ def post_target_image(session,server,tout, target_id, image_binary):
         404 Not Found: Target not found. Check target ID.
         413 Request Entity Too Large: Image exceeded 1MB in size.
     """
-    r = session.post(server+'api/targets/%d/image' % target_id,timeout = tout, data=image_binary)
+    r = session.post(server+'/api/targets/%d/image' % target_id,timeout = tout, data=image_binary)
     if not r.ok:
-        raise InteropError(r)
+        return InteropError(r)
     return r
