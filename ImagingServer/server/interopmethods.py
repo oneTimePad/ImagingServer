@@ -134,7 +134,7 @@ def post_target_image(session,server,tout, target_id, image_binary):
         404 Not Found: Target not found. Check target ID.
         413 Request Entity Too Large: Image exceeded 1MB in size.
     """
-    r = session.post(server+'/api/targets/%d/image' % target_id,timeout = tout, data=image_binary)
+    r = session.post(server+'/api/targets/%d/image' % target_id, headers={'Content-Type':'image/jpg'},timeout = tout, data=image_binary)
     if not r.ok:
         return InteropError(r)
     return r
