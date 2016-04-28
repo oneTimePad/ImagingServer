@@ -23,7 +23,7 @@
 	image_cache = null; // caches the image strings
 	next_array = null;
 	firstinit = true;
-
+	looping = null;
 
 	(function(){
 		// Convert array to object
@@ -459,14 +459,16 @@ function PictureArray(){
 			}
 		});
 	}
-/*
+
 	//wanna do some testing before I add this
 	function loop(){
-		while(looping){
-			image_cache.next();
-			setTimeout(function(){},3000);
-		}
-	}*/
+			looping = setInterval(function(){image_cache.next();},3000);
+	}
+
+	function stoploop(){
+		clearTimeout(looping);
+	}
+
 	window.onload = function() {
 		//making the panels the height of the window (excluding the navbar)
 		//if the window height changes, the page has to be reloaded
@@ -825,6 +827,22 @@ function dump_targets() {
 function interop_login() {
 	window.open('/interoplogin')
 }
+$(function(){
+$("#loopbtn").on("click",function loophandler(){
+	if($(this).val()==1){
+		loop();
+		$(this).html("stop loop");
+		this.value=0;
+	}
+	else{
+		stoploop();
+		$(this).html("loop");
+	  this.value=1;
+	}
+
+});
+});
+
 
 </script>
 </head>
@@ -839,7 +857,8 @@ function interop_login() {
 				<input id="time_interval" type="text" value="0"/>
 				<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
 				<!--<button onlick="interop_login();return false;" class="btn btn-primary">Interop Login</button>-->
-				<button onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
+				<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop</button>
+				<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
 				<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
 				<!--<button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>-->
 

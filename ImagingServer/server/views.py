@@ -43,10 +43,11 @@ import pdb
 
 
 #constants from Environment Vars
-IMAGE_STORAGE = os.getenv("IMAGE_STORAGE","http://localhost:80/PHOTOS")
-TARGET_STORAGE = os.getenv("TARGET_STORAGE", "http://localhost:80/TARGETS")
+IMAGE_STORAGE = "http://localhost:80/PHOTOS"
+TARGET_STORAGE = "http://localhost:80/TARGETS"
 
-
+IMAGE  = os.getenv("IMAGE",IMAGE_STORAGE)
+TARGET = os.getenv("TARGET",TARGET_STORAGE)
 
 
 #important time constants
@@ -308,7 +309,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		if not cache.has_key("android"):
 			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
-			cache.set("checkallowed",True)
+			cache.set("checkallowed",True,None)
             #if no set its cache entry
 			cache.set("android","contacted",EXPIRATION)
 		else:
@@ -336,7 +337,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			'''
             #form image dict
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt')}
-			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
+			imageData['fileName'] = IMAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
 
 			#make obj
 			pictureObj = PictureSerializer(data = imageData)
@@ -360,9 +361,10 @@ class DroneViewset(viewsets.ModelViewSet):
 
 
 		if not cache.has_key('trigger'):
-			cache.set("trigger",0)
+
+			cache.set("trigger",0,None)
 		if not cache.has_key('time'):
-			cache.set("time",0)
+			cache.set("time",0,None)
 
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
@@ -370,8 +372,6 @@ class DroneViewset(viewsets.ModelViewSet):
 		elif cache.get('trigger')== 0:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
-
-
 
 		return Response({'trigger':cache.get("trigger"),'time':cache.get("time")})
 		'''
@@ -483,13 +483,13 @@ class GCSViewset(viewsets.ModelViewSet):
 
 		if triggerStatus == '1':
             #set cache to yes
-			cache.set('trigger',1)
+			cache.set('trigger',1,None)
             #settime
 			cache.set('time',float(request.data['time']))
         #if attempting to stop triggering
 		elif triggerStatus == '0':
             # set cache
-			cache.set('trigger',0)
+			cache.set('trigger',0,None)
         #Success
 		return Response({'Success':'Success'})
 
@@ -563,7 +563,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		target = target.deserialize()
 		target.crop(size_data=sizeData,parent_pic=picture)
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET_STORAGE+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
+		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
 		return Response()
 
 

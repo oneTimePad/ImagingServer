@@ -3,7 +3,7 @@ from PIL import Image
 from matplotlib import cm
 from io import BytesIO
 import math
-import cv2
+#import cv2
 import numpy as np
 import os
 import pdb
@@ -106,7 +106,7 @@ class Target(models.Model):
 	background_color = models.CharField(max_length=20)
 	alphanumeric = models.CharField(max_length=1)
 	alphanumeric_color = models.CharField(max_length=20)
-	description = models.CharField(max_length=200,default=None)
+	description = models.CharField(max_length=200,null=True,blank=True)
 
 	def edit(self,edits):
 		self.alphanumeric=edits['alphanumeric']
