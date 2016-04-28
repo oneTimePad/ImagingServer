@@ -113,7 +113,7 @@ def interop_error_handler(error):
 		return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
 	#EXCEPT FOR THIS
 	elif code == 403:
-			creds = cach.get("Creds")
+			creds = cache.get("Creds")
 			times = 5
 			for i in xrange(0,times):
 				try:
@@ -146,7 +146,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 	permission_classes = (InteroperabilityAuthentication,)
 
 	#mavclient endpoint for getting SDA-obstacles
-	@list_route(methods=['get'])
+	@list_route(methods=['post'])
 	def getObstacles(self,request,pk=None):
 		#fetch the current time, technically not needed, can be handed by client
 		#ignore it if you want
@@ -156,11 +156,11 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 		server = cache.get("Server")
 		try:
 			#attempt to fetch obstacles
-			serverInfo = get_obstacles(session,server,tout=5)
+			stationary,moving = get_obstacles(session,server,tout=5)
 			#return a json response with the time diff(again ignore if you want)
 			#json version of data (i.e. obstacles)
 			#there is no error, filled in if there is an error
-			return Response({'time':time()-startTime,'data':json.dumps(serverInfo),'error':None})
+			return Response({'time':time()-startTime,'stationary':stat.serialize(),'moving':moving.serialize(),'error':None})
 		except InteropError as e:
 			#interop errors are handled differently
 			#this returns something in side
@@ -192,7 +192,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 
 
 	#mavclient endpoint for getting server time
-	@list_route(methods=['get'])
+	@list_route(methods=['post'])
 	def getServerInfo(self,request,pk=None):
 		startTime = time()
 		session = cache.get("InteropClient")
@@ -442,9 +442,9 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 		#success
 		else:
 			#save session and server route
-			cache.set("Creds",serverCreds)
-			cache.set("InteropClient",session)
-			cache.set("Server",serverCreds.validated_data['server'])
+			cache.set("Creds",serverCreds,None)
+			cache.set("InteropClient",session,None)
+			cache.set("Server",serverCreds.validated_data['server'],None)
 			return HttpResponse('Success')
 
 	def get(self,request):

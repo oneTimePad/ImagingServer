@@ -1,8 +1,9 @@
 from .exceptions import InteropError
-from .types import AUVSITarget
+from .types import AUVSITarget,ServerInfo,MovingObstacle,StationaryObstacle
 import requests
 import json
 import pdb
+
 def interop_login(username,password,server,tout):
     session = None
     try:
@@ -58,7 +59,7 @@ def get_server_info(session,server, tout):
     if not r.ok:
         raise InteropError(r)
 
-    return ServerInfo.deserialize(r.json())
+    return r.json()
 
 def post_telemetry(session,server,tout, telem):
     """POST new telemetry.
