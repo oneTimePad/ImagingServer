@@ -11,7 +11,7 @@ from ws4redis.uwsgi_runserver import uWSGIWebsocketServer
 
 _django_app = get_wsgi_application()
 _websocket_app = uWSGIWebsocketServer()
-
+#os.environ['HTTPS'] = "on"
 
 def application(environ, start_response):
     if environ.get('PATH_INFO').startswith(settings.WEBSOCKET_URL):

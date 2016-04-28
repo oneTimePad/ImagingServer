@@ -34,6 +34,9 @@ ALLOWED_HOSTS = []
 AUTH_USER_MODEL = 'server.ImagingUser'
 
 
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 WEBSOCKET_URL = '/ws/'
 WS4REDIS_EXPIRE = 0
 WS4REDIS_PREFIX = 'ws'
@@ -119,7 +122,7 @@ TEMPLATES = [
         },
     },
 ]
-
+X_FRAMES_OPTION = "DENY"
 WSGI_APPLICATION = 'ws4redis.django_runserver.application'
 #WSGI_APPLICATION = 'AUVSIDataProc.wsgi.application'
 
