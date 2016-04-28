@@ -551,6 +551,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def targetCreate(self,request,pk=None):
+		pdb.set_trace()
 		connectionCheck()
 		try:
 			picture = Picture.objects.get(pk=request.data['pk'])
@@ -570,12 +571,12 @@ class GCSViewset(viewsets.ModelViewSet):
 				target.description = code
 				target.save()
 			#if it fails, just no description
-			except Expcetion as e:
+			except Exception as e:
 				pass
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
-		return Response()
+		return Response("success")
 
 
 	@list_route(methods=['post'])
@@ -609,7 +610,8 @@ class GCSViewset(viewsets.ModelViewSet):
 	def sendTarget(self,request,pk=None):
 		connectionCheck()
 		try:
-
+			if not cache.has_key("Server") or not cache.has_key("Server"):
+				return Response({'error',"Not logged into interop!"})
 			#fetch the client
 			session = cache.get("InteropClient")
 			server = cache.get("Server")
@@ -622,8 +624,11 @@ class GCSViewset(viewsets.ModelViewSet):
 				dataDict = dict(pretarget.data)
 				dataDict['type'] = dataDict.pop('ptype')
 				target = AUVSITarget(**dataDict)
+				if not cache.has_key("Creds"):
+					return Response({'error':"Not logged into interop!"})
 				target.user = cache.get("Creds").validated_data['username']
 				#post the target
+
 				data = post_target(session,server,target,tout=5)
 				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
 				if isinstance(data,InteropError):

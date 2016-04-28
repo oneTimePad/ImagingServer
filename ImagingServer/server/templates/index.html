@@ -317,8 +317,20 @@ function PictureArray(){
 			var input_array = {};
 			//put each one in an array
 			inputs.each(function() {
+
+				if($("#id_ptype").find(":selected").text() != "QR Code"){
+					if(this.name=="description"){
+						return;
+					}
+				}
+				else if($("#id_ptype").find(":selected").text() == "QR Code"){
+					if(this.name=="orientation"||this.name=="alphanumeric" || this.name == "alphanumeric_color" || this.name == "background_color" || this.name == "shape"){
+						return;
+					}
+				}
+
 				input_array[this.name] = this.value;
-			})
+			});
 			//if there attributes, send them
 			if(input_array) {
 				if (picview) {
@@ -395,6 +407,7 @@ function PictureArray(){
 				picview=true;
 				image_cache.curr();
 				$("#back").hide();
+
 			}
 		}
 		else if (json_response.hasOwnProperty("target") && json_response["target"] == "sent") {
@@ -667,7 +680,7 @@ function PictureArray(){
 			data: {"pk":pk},
 			success:function(resp){
 				if (resp.hasOwnProperty('error')) {
-					bootbox.alert("Submission Failure");
+					bootbox.alert("Submission Failure: "+resp['error']);
 				}
 				else {
 					bootbox.alert("Target Submited");
@@ -804,7 +817,7 @@ function PictureArray(){
 			picview = true;
 			image_cache.curr();
 		}
-		$(this).hide();
+		$("#back").hide();
 	}
 
 function dump_targets() {
@@ -864,6 +877,9 @@ $(function(){
 				$("#id_description").css("display","none");
 				$("label[for='id_description']").css("display","none");
 
+
+
+
 			}
 			else if($(this).find(":selected").text()=="QR Code"){
 				$("#bkcolor").css("display","none");
@@ -876,6 +892,12 @@ $(function(){
 				$("label[for='id_shape']").css("display","none");
 				$("#id_description").css("display","");
 				$("label[for='id_description']").css("display","");
+
+
+
+
+
+
 			}
 
 
