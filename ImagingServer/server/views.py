@@ -556,7 +556,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			picture = Picture.objects.get(pk=request.data['pk'])
 		except Picture.DoesNotExist:
 			return HttpResponseForbidden()
-		target = TargetSerializer(data={key : request.data[key] for key in ('background_color','alphanumeric_color','orientation','shape','alphanumeric','ptype')})
+		target = TargetSerializer(data={key : (request.data[key] if key in request.data else None)  for key in ('background_color','alphanumeric_color','orientation','shape','alphanumeric','ptype','description')})
 		if not target.is_valid():
 			return HttpResponseForbidden()
 		sizeData = request.data

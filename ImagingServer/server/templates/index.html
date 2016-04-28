@@ -827,20 +827,61 @@ function dump_targets() {
 function interop_login() {
 	window.open('/interoplogin')
 }
+//enable and disable picture looping fct
 $(function(){
-$("#loopbtn").on("click",function loophandler(){
-	if($(this).val()==1){
-		loop();
-		$(this).html("stop loop");
-		this.value=0;
-	}
-	else{
-		stoploop();
-		$(this).html("loop");
-	  this.value=1;
-	}
+	$("#loopbtn").on("click",function loophandler(){
+		//if not enabled
+		if($(this).val()==1){
+			//enable
+			loop();
+			$(this).html("stop loop");
+			this.value=0;
+		}
+		//if enabled
+		else{
+			//disable
+			stoploop();
+			$(this).html("loop");
+		  this.value=1;
+		}
+	});
 
-});
+	$("#id_description").css("display","none");
+	$("label[for='id_description']").css("display","none");
+	//reformat target form for qr code, qr code doesn't need shape,color ...
+	$("#id_ptype").on("change",function(){
+
+			if($(this).find(":selected").text() != "QR Code"){
+				console.log("not qrc");
+				$("#bkcolor").css("display","");
+				$("#ltcolor").css("display","");
+				$("#id_alphanumeric").css("display","");
+				$("label[for='id_alphanumeric']").css("display","");
+				$("#id_orientation").css("display","");
+				$("label[for='id_orientation']").css("display","");
+				$("#id_shape").css("display","");
+				$("label[for='id_shape']").css("display","");
+				$("#id_description").css("display","none");
+				$("label[for='id_description']").css("display","none");
+
+			}
+			else if($(this).find(":selected").text()=="QR Code"){
+				$("#bkcolor").css("display","none");
+				$("#ltcolor").css("display","none");
+				$("#id_alphanumeric").css("display","none");
+				$("label[for='id_alphanumeric']").css("display","none");
+				$("#id_orientation").css("display","none");
+				$("label[for='id_orientation']").css("display","none");
+				$("#id_shape").css("display","none");
+				$("label[for='id_shape']").css("display","none");
+				$("#id_description").css("display","");
+				$("label[for='id_description']").css("display","");
+			}
+
+
+
+	});
+
 });
 
 
@@ -875,11 +916,11 @@ $("#loopbtn").on("click",function loophandler(){
 			<form id="attr_form">
 				<table>
 					{{form.as_table}}
-					<tr>
+					<tr id ="bkcolor">
 						<th><label for="palette">Background Color</label></th>
 						<td><input name="background_color" value="black" type="text" id="palette"/></td>
 					</tr>
-					<tr>
+					<tr id="ltcolor">
 						<th><label for="lpalette">Letter Color</label></th>
 						<td><input name="alphanumeric_color" type="text" value="black" id="lpalette"/></td>
 					</tr>
