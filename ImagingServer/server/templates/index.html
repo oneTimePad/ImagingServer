@@ -718,6 +718,9 @@ function PictureArray(){
 				if (resp.hasOwnProperty('error')==true) {
 					bootbox.alert("Submission Failure: "+resp['error']);
 				}
+				else if(resp.hasOwnProperty('sent')==true){
+					bootbox.alert("Target already sent");
+				}
 				else {
 					bootbox.alert("Target Submited");
 				}

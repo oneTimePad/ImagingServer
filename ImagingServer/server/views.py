@@ -632,8 +632,11 @@ class GCSViewset(viewsets.ModelViewSet):
 			session = cache.get("InteropClient")
 			server = cache.get("Server")
 			targatAtPk = Target.objects.get(pk=int(request.data['pk']))
-			print(targatAtPk.ptype)
-			print(targatAtPk.shape)
+			if target.sent:
+				return Response(json.dumps({'sent','Target was sent\n Would you like to send an edit?'}))
+
+			#print(targatAtPk.ptype)
+			#print(targatAtPk.shape)
 			#serialize the target
 			pretarget = TargetSubmissionSerializer(targatAtPk)
 
@@ -668,6 +671,7 @@ class GCSViewset(viewsets.ModelViewSet):
 					code, reason,text = redis_publisher.errorData()
 					errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
 					return Response(json.dumps({'error':errorStr}))
+				target.wasSent()
 				return Response(json.dumps({'response':"Success"}))
 			except Exception as e:
 				return Response({'error':str(e)})
