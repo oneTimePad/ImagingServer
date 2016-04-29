@@ -1029,7 +1029,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             this.pitch = -1*mSensor.getPitch();
             this.roll = -1*mSensor.getRoll();
             LatLongAlt gps = retLatLonAlt();
+
             if(gps!=null){
+
                 lat = gps.getLatitude();
                 lon = gps.getLongitude();
                 alt = gps.getAltitude();
