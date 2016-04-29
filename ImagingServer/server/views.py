@@ -545,7 +545,7 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def getAllTargets(self,request,pk=None):
 		connectionCheck()
-		data = [{'pk':t.pk, 'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
+		data = [{'pk':t.pk, 'image':TARGET+"/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
 		return Response(json.dumps({'targets':data}))
 
 
@@ -553,6 +553,12 @@ class GCSViewset(viewsets.ModelViewSet):
 	def targetCreate(self,request,pk=None):
 		pdb.set_trace()
 		connectionCheck()
+		if not "scaleWidth" in request.data or int(request.data['scaleWidth'])==0 :
+			return HttpResponseForbidden("No crop given!")
+		if not "width" in request.data or int(request.data['width']) == 0:
+			return HttpResponseForbidden("No crop given!")
+		if not "height" in request.data or itn(request.data['height']) ==0:
+			return HttpResponseForbidden("No crop given!")
 		try:
 			picture = Picture.objects.get(pk=request.data['pk'])
 		except Picture.DoesNotExist:

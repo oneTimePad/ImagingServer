@@ -102,7 +102,7 @@ class Target(models.Model):
 	#latitude and longitude for top left corner of target cropped image
 	latitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
 	longitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
-	orientation = models.CharField(max_length=2,null=True,blank=True,choices=ORIENTATION_CHOICES)
+	orientation =SanitizedCharField(max_length=2,null=True,blank=True,choices=ORIENTATION_CHOICES)
 	shape = SanitizedCharField(max_length=14,null=True,blank=True,choices=SHAPE_CHOICES)
 	background_color = SanitizedCharField(max_length=20,null=True,blank=True)
 	alphanumeric = SanitizedCharField(max_length=1,null=True,blank=True)
@@ -110,14 +110,14 @@ class Target(models.Model):
 	description = SanitizedCharField(max_length=200,null=True,blank=True)
 
 	def edit(self,edits):
-		self.alphanumeric=edits['alphanumeric']
-		self.alphanumeric_color = edits['alphanumeric_color']
-		self.background_color = edits['background_color']
+		self.alphanumeric=edits['alphanumeric'] if  'alphanumeric' in edits else None
+		self.alphanumeric_color = edits['alphanumeric_color'] if 'alphanumeric_color' in edits else None
+		self.background_color = edits['background_color'] if 'background_color' in edits else None
 		shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
-		self.shape = str(shapeChoices[edits['shape']])
-		self.orientation = edits['orientation']
+		self.shape = str(shapeChoices[edits['shape']]) if 'shape' in edits else None
+		self.orientation = edits['orientation'] if 'orientation' in edits else None
 		self.ptype = edits['ptype']
-		self.description = edits['description']
+		self.description = edits['description'] if 'description' in edits else None
 		self.save()
 
 	def wasSent(self):

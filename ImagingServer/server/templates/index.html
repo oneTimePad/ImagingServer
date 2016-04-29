@@ -24,6 +24,7 @@
 	next_array = null;
 	firstinit = true;
 	looping = null;
+	said_no_pictures=false;
 
 	(function(){
 		// Convert array to object
@@ -317,10 +318,14 @@ function PictureArray(){
 			var input_array = {};
 			//put each one in an array
 			inputs.each(function() {
-
+				console.log(this.value);
 				if($("#id_ptype").find(":selected").text() != "QR Code"){
 					if(this.name=="description"){
 						return;
+					}
+					//this still keeps happening, value gets set to ""
+					if((this.id=="palette" || this.id =="lpalette")&&this.value==""){
+								this.value ="black";
 					}
 				}
 				else if($("#id_ptype").find(":selected").text() == "QR Code"){
@@ -343,6 +348,9 @@ function PictureArray(){
 						url: "{% url 'gcs-targetCreate'%}",
 						type: "POST",
 						data: input_array,
+						failure: function(response){
+							bootbox.alert(response);
+						}
 					});
 				}
 				else {
@@ -439,8 +447,15 @@ function PictureArray(){
 							setFocusedImage(image_cache[0]);
 						}
 						else{
+							 	console.log("cached");
 								next_array = cache;
+
+								next_array.serializePrep();
+
+								window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
+
 						}
+						said_no_pictures = false;
 						PictureArray.prototype.allowForward=true;
 						PictureArray.prototype.allow = true;
 
@@ -465,7 +480,10 @@ function PictureArray(){
 					else if(response['type'] == 'nopicture'){
 						image_cache.upCurrent();
 						image_cache.downReverse();
-						bootbox.alert("no more old pictures");
+						if(!said_no_pictures){
+							said_no_pictures=true;
+							bootbox.alert("no more old pictures");
+						}
 						PictureArray.prototype.allow = true;
 					}
 				}
@@ -475,7 +493,7 @@ function PictureArray(){
 
 	//wanna do some testing before I add this
 	function loop(){
-			looping = setInterval(function(){image_cache.next();},3000);
+			looping = setInterval(function(){image_cache.next();},$("#loop_interval").val()*1000);
 	}
 
 	function stoploop(){
@@ -505,13 +523,24 @@ function PictureArray(){
 		//if there is no state to restore
 		if(window.sessionStorage.getItem("curr") ==null){
 			//attempt to get a pic
+
 			forwardPicture();
+
 		}
 		// else if there is a state to restore
 		else{
+		
 			//restore state on refresh
 			image_cache = new PictureArray(JSON.parse(window.sessionStorage.getItem("image_cache"))); //array of images
-			next_array =  new PictureArray(JSON.parse(window.sessionStorage.getItem("next_array")));
+			if(window.sessionStorage.getItem("next_array")!=null&&window.sessionStorage.getItem("next_array")!="null"){
+
+					next_array =  new PictureArray(JSON.parse(window.sessionStorage.getItem("next_array")));
+			}
+			else{
+				next_array = null;
+			}
+			console.log(next_array);
+
 			curr = window.sessionStorage.getItem("curr"); //current pic index
 			//image_cache.current=window.sessionStorage.getItem("current"); //prototype current
 			//image_cache.reverseval=window.sessionStorage.getItem("reverseval");//prototype reverseval
@@ -600,18 +629,22 @@ function PictureArray(){
 	}
 	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
-		if (picview) {
-			//save all state data
-			image_cache.serializePrep();
-			window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
-			window.sessionStorage.setItem("curr",curr); // current pic id
+		//save all state data
+		image_cache.serializePrep();
+		window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
+		window.sessionStorage.setItem("curr",curr); // current pic id
+		if(next_array != null && next_array!="null"){
+			console.log(next_array);
+			next_array.serializePrep();
 
-			if(next_array != null){
-				window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
-			}
-			else{
-				window.sessionStorage.setItem("next_array",null);
-			}
+			window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
+
+		}
+		else{
+			window.sessionStorage.setItem("next_array",null);
+		}
+		if (picview) {
+
 			//window.sessionStorage.setItem("allow",PictureArray.prototype.allow);
 			//window.sessionStorage.setItem("allowForward",PictureArray.prototype.allowForward);
 			//window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
@@ -920,6 +953,7 @@ $(function(){
 				<input id="time_interval" type="text" value="0"/>
 				<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
 				<!--<button onlick="interop_login();return false;" class="btn btn-primary">Interop Login</button>-->
+				<input id="loop_interval" type="text" value="3"/>
 				<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop</button>
 				<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
 				<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
