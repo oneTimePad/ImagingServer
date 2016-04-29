@@ -425,7 +425,7 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 	content_type = 'text/html'
 
 	def post(self,request,format=None):
-		pdb.set_trace()
+		#pdb.set_trace()
 		#validate interop credential data
 		serverCreds = ServerCredsSerializer(data=request.POST)
 		if not serverCreds.is_valid():
@@ -553,7 +553,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def targetCreate(self,request,pk=None):
-		pdb.set_trace()
+		#pdb.set_trace()
 		connectionCheck()
 		if not "scaleWidth" in request.data or int(request.data['scaleWidth'])==0 :
 			return HttpResponseForbidden("No crop given!")
@@ -622,8 +622,15 @@ class GCSViewset(viewsets.ModelViewSet):
 		return HttpResponseForbidden("Target does not exist")
 
 	@list_route(methods=['post'])
+	def updateTarget(self,request,pk=None):
+		#i'm thinking about adding this...
+		pass
+
+
+
+	@list_route(methods=['post'])
 	def sendTarget(self,request,pk=None):
-		pdb.set_trace()
+
 		connectionCheck()
 		try:
 			if not cache.has_key("Server") or not cache.has_key("InteropClient"):
