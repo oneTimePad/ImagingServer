@@ -425,7 +425,7 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 	content_type = 'text/html'
 
 	def post(self,request,format=None):
-
+		pdb.set_trace()
 		#validate interop credential data
 		serverCreds = ServerCredsSerializer(data=request.POST)
 		if not serverCreds.is_valid():
@@ -535,6 +535,8 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def getTargetData(self,request,pk=None):
 		connectionCheck()
+		if not "pk" in request.data:
+			return HttpResponseForbidden();
 		try:
             #return target data dictionary
 			targetData = TargetSerializer(Target.objects.get(pk = request.data['pk']))
@@ -557,7 +559,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			return HttpResponseForbidden("No crop given!")
 		if not "width" in request.data or int(request.data['width']) == 0:
 			return HttpResponseForbidden("No crop given!")
-		if not "height" in request.data or itn(request.data['height']) ==0:
+		if not "height" in request.data or int(request.data['height']) ==0:
 			return HttpResponseForbidden("No crop given!")
 		try:
 			picture = Picture.objects.get(pk=request.data['pk'])
@@ -568,7 +570,12 @@ class GCSViewset(viewsets.ModelViewSet):
 			return HttpResponseForbidden()
 		sizeData = request.data
 		target = target.deserialize()
+		if target.background_color == "grey":
+			target.background_color = "gray"
+		if target.alphanumeric_color =="grey":
+			target.alphanumeric_color = "gray"
 		target.crop(size_data=sizeData,parent_pic=picture)
+		target.save()
 		if target.ptype == "qrc":
 			#attempt to decode qrc/ NOT TESTED
 			try:
@@ -588,7 +595,9 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def targetEdit(self,request,pk=None):
 		connectionCheck()
+
 		try:
+
             #edit target with new values
 			target = Target.objects.get(pk=request.data['pk'])
 			target.edit(request.data)
@@ -614,24 +623,31 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def sendTarget(self,request,pk=None):
+		pdb.set_trace()
 		connectionCheck()
 		try:
-			if not cache.has_key("Server") or not cache.has_key("Server"):
-				return Response({'error',"Not logged into interop!"})
+			if not cache.has_key("Server") or not cache.has_key("InteropClient"):
+				return Response(json.dumps({'error':"Not logged into interop!"}))
 			#fetch the client
 			session = cache.get("InteropClient")
 			server = cache.get("Server")
 			targatAtPk = Target.objects.get(pk=int(request.data['pk']))
+			print(targatAtPk.ptype)
+			print(targatAtPk.shape)
 			#serialize the target
 			pretarget = TargetSubmissionSerializer(targatAtPk)
+
 			data = None
 			try:
 				#create dictionary to use to create AUVSITarget
 				dataDict = dict(pretarget.data)
 				dataDict['type'] = dataDict.pop('ptype')
+				for key in dataDict:
+					if dataDict[key]=='':
+						dataDict[key] =None
 				target = AUVSITarget(**dataDict)
 				if not cache.has_key("Creds"):
-					return Response({'error':"Not logged into interop!"})
+					return Response(json.dumps({'error':"Not logged into interop!"}))
 				target.user = cache.get("Creds").validated_data['username']
 				#post the target
 
@@ -640,7 +656,7 @@ class GCSViewset(viewsets.ModelViewSet):
 				if isinstance(data,InteropError):
 					code, reason,text = data.errorData()
 					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-					return Response({'error':errorStr})
+					return Response(json.dumps({'error':errorStr}))
 				#retrieve image binary for sent image
 				pid = data['id']
 				f = open(targatAtPk.picture.path, 'rb')
@@ -651,12 +667,12 @@ class GCSViewset(viewsets.ModelViewSet):
 				if isinstance(resp,InteropError):
 					code, reason,text = redis_publisher.errorData()
 					errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
-					return Response({'error':errorStr})
-				return Response({'response':"Success"})
+					return Response(json.dumps({'error':errorStr}))
+				return Response(json.dumps({'response':"Success"}))
 			except Exception as e:
 				return Response({'error':str(e)})
 		except Target.DoesNotExist:
-			return Response({'error':'Image does not exist'})
+			return Response(json.dumps({'error':'Image does not exist'}))
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):

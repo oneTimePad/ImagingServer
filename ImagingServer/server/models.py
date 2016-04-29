@@ -112,7 +112,11 @@ class Target(models.Model):
 	def edit(self,edits):
 		self.alphanumeric=edits['alphanumeric'] if  'alphanumeric' in edits else None
 		self.alphanumeric_color = edits['alphanumeric_color'] if 'alphanumeric_color' in edits else None
+		if self.alphanumeric_color =="grey":
+			self.alphanumeric_color = "gray"
 		self.background_color = edits['background_color'] if 'background_color' in edits else None
+		if self.background_color == "grey":
+			self.background_color = "gray";
 		shapeChoices = dict((x,y) for x,y in Target.SHAPE_CHOICES)
 		self.shape = str(shapeChoices[edits['shape']]) if 'shape' in edits else None
 		self.orientation = edits['orientation'] if 'orientation' in edits else None
