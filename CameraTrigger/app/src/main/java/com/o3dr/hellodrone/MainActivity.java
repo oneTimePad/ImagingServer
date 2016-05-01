@@ -767,7 +767,7 @@ public class MainActivity extends ActionBarActivity {
                 public void run() {
                     try {
                         //check if refresh is necessary before posting
-                        refresh();
+                        //refresh();
                         //open connection to server
                         URL url = new URL("http://" + URL + "/drone/serverContact");
                         HttpURLConnection con = (HttpURLConnection) url.openConnection();
