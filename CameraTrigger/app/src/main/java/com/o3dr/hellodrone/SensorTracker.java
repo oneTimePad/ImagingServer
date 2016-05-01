@@ -132,6 +132,7 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
 
         if(event.sensor.getType() == Sensor.TYPE_PRESSURE){
             pressure = event.values[0];
+            Log.i("zeropressure",zeroPressure+"");
             if(zeroPressure == 0){
                 zeroPressure = pressure;
             }
@@ -208,6 +209,7 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
     //set zero altitude msl
     public void calibrateAltitude(){
         zeroPressure = pressure;
+
 
     }
     //set zero roll/pitch
