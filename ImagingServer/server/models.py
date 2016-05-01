@@ -127,7 +127,7 @@ class Target(models.Model):
 	def wasSent(self):
 		self.sent = True
 
-	def findWorldCoords(x,y,orig_width,orig_height):
+	def findWorldCoords(self,x,y,orig_width,orig_height):
 		# divide full width / height by 2 cuz we don't need that crap
 		orig_width = orig_width / 2
 		orig_height = orig_height / 2
@@ -144,7 +144,7 @@ class Target(models.Model):
 
 		return np.matrix([[tempX], [tempY], [1]])
 
-	def rotateByAngles( worldCoords, altitude, azimuth, pitch, roll):
+	def rotateByAngles( self,worldCoords, altitude, azimuth, pitch, roll):
 		# woo wikipedia
 		rotX = np.matrix([ 	[1, 0, 0],
 					[0, math.cos(pitch), -math.sin(pitch)],
@@ -217,8 +217,8 @@ class Target(models.Model):
 			self.save()
 			return
 
-		worldCoords = findWorldCoords(x,y,orig_width,orig_height)
-		rotatedCoords = rotateByAngles(worldCoords, altitude, azimuth, pitch, roll)
+		worldCoords = self.findWorldCoords(x,y,orig_width,orig_height)
+		rotatedCoords = self.rotateByAngles(worldCoords, altitude, azimuth, pitch, roll)
 		latOffset, lonOffset, _ = [METER_TO_DEGREE_CONVERSION * num for num in rotatedCoords]
 
 		# ************************* MOST IMPORTANT INFORMATION ******************************
