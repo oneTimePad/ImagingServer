@@ -254,6 +254,8 @@ public class MainActivity extends ActionBarActivity {
 
         gps = new GPS(MainActivity.this);
 
+
+
         final EditText ipText = (EditText)findViewById(R.id.URL);
         //make keyboard disappear at enter
         ipText.setOnKeyListener(new View.OnKeyListener() {
@@ -383,6 +385,7 @@ public class MainActivity extends ActionBarActivity {
         }
 
 
+
         try {
             if(logOut!=null){
                 logOut.close();
@@ -398,11 +401,16 @@ public class MainActivity extends ActionBarActivity {
 
         //tell it to stop taking pics
         if(mSensor!=null){
+            if(gps!=null){
+                gps.stopUsingGPS();
+            }
             mSensor.stopSensors();
         }
 
 
     }
+
+
 
 
     /*
@@ -542,6 +550,7 @@ public class MainActivity extends ActionBarActivity {
                         }
                         //time at start of loop
                         long time = System.currentTimeMillis();
+                        /*
                         //while phon is rotated pas 30 degrees on any access
                         while(Math.abs(mSensor.getPitch())>30 || Math.abs(mSensor.getRoll())>30){
                             //suspend taking pics
@@ -551,7 +560,7 @@ public class MainActivity extends ActionBarActivity {
                             catch(InterruptedException e){
 
                             }
-                        }
+                        }*/
                         //if camera exists
                         if (mCamera != null) {
                             //take pics
@@ -1012,6 +1021,8 @@ public class MainActivity extends ActionBarActivity {
                 lat = gps.getLatitude();
                 lon = gps.getLongitude();
                 alt = gps.getAltitude();
+                Log.i("GPS LAT", gps.getLatitude()+"");
+                Log.i("GPS LON", gps.getLongitude()+"");
             }
 
         }
@@ -1126,6 +1137,18 @@ public class MainActivity extends ActionBarActivity {
     };
 
 
+    public void onCalibrate(View view){
+
+        if(mSensor!=null) {
+            mSensor.calibrateAltitude();
+            mSensor.calibrateRollPitch();
+            alertUser("Sensors Callibrated");
+        }
+        else{
+            alertUser("No Sensors");
+        }
+
+    }
 
 
 

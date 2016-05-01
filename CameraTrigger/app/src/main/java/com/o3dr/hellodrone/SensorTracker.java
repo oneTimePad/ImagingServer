@@ -39,6 +39,10 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
     private float[] prefValues = new float[3];
     private  float pressure;
     private float zeroPressure =0;
+    private float zeroRoll =0;
+    private float zeroPitch=0;
+
+    private float MEAN_SEA_LEVEL =0;
 
     private float mInclination;
     private int counter = 0;
@@ -190,12 +194,30 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
     }
 
     public float getPitch() {
-        return pitch;
+        return pitch-zeroPitch;
     }
 
     public float getRoll() {
-        return roll;
+        return roll-zeroRoll;
     }
+
+    public void setMSL(float msl){
+        MEAN_SEA_LEVEL = msl;
+    }
+
+    //set zero altitude msl
+    public void calibrateAltitude(){
+        zeroPressure = pressure;
+
+    }
+    //set zero roll/pitch
+    public void calibrateRollPitch(){
+        zeroRoll = roll;
+        zeroPitch = pitch;
+
+
+    }
+
 
     public float getAltitude(){
         if(mSensorManager != null) {
