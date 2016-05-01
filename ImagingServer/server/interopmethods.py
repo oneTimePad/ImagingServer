@@ -115,7 +115,7 @@ def post_target(session,server,target,tout):
         requests.Timeout: Request timeout.
         ValueError or AttributeError: Malformed response from server.
     """
-    pdb.set_trace()
+    #pdb.set_trace()
     r = session.post(server+'/api/targets', timeout = tout,data=json.dumps(target.serialize()))
     if not r.ok:
         return InteropError(r)

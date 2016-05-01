@@ -37,16 +37,6 @@
             android:onClick="remoteCommunications"
             android:id="@+id/remote"/>
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="AP Connect"
-            android:textSize="20dp"
-            android:layout_below="@+id/remote"
-            android:layout_alignParentLeft="true"
-            android:onClick="onBtnConnectTap"
-            android:id="@+id/btnconnect"/>
-
 
         <EditText
 
@@ -79,6 +69,7 @@
         android:ems="10"
         android:id="@+id/password"
         android:hint="password" />
+
 
 
 </LinearLayout>

@@ -17,6 +17,8 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
+import android.location.Location;
+import android.location.LocationManager;
 import android.media.AudioManager;
 import android.net.Uri;
 
@@ -86,7 +88,7 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 
-public class MainActivity extends ActionBarActivity implements DroneListener,TowerListener {
+public class MainActivity extends ActionBarActivity {
 
     //controls phone sensors
     private SensorTracker mSensor;
@@ -95,11 +97,8 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //queue for picture data to upload
     private static ArrayList<Data>  pictureData = new ArrayList<>();
     //for drone communication
-    private static Drone drone;
-    //thread handler
-    private final Handler handler = new Handler();
-    //for 3dr tower
-    private ControlTower controlTower;
+    private static GPS gps;
+
     //for storage of pictures
     private File StoragePic;
     //for storage of logs
@@ -135,9 +134,9 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
 
     private boolean didPause = false;
     private Thread uploader;
-    private  Thread connect;
-    private final long DEFAULT_TRIGGER_TIME = 500;
-    private final long CONNECTION_DELAY = 3000;
+
+    public final  int CONNECTION_DELAY =3000;
+    public final  int DEFAULT_TRIGGER_DELAY =500;
 
     //allows for syncing on boolean's for deciding when to break loops
     private class BooleanObj{
@@ -188,9 +187,21 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         android_id=Settings.Secure.getString(getApplicationContext().getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
-
+        Context  ctx = getApplicationContext();
         //get the drone
-        drone = new Drone();
+        LocationManager locationManager = (LocationManager)ctx.getSystemService(LOCATION_SERVICE);
+
+
+        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+
+        if(!isGPSEnabled){
+            alertUser("GPS Services disabled");
+            Intent gpsOptionsIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            startActivity(gpsOptionsIntent);
+        }
+
+
 
         //initialize picnum
         picNum = 0;
@@ -241,9 +252,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         mSensor = new SensorTracker(getApplicationContext());
         mSensor.startSensors();
 
-
-        //3dr control tower
-        controlTower = new ControlTower(getApplicationContext());
+        gps = new GPS(MainActivity.this);
 
         final EditText ipText = (EditText)findViewById(R.id.URL);
         //make keyboard disappear at enter
@@ -318,8 +327,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         //in practice this will never happen as long as phone is sleeping
         //if(didPause){ alertUser("App was paused. Please close and restart");}
         didPause=false;
-        //connect to tower
-        this.controlTower.connect(this);
+
         //create the uploader thread
         if(uThread == null){
             uThread = new ServerContactThread();
@@ -387,43 +395,12 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         synchronized (handlerCamerathread) {
             handlerCamerathread.closeCamera();
         }
-        //stop drone connection
-        this.controlTower.disconnect();
-        if (this.drone.isConnected()) {
-            this.drone.disconnect();
-            updateConnectedButton(false);
-        }
+
         //tell it to stop taking pics
         if(mSensor!=null){
             mSensor.stopSensors();
         }
 
-
-    }
-
-
-    //3dr tower connection
-    @Override
-    public void onTowerConnected() {
-        alertUser("3DR Services Connected");
-        this.controlTower.registerDrone(drone, this.handler);
-        drone.registerDroneListener(this);
-    }
-    //disconnection for 3dr tower
-    @Override
-    public void onTowerDisconnected() {
-        alertUser("3DR Service Interrupted");
-    }
-
-    //drone connection error handling
-    @Override
-    public void onDroneConnectionFailed(ConnectionResult result) {
-        alertUser("Connection Failed:" + result.getErrorMessage());
-    }
-
-    @Override
-    public void onDroneServiceInterrupted(String errorMsg) {
-        alertUser(errorMsg);
 
     }
 
@@ -602,7 +579,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                             }
                             else{
                                 //almost never gets executed...to stop crashes
-                                Thread.sleep(DEFAULT_TRIGGER_TIME);
+                                Thread.sleep(DEFAULT_TRIGGER_DELAY);
                             }
 
                             Log.i("BOTTLEKNECK+Delay", System.currentTimeMillis() - time + "");
@@ -1149,52 +1126,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     };
 
 
-    //update connect button upon drone connection
-    protected void updateConnectedButton(Boolean isConnected) {
 
-        Button connectButton = (Button)findViewById(R.id.btnconnect);
-
-        connectButton.setText(isConnected ? "AP Disconnect" : "AP Connect");
-
-    }
-
-    //connect to drone
-    public void onBtnConnectTap(View view) {
-
-        connect= new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if (drone.isConnected()) {
-                    drone.disconnect();
-                } else {
-                    Bundle extraParams = new Bundle();
-                    extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, DEFAULT_USB_BAUD_RATE); // Set default baud rate to 57600
-                    //connect with usb
-                    ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
-                    drone.connect(connectionParams);
-
-                }
-                synchronized (this) {
-                    this.notify();
-                }
-            }
-        });
-
-        connect.start();
-
-        try{
-            synchronized (connect) {
-                connect.wait();
-                //connect = null;
-            }
-        }
-        catch (InterruptedException e){
-            Log.e("Drone Conection", "error on wait");
-        }
-        ;
-        updateConnectedButton(drone.isConnected());
-
-    }
 
 
     //set up remote GCS commands for trigger and connect to drone
@@ -1266,36 +1198,20 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
     //get lat/lon/alt of image
     @Nullable
     private LatLongAlt retLatLonAlt() {
-        //get altitude
-        Altitude droneAltitude = drone.getAttribute(AttributeType.ALTITUDE);
-        if(droneAltitude==null){
-            alertUser("No altitude");
-            return null;
+        double latitude = 0;
+        double longitude =0;
+        //check for gps location and retrieve it
+        if(gps.canGetLocation()){
+            latitude = gps.getLatitude();
+            longitude = gps.getLongitude();
         }
-        //get the altitude
-        final double vehicleAltitude = droneAltitude.getAltitude();
-
-        //get positon
-        Gps droneGps = drone.getAttribute(AttributeType.GPS);
-
-        if(droneGps==null){
-
-            return null;
-        }
-        //get lon and lat
-        LatLong vehiclePosition = droneGps.getPosition();
-
-        if(vehiclePosition==null){
-
-            return null;
+        double altitude =0;
+        if(mSensor !=null){
+            altitude =mSensor.getAltitude();
         }
 
-        //get actual lat/lon
-        final double latNum =vehiclePosition.getLatitude();
-        final double lonNum = vehiclePosition.getLongitude();
 
-
-        return new LatLongAlt(vehicleAltitude, latNum, lonNum);
+        return new LatLongAlt(latitude, longitude,altitude );
     }
 
 
@@ -1314,34 +1230,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
-
-
-    // Drone Listener
-    // ==========================================================
-    //does this do anything?
-
-    @Override
-    public void onDroneEvent(String event, Bundle extras) {
-
-        switch (event) {
-
-            case AttributeEvent.STATE_CONNECTED:
-                alertUser("Drone Connected");
-                updateConnectedButton(this.drone.isConnected());
-
-                break;
-
-            case AttributeEvent.STATE_DISCONNECTED:
-                alertUser("Drone Disconnected");
-                updateConnectedButton(this.drone.isConnected());
-                break;
-
-            default:
-//                Log.i("DRONE_EVENT", event); //Uncomment to see events from the drone
-                break;
-        }
-
-    }
 
 
 }
