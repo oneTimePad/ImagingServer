@@ -17,11 +17,13 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
     private Sensor accel;
     private Sensor compass;
     private Sensor gravity;
+    private Sensor barometer;
 
     private boolean gyroscopeIsAvailable;
     private boolean accelerometerIsAvailable;
     private boolean magneticFieldIsAvailable;
     private boolean gravityIsAvailable;
+    private boolean barometerIsAvailable;
 
     private float azimuth; // Angle from magnetic north
     private float pitch; // When in portrait, tilting phone towards face
@@ -35,6 +37,8 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
     private float[] inclineMatrix = new float[9];
     private float[] orientationValues = new float[3];
     private float[] prefValues = new float[3];
+    private  float pressure;
+    private float zeroPressure =0;
 
     private float mInclination;
     private int counter = 0;
@@ -81,18 +85,26 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
             gravityIsAvailable = true;
             gravity = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
         }
+
+        if(mSensorManager.getSensorList(Sensor.TYPE_PRESSURE).size()>0){
+            barometerIsAvailable = true;
+            barometer = mSensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
+
+        }
     }
 
     public void startSensors() {
         mSensorManager.registerListener(this, gyro, mSensorManager.SENSOR_DELAY_UI);
         mSensorManager.registerListener(this, accel, mSensorManager.SENSOR_DELAY_UI);
         mSensorManager.registerListener(this, compass, mSensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener(this, barometer,mSensorManager.SENSOR_DELAY_UI);
     }
 
     public void stopSensors() {
         mSensorManager.unregisterListener(this, gyro);
         mSensorManager.unregisterListener(this, accel);
         mSensorManager.unregisterListener(this, compass);
+        mSensorManager.unregisterListener(this, barometer);
     }
 
     @Override
@@ -114,6 +126,12 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
             ready = (accelValues[2] != 0) ? true : false;
         }
 
+        if(event.sensor.getType() == Sensor.TYPE_PRESSURE){
+            pressure = event.values[0];
+            if(zeroPressure == 0){
+                zeroPressure = pressure;
+            }
+        }
 
         if (!ready) {
             return;
@@ -177,6 +195,13 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
 
     public float getRoll() {
         return roll;
+    }
+
+    public float getAltitude(){
+        if(mSensorManager != null) {
+            return mSensorManager.getAltitude(zeroPressure,pressure)*(float)3.28084;
+        }
+        return 0;
     }
 
     public boolean getGyroscopeIsAvailable() {
