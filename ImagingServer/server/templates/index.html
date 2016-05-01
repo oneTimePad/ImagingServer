@@ -655,12 +655,26 @@ function PictureArray(){
 
 			curr = parseInt(image['pk']);
 			image_data = image["image"];
-			document.focusedImage.src=image_data['fileName'];
-			$("#focus-type").text("Picture Data");
 			pic_curr_props = image_data;//using the string id to access the data in the map
+			document.focusedImage.src=image_data['fileName'];
+
+			var lat = pic_curr_props.lat;
+			var latdeg = Math.trunc(lat);
+			var latmin = Math.trunc((lat-latdeg)*60);
+			var latsec = Math.trunc((((lat-latdeg)*60)-latmin)*3600);
+
+
+			var lon = pic_curr_props.lon;
+			var londeg = Math.trunc(lon);
+			var lonmin = Math.trunc((lon-londeg)*60);
+			var lonsec = Math.trunc((((lon-londeg)*60)-lonmin)*3600);
+
+
+			$("#focus-type").text("Picture Data");
+
 			$("#focus-data").empty()
-				.append("<tr><td>Latitude</td><td>"+pic_curr_props.lat+"</td></tr>")
-				.append("<tr><td>Longitude</td><td>"+pic_curr_props.lon+"</td></tr>")
+				.append("<tr><td>Latitude</td><td>"+latdeg+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
+				.append("<tr><td>Longitude</td><td>"+londeg+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
 				.append("<tr><td>Altitude</td><td>"+pic_curr_props.alt+"</td></tr>")
 				.append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
@@ -686,14 +700,29 @@ function PictureArray(){
 			dataType: "json",
 			data: {"pk": pk},
 			success: function(json) {
+
+				var lat = json.latitude;
+				var latdeg = Math.trunc(lat);
+				var latmin = Math.trunc((lat-latdeg)*60);
+				var latsec = Math.trunc((((lat-latdeg)*60)-latmin)*3600);
+
+
+				var lon = json.longitude;
+				var londeg = Math.trunc(lon);
+				var lonmin = Math.trunc((lon-londeg)*60);
+				var lonsec = Math.trunc((((lon-londeg)*60)-lonmin)*3600);
+
+
+
+
 				$("#focus-data").empty()
 					.append("<tr><td>Shape</td><td>"+json.shape+"</td></tr>")
 					.append("<tr><td>Letter</td><td>"+json.alphanumeric+"</td></tr>")
 					.append("<tr><td>Color</td><td>"+json.background_color+"</td></tr>")
 					.append("<tr><td>Letter Color</td><td>"+json.alphanumeric_color+"</td></tr>")
 					.append("<tr><td>Orientation</td><td>"+json.orientation+"</td></tr>")
-					.append("<tr><td>Latitude</td><td>"+json.latitude+"</td></tr>")
-					.append("<tr><td>Longitude</td><td>"+json.longitude+"</td></tr>")
+					.append("<tr><td>Latitude</td><td>"+latdeg+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
+					.append("<tr><td>Longitude</td><td>"+londeg+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
 					.append("<tr><td>Type</td><td>"+json.ptype+"</td></tr>")
 					.append("<tr><td>Description</td><td>"+json.description+"</td></tr>")
 					.append("<tr><td><button id='targsubmit' onclick='tsubmit(" + pk+");' class='btn btn-primary'>Submit Target</button></td></tr>");
