@@ -1142,6 +1142,8 @@ public class MainActivity extends ActionBarActivity {
         if(mSensor!=null) {
             mSensor.calibrateAltitude();
             mSensor.calibrateRollPitch();
+            EditText msl = (EditText)findViewById(R.id.msl);
+            mSensor.setMSL(Float.parseFloat(msl.getText().toString()));
             alertUser("Sensors Callibrated");
         }
         else{

@@ -71,6 +71,12 @@
         android:id="@+id/password"
         android:hint="password" />
 
+    <EditText
+        android:layout_width="152dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/msl"
+        android:hint="Mean Sea Level" />
+
     <Button
         android:layout_width="174dp"
         android:layout_height="wrap_content"
