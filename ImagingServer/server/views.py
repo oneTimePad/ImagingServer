@@ -34,6 +34,8 @@ import csv
 import pika
 import sys
 import qrtools
+import zbarlight
+from PIL import Image
 #telemetry
 from .types import  Telemetry,AUVSITarget
 from .exceptions import InteropError
@@ -579,10 +581,13 @@ class GCSViewset(viewsets.ModelViewSet):
 		if target.ptype == "qrc":
 			#attempt to decode qrc/ NOT TESTED
 			try:
-				qr = qrtools.QR()
-				code = qr.decode(target.picture.path)
-				target.description = code
-				target.save()
+				with open(target.picture.path, 'rb') as image_file:
+				    image = Image.open(image_file)
+				    image.load()
+				codes = zbarlight.scan_codes('qrcode', image)
+				if (len(codes)>0):
+					target.description = codes[0].decode('utf-8')
+					target.save()
 			#if it fails, just no description
 			except Exception as e:
 				pass
