@@ -36,6 +36,7 @@ import android.os.Handler;
 import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Base64;
 import android.util.Log;
+import android.view.InflateException;
 import android.view.KeyEvent;
 
 import android.view.SurfaceHolder;
@@ -74,6 +75,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -259,9 +261,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         alertUser("Tower Disconnected");
     }
 
-
-
-
+    private QXHandler qx;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -387,6 +387,7 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         sH = sf.getHolder();
         sH.setKeepScreenOn(true);
         //surface control callbacks
+
         sH.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
@@ -401,14 +402,14 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
                         if (mCamera != null) {
                             mCamera.setPreviewDisplay(holder);
                             mCamera.startPreview();
-                            /*
+
                             if(getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
                                 mCamera.getParameters().set("orientation","portrait");
                                 String rot =mCamera.getParameters().get("rotation");
                                 Log.i("orientation",rot);
                                 mCamera.getParameters().set("rotation",90);
                                 Log.i("orientation","portrait");
-                            }*/
+                            }
                         }
 
                     } catch (IOException e) {
@@ -431,8 +432,6 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
             }
         });
 
-
-        mSsdpClient = new SimpleSsdpClient();
 
     }
 
@@ -470,10 +469,25 @@ public class MainActivity extends ActionBarActivity implements DroneListener,Tow
         findViewById(R.id.button_searchqx).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Button btn = (Button)v;
-                if(!mSsdpClient.isSearching()){
-                    searchQx();
-                }
+                    qx = new QXHandler(getApplication());
+                    qx.searchQx();
+            }
+        });
+
+        findViewById(R.id.button_triggerqx).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                    qx.capture();
+                /*
+                    while(true){
+                        qx.capture();
+                        try{
+                            Thread.sleep(3000);
+                        }
+                        catch (InterruptedException e){
+
+                        }
+                    }*/
             }
         });
 

@@ -1,15 +1,25 @@
 package com.o3dr.hellodrone;
 
 import android.app.Application;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -33,7 +43,18 @@ public class QXHandler {
 
     }
 
+
+    public void capture(){
+        takeAndFetchPicture();
+    }
+
+    public void exitQx(){
+        closeConnection();
+    }
+
+
     public void searchQx(){
+        mSsdpClient = new SimpleSsdpClient();
         mSsdpClient.search(new SimpleSsdpClient.SearchResultHandler(){
 
             @Override
@@ -186,6 +207,13 @@ public class QXHandler {
                     if (isCameraApiAvailable("getApplicationInfo")) {
                         Log.d(TAG, "openConnection(): getApplicationInfo()");
                         replyJson = mRemoteApi.getApplicationInfo();
+                        if(!isSupportedServerVersion(replyJson)) {
+                            Log.e(TAG, "Can't support this device");
+                            return;
+                        }
+
+
+
                         /*if (!isSupportedServerVersion(replyJson)) {
                             DisplayHelper.toast(getApplicationContext(), //
                                     R.string.msg_error_non_supported_device);
@@ -196,7 +224,7 @@ public class QXHandler {
                         // never happens;
                         return;
                     }
-
+                    /*
                     // startRecMode if necessary.
                     if (isCameraApiAvailable("startRecMode")) {
                         Log.d(TAG, "openConnection(): startRecMode()");
@@ -205,34 +233,62 @@ public class QXHandler {
                         // Call again.
                         replyJson = mRemoteApi.getAvailableApiList();
                         loadAvailableCameraApiList(replyJson);
-                    }
+                    }*/
 
                     // getEvent start
                     if (isCameraApiAvailable("getEvent")) {
                         Log.d(TAG, "openConnection(): EventObserver.start()");
                         mEventObserver.start();
                     }
-
+                    /*
                     // Liveview start
                     if (isCameraApiAvailable("startLiveview")) {
                         Log.d(TAG, "openConnection(): LiveviewSurface.start()");
                         //startLiveview();
-                    }
+                    }*/
 
                     // prepare UIs
                     if (isCameraApiAvailable("getAvailableShootMode")) {
                         Log.d(TAG, "openConnection(): prepareShootModeSpinner()");
                         //prepareShootModeSpinner();
                         // Note: hide progress bar on title after this calling.
+
+                        try {
+                            replyJson = mRemoteApi.getAvailableShootMode();
+
+                            JSONArray resultsObj = replyJson.getJSONArray("result");
+                            final String currentMode = resultsObj.getString(0);
+                            JSONArray availableModesJson = resultsObj.getJSONArray(1);
+                            final List<String> availableModes = new ArrayList<String>();
+
+                            for (int i = 0; i < availableModesJson.length(); i++) {
+                                String mode = availableModesJson.getString(i);
+                                if (!isSupportedShootMode(mode)) {
+                                    mode = "";
+                                }
+                                availableModes.add(mode);
+                            }
+                            Log.i(TAG,availableModes.toString());
+                        }
+                        catch (IOException e){
+
+                        }
+                        catch (JSONException e){
+
+                        }
+
+
+
                     }
 
+                    /*
                     // prepare UIs
                     if (isCameraApiAvailable("actZoom")) {
                         Log.d(TAG, "openConnection(): prepareActZoomButtons()");
                         //prepareActZoomButtons(true);
                     } else {
                         //prepareActZoomButtons(false);
-                    }
+                    }*/
 
                     Log.d(TAG, "openConnection(): completed.");
                 } catch (IOException e) {
@@ -391,6 +447,69 @@ public class QXHandler {
                     Log.w(TAG, "prepareToStartContentsListMode: JSONException: " + e.getMessage());
                   //  DisplayHelper.toast(getApplicationContext(), R.string.msg_error_api_calling);
                   //  DisplayHelper.setProgressIndicator(SampleCameraActivity.this, false);
+                }
+            }
+        }.start();
+    }
+
+    /**
+     * Take a picture and retrieve the image data.
+     */
+    private void takeAndFetchPicture() {
+
+
+        new Thread() {
+
+            @Override
+            public void run() {
+                try {
+                    Log.i("CAMERATAG","BEFORE"+System.currentTimeMillis()/1000+"");
+                    JSONObject replyJson = mRemoteApi.actTakePicture();
+                    JSONArray resultsObj = replyJson.getJSONArray("result");
+                    JSONArray imageUrlsObj = resultsObj.getJSONArray(0);
+                    Log.i("CAMERATAG",replyJson.toString()+"");
+
+                    String postImageUrl = null;
+                    if (1 <= imageUrlsObj.length()) {
+                        postImageUrl = imageUrlsObj.getString(0);
+                    }
+                    if (postImageUrl == null) {
+                        Log.w(TAG, "takeAndFetchPicture: post image URL is null.");
+
+                        return;
+                    }
+                    Log.i("CAMERATAG","AFTER"+System.currentTimeMillis()/1000+"");
+
+
+                    URL url = new URL(postImageUrl);
+                    InputStream istream = new BufferedInputStream(url.openStream());
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    byte[] buf =new byte[6000000];
+                    int len;
+                    int total=0;
+                    ByteArrayOutputStream bos =new ByteArrayOutputStream();
+                    while((len=istream.read(buf))>0){
+                        total+=len;
+                        bos.write(buf,0,len);
+                    }
+                    Log.i("CAMERATAG",total+"");
+                    options.inSampleSize = 4; // irresponsible value
+                   /* final Drawable pictureDrawable =
+                            new BitmapDrawable(getResources(), //
+                                    BitmapFactory.decodeStream(istream, null, options));*/
+                    istream.close();
+                    Log.i("CAMERATAG","FETCH"+System.currentTimeMillis()/1000+"");
+                    Log.i(TAG,"PHOTOTAKEN");
+
+
+                } catch (IOException e) {
+                    Log.w(TAG, "IOException while closing slicer: " + e.getMessage());
+
+                } catch (JSONException e) {
+                    Log.w(TAG, "JSONException while closing slicer");
+
+                } finally {
+
                 }
             }
         }.start();

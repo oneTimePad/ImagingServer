@@ -123,6 +123,28 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:id="@+id/lon" />
+
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/button_searchqx"
+            android:text="Search"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/button_triggerqx"
+            android:text="Trigger QX"
+            android:layout_toRightOf="@+id/button_searchqx"/>
+
+
+    </RelativeLayout>
+
     <!--
         <RelativeLayout
             android:layout_width="wrap_content"

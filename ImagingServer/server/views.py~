@@ -34,8 +34,6 @@ import csv
 import pika
 import sys
 import qrtools
-#import zbarlight
-from PIL import Image
 #telemetry
 from .types import  Telemetry,AUVSITarget
 from .exceptions import InteropError
@@ -163,7 +161,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			#return a json response with the time diff(again ignore if you want)
 			#json version of data (i.e. obstacles)
 			#there is no error, filled in if there is an error
-			return Response({'time':time()-startTime,'stationary':stat.serialize(),'moving':moving.serialize(),'error':None})
+			return Response({'time':time()-startTime,'stationary':stationary.serialize(),'moving':moving.serialize(),'error':None})
 		except InteropError as e:
 			#interop errors are handled differently
 			#this returns something in side
@@ -297,7 +295,6 @@ class DroneViewset(viewsets.ModelViewSet):
 		#fetch phone client information
 		dataDict = {}
 		androidId=0
-		timeReceived = time()
 		try:
 			dataDict = request.data
 			androidId = dataDict['id']
@@ -339,18 +336,16 @@ class DroneViewset(viewsets.ModelViewSet):
 				cache.delete(androidId+"pic")
 			'''
             #form image dict
-			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt','timeTaken')}
+			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt')}
 			imageData['fileName'] = IMAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
-			imageData['timeReceived'] = timeReceived
+
 			#make obj
 			pictureObj = PictureSerializer(data = imageData)
 			if pictureObj.is_valid():
 				pictureObj = pictureObj.deserialize()
 	            #save img to obj
 				pictureObj.photo = picture
-
 				pictureObj.save()
-				#pdb.set_trace()
 				connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
 				channel = connection.channel()
 
@@ -520,7 +515,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		for pk in picList:
 			picStack.insert(0,int(pk))
 		request.session['picstack'] = picStack
-		serPics = [{'pk':picture.pk,'image':PictureSerializer(picture).data,'timeSent':time()} for picture in pics ]
+		serPics = [{'pk':picture.pk,'image':PictureSerializer(picture).data} for picture in pics ]
 		return Response(serPics)
 
 	@list_route(methods=['post'])
@@ -581,21 +576,16 @@ class GCSViewset(viewsets.ModelViewSet):
 			target.alphanumeric_color = "gray"
 		target.crop(size_data=sizeData,parent_pic=picture)
 		target.save()
-	#	if target.ptype == "qrc":
+		if target.ptype == "qrc":
 			#attempt to decode qrc/ NOT TESTED
-	#		try:
-
-				#with open(target.picture.path, 'rb') as image_file:
-				 #   image = Image.open(image_file)
-				  #  image.load()
-				#codes = zbarlight.scan_codes('qrcode', image)
-				#if (len(codes)>0):
-				#	target.description = codes[0].decode('utf-8')
-				#	target.save()
-
+			try:
+				qr = qrtools.QR()
+				code = qr.decode(target.picture.path)
+				target.description = code
+				target.save()
 			#if it fails, just no description
-	#		except Exception as e:
-	#			pass
+			except Exception as e:
+				pass
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
