@@ -15,6 +15,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.location.Location;
@@ -88,16 +90,16 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements DroneListener,TowerListener {
 
     //controls phone sensors
-    private SensorTracker mSensor;
+    //private SensorTracker mSensor;
     //queue for pictures to uploader
     private static ArrayList<String> pictureQueue = new ArrayList<>();
     //queue for picture data to upload
     private static ArrayList<Data>  pictureData = new ArrayList<>();
     //for drone communication
-    private static GPS gps;
+    //private static GPS gps;
 
     //for storage of pictures
     private File StoragePic;
@@ -135,8 +137,10 @@ public class MainActivity extends ActionBarActivity {
     private boolean didPause = false;
     private Thread uploader;
 
-    public final  int CONNECTION_DELAY =3000;
+    public final  int CONNECTION_DELAY =1000;
     public final  int DEFAULT_TRIGGER_DELAY =500;
+
+    private SensorTracker mSensor;
 
     //allows for syncing on boolean's for deciding when to break loops
     private class BooleanObj{
@@ -165,6 +169,92 @@ public class MainActivity extends ActionBarActivity {
     private long expiration =0;
 
 
+    private Drone drone;
+    private ControlTower controlTower;
+    private final Handler handler = new Handler();
+
+    public void onBtnConnectTap(View view){
+        if(drone.isConnected()){
+            drone.disconnect();
+
+        }
+        else{
+            Bundle extraParams = new Bundle();
+            extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT,14550);
+            ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP,extraParams,null);
+            drone.connect(connnectionParams);
+            Log.i("drone","attempted connection");
+
+        }
+    }
+
+
+    public void onDroneEvent(String event, Bundle extras){
+
+        switch (event){
+            case AttributeEvent.STATE_CONNECTED:
+                ((Button)findViewById(R.id.droneconnect)).setText("Disconnect");
+                alertUser("Connected!");
+                break;
+            case AttributeEvent.STATE_DISCONNECTED:
+                ((Button)findViewById(R.id.droneconnect)).setText("Connect");
+                break;
+
+            case AttributeEvent.ALTITUDE_UPDATED:
+                double altitude = droneAltitude();
+                ((TextView)findViewById(R.id.alt)).setText(String.format("%3.1f",altitude));
+                break;
+            case AttributeEvent.GPS_POSITION:
+
+                LatLong vehiclePosition = dronePosition();
+                double lat = vehiclePosition.getLatitude();
+                double lon = vehiclePosition.getLongitude();
+                ((TextView)findViewById(R.id.lat)).setText(String.format(("%3.1f"),lat));
+                ((TextView)findViewById(R.id.lon)).setText(String.format("%3.1f",lon));
+                break;
+            default:
+                break;
+
+
+
+        }
+    }
+
+    public LatLong dronePosition(){
+        Gps droneGps = drone.getAttribute(AttributeType.GPS);
+        LatLong vehiclePosition = droneGps.getPosition();
+        return vehiclePosition;
+    }
+
+    public double droneAltitude(){
+        Altitude alt = drone.getAttribute(AttributeType.ALTITUDE);
+        double altitude = alt.getAltitude();
+        final double metersToFeet = 3.28084;
+        return altitude*metersToFeet;
+    }
+
+
+
+    public void onDroneConnectionFailed(ConnectionResult result){
+        alertUser("Connection failed");
+    }
+
+    public void onDroneServiceInterrupted(String errorMsg){
+        alertUser("Connection interrupted");
+    }
+
+    @Override
+    public void onTowerConnected(){
+        controlTower.registerDrone(drone,handler);
+        drone.registerDroneListener(this);
+        alertUser("Tower connected");
+    }
+
+    @Override
+    public void onTowerDisconnected(){
+        alertUser("Tower Disconnected");
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -183,23 +273,28 @@ public class MainActivity extends ActionBarActivity {
         //set layout
         setContentView(R.layout.activity_main);
 
+        final Resources res= this.getResources();
+        final int id = Resources.getSystem().getIdentifier("config_ntpServer","string","android");
+        String defaultServer = res.getString(id);
+        Log.i("time",defaultServer);
+
         //this is the android devices, id used as cache key in django
         android_id=Settings.Secure.getString(getApplicationContext().getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
-        Context  ctx = getApplicationContext();
+        //Context  ctx = getApplicationContext();
         //get the drone
-        LocationManager locationManager = (LocationManager)ctx.getSystemService(LOCATION_SERVICE);
+        //LocationManager locationManager = (LocationManager)ctx.getSystemService(LOCATION_SERVICE);
 
 
-        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        //boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-
+        /*
         if(!isGPSEnabled){
             alertUser("GPS Services disabled");
             Intent gpsOptionsIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             startActivity(gpsOptionsIntent);
-        }
+        }*/
 
 
 
@@ -247,12 +342,15 @@ public class MainActivity extends ActionBarActivity {
             alertUser("Storage creation failed. Exiting");
             System.exit(1);
         }
+        drone = new Drone();
+        controlTower = new ControlTower(getApplicationContext());
+
 
         //initialize sensor controller
         mSensor = new SensorTracker(getApplicationContext());
         mSensor.startSensors();
 
-        gps = new GPS(MainActivity.this);
+        //gps = new GPS(MainActivity.this);
 
 
 
@@ -295,6 +393,14 @@ public class MainActivity extends ActionBarActivity {
                         if (mCamera != null) {
                             mCamera.setPreviewDisplay(holder);
                             mCamera.startPreview();
+                            /*
+                            if(getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
+                                mCamera.getParameters().set("orientation","portrait");
+                                String rot =mCamera.getParameters().get("rotation");
+                                Log.i("orientation",rot);
+                                mCamera.getParameters().set("rotation",90);
+                                Log.i("orientation","portrait");
+                            }*/
                         }
 
                     } catch (IOException e) {
@@ -325,6 +431,7 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        controlTower.connect(this);
         //app was zoomed out. Can't recover from this...just start over
         //in practice this will never happen as long as phone is sleeping
         //if(didPause){ alertUser("App was paused. Please close and restart");}
@@ -371,6 +478,16 @@ public class MainActivity extends ActionBarActivity {
     //app stopped
     @Override
     public void onDestroy(){
+
+        if(drone.isConnected()){
+            drone.disconnect();
+        }
+        controlTower.unregisterDrone(drone);
+        controlTower.disconnect();
+
+
+
+
         Log.i("Destroyed","Destroyed");
         super.onDestroy();
 
@@ -400,12 +517,12 @@ public class MainActivity extends ActionBarActivity {
         }
 
         //tell it to stop taking pics
-        if(mSensor!=null){
+        /*if(mSensor!=null){
             if(gps!=null){
                 gps.stopUsingGPS();
             }
             mSensor.stopSensors();
-        }
+        }*/
 
 
     }
@@ -466,16 +583,18 @@ public class MainActivity extends ActionBarActivity {
                         //open camera and set params
                         mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
                         Camera.Parameters params = mCamera.getParameters();
-
+                        //params.setRotation(90);
                         double thetaV = Math.toRadians(params.getVerticalViewAngle());
                         double thetaH = Math.toRadians(params.getHorizontalViewAngle());
                         Log.i("angle","Hori"+thetaH);
                         Log.i("angle","Verti"+thetaV);
 
-                        params.setFocusMode(params.FOCUS_MODE_INFINITY);
-                        params.setPictureSize(300, 300);
+                        params.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
+                        params.set("iso","3200");
+                        //params.setPictureSize(300, 300);
                         params.setRotation(90);
-                        params.setZoom(100);
+                        //params.setZoom(100);
+                        mCamera.setParameters(params);
 
                     }catch(RuntimeException e){
                         alertUser("Failed to open camera");
@@ -775,6 +894,7 @@ public class MainActivity extends ActionBarActivity {
                 @Override
                 public void run() {
                     try {
+                        Log.i("time",System.currentTimeMillis()/1000+"");
                         //check if refresh is necessary before posting
                         //refresh();
                         //open connection to server
@@ -807,12 +927,7 @@ public class MainActivity extends ActionBarActivity {
                             }
                             //put image data in json
                             if (imageData != null) {
-                                requestData.put("azimuth", imageData.getAzimuth());
-                                requestData.put("pitch", imageData.getPitch());
-                                requestData.put("roll", imageData.getRoll());
-                                requestData.put("lat",imageData.getLat());
-                                requestData.put("lon",imageData.getLon());
-                                requestData.put("alt",imageData.getAlt());
+                                requestData = imageData;
                             }
                             //fetch image from fs
                             File outFile = new File(StoragePic,fileName);
@@ -998,47 +1113,44 @@ public class MainActivity extends ActionBarActivity {
 
 
     //for holding image data
-    private class Data{
+    private class Data extends JSONObject{
         private float azimuth=0;
         private float pitch=0;
         private float roll=0;
         private double lat=0;
         private double lon=0;
         private double alt=0;
+        private long time=0;
         //private LatLongAlt gpsData = null;
 
 
 
-        Data(){
+        Data(long time){
             //fetch data from sensors
-            this.azimuth =mSensor.getAzimuth();
-            this.pitch = -1*mSensor.getPitch();
-            this.roll = -1*mSensor.getRoll();
-            LatLongAlt gps = retLatLonAlt();
-
-            if(gps!=null){
-
-                lat = gps.getLatitude();
-                lon = gps.getLongitude();
-                alt = gps.getAltitude();
-                Log.i("GPS LAT", gps.getLatitude()+"");
-                Log.i("GPS LON", gps.getLongitude()+"");
+            try {
+                this.put("azimuth", mSensor.getAzimuth());
+                this.put("pitch", -1 * mSensor.getPitch());
+                this.put("roll",  -1 * mSensor.getRoll());
+                this.put("timeTaken", time);
+                LatLong position = dronePosition();
+                if(position!=null) {
+                    this.put("lat", position.getLatitude());
+                    this.put("lon", position.getLongitude());
+                    this.put("alt", droneAltitude());
+                }
+                else{
+                    this.put("lat",0);
+                    this.put("lon",0);
+                    this.put("alt",0);
+                }
+            }
+            catch(JSONException e){
+                Log.e("JSONEXP","failed to create pic data");
             }
 
+
         }
-        //getter methods to obtain data
-        float getAzimuth(){
-            return azimuth;
-        }
-        float getPitch(){
-            return pitch;
-        }
-        float getRoll(){
-            return roll;
-        }
-        double getLat(){return lat;}
-        double getLon(){return lon;}
-        double getAlt(){return alt;}
+
 
 
     }
@@ -1050,22 +1162,21 @@ public class MainActivity extends ActionBarActivity {
         @Override
         public void onShutter () {
             String time = getTime();
+            long timeTaken = System.currentTimeMillis()/1000;
             //make shutter sound
-            AudioManager mgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
+            //AudioManager mgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            //mgr.playSoundEffect(AudioManager.FLAG_PLAY_SOUND);
             //get image data
-            Data dataHolder = new Data();
+            Data dataHolder = new Data(timeTaken);
             //send it so picture callback can get it
             synchronized (handlerCamerathread) {
                 handlerCamerathread.setPictureData(time, dataHolder);
             }
             //create log file
             try {
-                String logData;
                 //log entry
-                logData = time+picNum + "Lat:"+dataHolder.getLat()+"Lon:"+dataHolder.getLon()+"Alt:"+dataHolder.getAlt()+" Pitch:"+dataHolder.getPitch()+" Roll:"+dataHolder.getRoll()+" Azimuth:"+dataHolder.getAzimuth();
                 //write to log
-                logOut.write(logData);
+                logOut.write(dataHolder.toString());
                 logOut.newLine();
             }
             catch (FileNotFoundException e){
@@ -1136,21 +1247,20 @@ public class MainActivity extends ActionBarActivity {
 
     };
 
-
+    /*
     public void onCalibrate(View view){
 
         if(mSensor!=null) {
-            mSensor.calibrateAltitude();
+            mSensor.calibrateAltitude(-1,-1);
             mSensor.calibrateRollPitch();
-            EditText msl = (EditText)findViewById(R.id.msl);
-            mSensor.setMSL(Float.parseFloat(msl.getText().toString()));
+
             alertUser("Sensors Callibrated");
         }
         else{
             alertUser("No Sensors");
         }
 
-    }
+    }*/
 
 
 
@@ -1214,30 +1324,40 @@ public class MainActivity extends ActionBarActivity {
       });
       uploader.start();
 
+    }
+
+    public void manualTrigger(View view){
+        synchronized (triggerOn) {
+            triggerOn.set(true);
+        }
+
+        synchronized (tThread) {
+            String time = ((EditText)findViewById(R.id.triggerTime)).getText().toString();
+            double triggerTime = 0.0;
+            if(time.equals("")){
+                alertUser("No time specified");
+                return;
+            }
+            try{
+                triggerTime = Double.parseDouble(time);
+            }
+            catch (Exception e){
+                alertUser("Invalid time");
+                return;
+            }
+            if(triggerTime <=0.0){
+                alertUser("Invalid time");
+                return;
+            }
+            tThread.setCapture(triggerTime);
+            tThread.capture();
+
+        }
 
 
     }
 
 
-
-    //get lat/lon/alt of image
-    @Nullable
-    private LatLongAlt retLatLonAlt() {
-        double latitude = 0;
-        double longitude =0;
-        //check for gps location and retrieve it
-        if(gps.canGetLocation()){
-            latitude = gps.getLatitude();
-            longitude = gps.getLongitude();
-        }
-        double altitude =0;
-        if(mSensor !=null){
-            altitude =mSensor.getAltitude();
-        }
-
-
-        return new LatLongAlt(latitude, longitude,altitude );
-    }
 
 
 

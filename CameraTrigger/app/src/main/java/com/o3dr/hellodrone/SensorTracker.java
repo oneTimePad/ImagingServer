@@ -39,6 +39,7 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
     private float[] prefValues = new float[3];
     private  float pressure;
     private float zeroPressure =0;
+    private float zeroAltitude =0;
     private float zeroRoll =0;
     private float zeroPitch=0;
 
@@ -132,7 +133,7 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
 
         if(event.sensor.getType() == Sensor.TYPE_PRESSURE){
             pressure = event.values[0];
-            Log.i("zeropressure",zeroPressure+"");
+            //Log.i("zeropressure",zeroPressure+"");
             if(zeroPressure == 0){
                 zeroPressure = pressure;
             }
@@ -202,14 +203,21 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
         return roll-zeroRoll;
     }
 
-    public void setMSL(float msl){
-        MEAN_SEA_LEVEL = msl;
-    }
 
     //set zero altitude msl
-    public void calibrateAltitude(){
-        zeroPressure = pressure;
+    public void calibrateAltitude(float currentAltitude,float mslPressure){
+        //if given configuration values
+        if(mSensorManager!=null && currentAltitude!=-1 && mslPressure!=-1){
 
+        }
+        //else do standard configuration
+        else if(mSensorManager != null) {
+            zeroAltitude = mSensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE,zeroPressure)*(float)3.28084;
+            Log.i("ZERO",zeroAltitude+"");
+            Log.i("pres",zeroPressure+"");
+            Log.i("std",SensorManager.PRESSURE_STANDARD_ATMOSPHERE+"");
+
+        }
 
     }
     //set zero roll/pitch
@@ -223,7 +231,7 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
 
     public float getAltitude(){
         if(mSensorManager != null) {
-            return mSensorManager.getAltitude(zeroPressure,pressure)*(float)3.28084;
+            return mSensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE,pressure)*(float)3.28084 -zeroAltitude;
         }
         return 0;
     }
