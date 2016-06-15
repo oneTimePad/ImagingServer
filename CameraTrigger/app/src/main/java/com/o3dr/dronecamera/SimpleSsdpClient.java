@@ -1,4 +1,4 @@
-package com.o3dr.hellodrone;
+package com.o3dr.dronecamera;
 
 /*
  * Copyright 2014 Sony Corporation

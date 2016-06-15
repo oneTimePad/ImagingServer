@@ -1,22 +1,17 @@
-package com.o3dr.hellodrone;
+package com.o3dr.dronecamera;
 
 import android.app.Application;
-import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.util.Log;
-import android.view.View;
-import android.widget.Toast;
+
+import com.o3dr.dronecamera.utils.DroneTelemetry;
+import com.o3dr.dronecamera.utils.ImageData;
+import com.o3dr.dronecamera.utils.PictureStorage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -28,27 +23,38 @@ import java.util.Set;
 public class QXHandler {
 
     private SimpleSsdpClient mSsdpClient;
-    private SimpleRemoteApi mRemoteApi;
+    private QxRemoteApi mRemoteApi;
     private ServerDevice mTargetServer;
     private SimpleCameraEventObserver mEventObserver;
     private String TAG = "QX";
     private final Set<String> mAvailableCameraApiSet = new HashSet<String>();
     private final Set<String> mSupportedApiSet = new HashSet<String>();
     private Application app;
+    private DroneTelemetry droneTelemetry;
+    private SensorTracker mSensor;
+    private PictureStorage pictureStorage;
+    private boolean connectionStatus = false;
+    public int up = 0;
 
 
 
-    public QXHandler(Application app){
-        this.app = app;
+    public QXHandler(){
+        this.app = DroneActivity.app;
+        this.pictureStorage = DroneActivity.app.getPictureStorage();
+        this.mSensor = DroneActivity.app.getSensorTracker();
+        this.droneTelemetry = DroneActivity.app.getDroneTelem();
+
+
 
     }
 
+    public boolean status(){ return connectionStatus;}
 
     public void capture(){
         takeAndFetchPicture();
     }
 
-    public void exitQx(){
+    public void disconnect(){
         closeConnection();
     }
 
@@ -60,10 +66,11 @@ public class QXHandler {
             @Override
             public void onDeviceFound(final ServerDevice device){
                 mTargetServer = device;
-                mRemoteApi = new SimpleRemoteApi(mTargetServer);
+                mRemoteApi = new QxRemoteApi(mTargetServer);
                 mEventObserver = new SimpleCameraEventObserver(app,mRemoteApi);
                 mEventObserver.activate();
                 prepareOpenConnection();
+                connectionStatus = true;
 
             }
 
@@ -291,6 +298,7 @@ public class QXHandler {
                     }*/
 
                     Log.d(TAG, "openConnection(): completed.");
+                    mRemoteApi.setPostviewImageSize();
                 } catch (IOException e) {
                     Log.w(TAG, "openConnection : IOException: " + e.getMessage());
                     //DisplayHelper.setProgressIndicator(SampleCameraActivity.this, false);
@@ -456,18 +464,20 @@ public class QXHandler {
      * Take a picture and retrieve the image data.
      */
     private void takeAndFetchPicture() {
-
+        if(mRemoteApi == null) return;
 
         new Thread() {
 
             @Override
             public void run() {
                 try {
-                    Log.i("CAMERATAG","BEFORE"+System.currentTimeMillis()/1000+"");
+
                     JSONObject replyJson = mRemoteApi.actTakePicture();
                     JSONArray resultsObj = replyJson.getJSONArray("result");
                     JSONArray imageUrlsObj = resultsObj.getJSONArray(0);
-                    Log.i("CAMERATAG",replyJson.toString()+"");
+                    long time = System.currentTimeMillis()/1000;
+                    ImageData imageData = new ImageData(time);
+
 
                     String postImageUrl = null;
                     if (1 <= imageUrlsObj.length()) {
@@ -478,35 +488,23 @@ public class QXHandler {
 
                         return;
                     }
-                    Log.i("CAMERATAG","AFTER"+System.currentTimeMillis()/1000+"");
+
+                    Log.i("REAL",postImageUrl);
+                    pictureStorage.writePicture(postImageUrl,imageData);
+
+                    Log.i("IMAGE","STORED"+System.currentTimeMillis()/1000+"::"+up);
+                    up++;
+                    Log.i("CAPTUREWATCH","took "+up);
 
 
-                    URL url = new URL(postImageUrl);
-                    InputStream istream = new BufferedInputStream(url.openStream());
-                    BitmapFactory.Options options = new BitmapFactory.Options();
-                    byte[] buf =new byte[6000000];
-                    int len;
-                    int total=0;
-                    ByteArrayOutputStream bos =new ByteArrayOutputStream();
-                    while((len=istream.read(buf))>0){
-                        total+=len;
-                        bos.write(buf,0,len);
-                    }
-                    Log.i("CAMERATAG",total+"");
-                    options.inSampleSize = 4; // irresponsible value
-                   /* final Drawable pictureDrawable =
-                            new BitmapDrawable(getResources(), //
-                                    BitmapFactory.decodeStream(istream, null, options));*/
-                    istream.close();
-                    Log.i("CAMERATAG","FETCH"+System.currentTimeMillis()/1000+"");
-                    Log.i(TAG,"PHOTOTAKEN");
 
 
                 } catch (IOException e) {
-                    Log.w(TAG, "IOException while closing slicer: " + e.getMessage());
+                    //Log.w(TAG, "IOException while closing slicer: " + e.getMessage());
 
                 } catch (JSONException e) {
-                    Log.w(TAG, "JSONException while closing slicer");
+
+                    Log.w(TAG, e.toString());
 
                 } finally {
 

@@ -1,7 +1,7 @@
 /*
  * Copyright 2014 Sony Corporation
  */
-package com.o3dr.hellodrone;
+package com.o3dr.dronecamera;
 
 
 import android.util.Log;
@@ -10,8 +10,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.o3dr.hellodrone.utils.SimpleHttpClient;
-import com.o3dr.hellodrone.utils.XmlElement;
+import com.o3dr.dronecamera.utils.SimpleHttpClient;
+import com.o3dr.dronecamera.utils.XmlElement;
 
 /**
  * A server device description class.

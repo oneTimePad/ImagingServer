@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.o3dr.hellodrone" >
+    package="com.o3dr.dronecamera" >
     <uses-feature android:name="android.hardware.bluetooth"/>
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
@@ -18,7 +18,7 @@
         android:label="Drone Camera"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".MainActivity"
+            android:name="com.o3dr.dronecamera.DroneActivity"
             android:label="Drone Camera"
             android:screenOrientation="portrait">
             <intent-filter>

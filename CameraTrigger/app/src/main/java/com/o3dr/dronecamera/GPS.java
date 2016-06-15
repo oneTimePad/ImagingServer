@@ -1,4 +1,4 @@
-package com.o3dr.hellodrone;
+package com.o3dr.dronecamera;
 
 import android.app.AlertDialog;
 import android.app.Service;

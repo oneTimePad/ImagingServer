@@ -1,4 +1,4 @@
-package com.o3dr.hellodrone;
+package com.o3dr.dronecamera;
 
 
 /*
@@ -123,7 +123,7 @@ public class SimpleCameraEventObserver {
 
     private final Handler mUiHandler;
 
-    private SimpleRemoteApi mRemoteApi;
+    private QxRemoteApi mRemoteApi;
 
     private ChangeListener mListener;
 
@@ -159,7 +159,7 @@ public class SimpleCameraEventObserver {
      * @param context context to notify the changes by UI thread.
      * @param apiClient API client
      */
-    public SimpleCameraEventObserver(Context context, SimpleRemoteApi apiClient) {
+    public SimpleCameraEventObserver(Context context, QxRemoteApi apiClient) {
         if (context == null) {
             throw new IllegalArgumentException("context is null.");
         }

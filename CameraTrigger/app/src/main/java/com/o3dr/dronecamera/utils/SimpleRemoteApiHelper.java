@@ -1,4 +1,4 @@
-package com.o3dr.hellodrone.utils;
+package com.o3dr.dronecamera.utils;
 
 
 /*
@@ -6,6 +6,8 @@ package com.o3dr.hellodrone.utils;
  */
 
 import android.util.Log;
+
+import com.o3dr.dronecamera.QxRemoteApi;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -16,9 +18,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import com.o3dr.hellodrone.SimpleRemoteApi;
-
-
 
 
 public final class SimpleRemoteApiHelper {
@@ -46,12 +45,12 @@ public final class SimpleRemoteApiHelper {
      * }
      * </pre>
      *
-     * @param object of SimpleRemoteAPi
+     *
      * @return JSON data of response
      * @throws IOException all errors and exception are wrapped by this
      *             Exception.
      */
-    public static JSONObject getContentDateList(SimpleRemoteApi simpleRemoteApi) throws IOException {
+    public static JSONObject getContentDateList(QxRemoteApi simpleRemoteApi) throws IOException {
 
         try {
             List<String> uri = getSupportedStorages(simpleRemoteApi);
@@ -103,7 +102,7 @@ public final class SimpleRemoteApiHelper {
      *             this Exception.
      */
     public static JSONObject
-    getContentListOfDay(SimpleRemoteApi simpleRemoteApi, String uri) throws IOException {
+    getContentListOfDay(QxRemoteApi simpleRemoteApi, String uri) throws IOException {
 
         try {
             JSONObject replyJson = null;
@@ -122,13 +121,13 @@ public final class SimpleRemoteApiHelper {
         }
     }
 
-    private static List<String> getSupportedStorages(SimpleRemoteApi simpleRemoteApi) //
+    private static List<String> getSupportedStorages(QxRemoteApi simpleRemoteApi) //
             throws IOException, JSONException {
 
         // Confirm Scheme
         JSONObject replyJsonScheme = simpleRemoteApi.getSchemeList();
 
-        if (SimpleRemoteApi.isErrorReply(replyJsonScheme)) {
+        if (QxRemoteApi.isErrorReply(replyJsonScheme)) {
             JSONArray resultsObjScheme = replyJsonScheme.getJSONArray("error");
             int resultCode = resultsObjScheme.getInt(0);
             Log.w(TAG, "getSchemeList Error:" + resultCode);
@@ -150,7 +149,7 @@ public final class SimpleRemoteApiHelper {
         // Confirm Source
         JSONObject replyJsonSource = simpleRemoteApi.getSourceList("storage");
 
-        if (SimpleRemoteApi.isErrorReply(replyJsonSource)) {
+        if (QxRemoteApi.isErrorReply(replyJsonSource)) {
             JSONArray resultsObjSource = replyJsonSource.getJSONArray("error");
             int resultCode = resultsObjSource.getInt(0);
             Log.w(TAG, "getSourceList Error:" + resultCode);

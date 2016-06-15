@@ -1,9 +1,8 @@
-package com.o3dr.hellodrone;
+package com.o3dr.dronecamera;
 
 
 
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 

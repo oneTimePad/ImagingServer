@@ -71,12 +71,6 @@
         android:id="@+id/password"
         android:hint="password" />
 
-    <EditText
-        android:layout_width="121dp"
-        android:layout_height="wrap_content"
-        android:id="@+id/triggerTime"
-        android:layout_gravity="right"
-        android:hint="trigger time" />
     <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
@@ -85,21 +79,8 @@
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Manual Trig"
-            android:id="@+id/manualtrigger"
-            android:layout_gravity="right"
-            android:layout_marginLeft="145dp"
-            android:layout_toRightOf="@+id/droneconnect"
-            android:onClick="manualTrigger"
-            />
-
-        <Button
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:text="Connect"
-            android:id="@+id/droneconnect"
-            android:onClick="onBtnConnectTap" />
+            android:id="@+id/droneconnect" />
 
 
 

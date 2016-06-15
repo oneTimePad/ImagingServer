@@ -1,4 +1,4 @@
-package com.o3dr.hellodrone.utils;
+package com.o3dr.dronecamera.utils;
 
 /*
  * Copyright 2014 Sony Corporation
@@ -9,22 +9,6 @@ import android.util.Xml;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-
-
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-
-import android.util.Log;
-import android.util.Xml;
 
 import java.io.IOException;
 import java.io.StringReader;
