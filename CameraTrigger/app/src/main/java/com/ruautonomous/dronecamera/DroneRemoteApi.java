@@ -1,10 +1,10 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
 import android.util.Base64;
 import android.util.Log;
 
-import com.o3dr.dronecamera.utils.PictureStorage;
-import com.o3dr.dronecamera.utils.SimpleHttpClient;
+import com.ruautonomous.dronecamera.utils.PictureStorage;
+import com.ruautonomous.dronecamera.utils.SimpleHttpClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import com.o3dr.dronecamera.utils.ImageData;
+import com.ruautonomous.dronecamera.utils.ImageData;
 /**
  * Created by lie on 6/7/16.
  */

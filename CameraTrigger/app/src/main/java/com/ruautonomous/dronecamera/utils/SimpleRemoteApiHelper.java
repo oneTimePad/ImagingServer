@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera.utils;
+package com.ruautonomous.dronecamera.utils;
 
 
 /*
@@ -7,7 +7,7 @@ package com.o3dr.dronecamera.utils;
 
 import android.util.Log;
 
-import com.o3dr.dronecamera.QxRemoteApi;
+import com.ruautonomous.dronecamera.QxRemoteApi;
 
 import org.json.JSONArray;
 import org.json.JSONException;

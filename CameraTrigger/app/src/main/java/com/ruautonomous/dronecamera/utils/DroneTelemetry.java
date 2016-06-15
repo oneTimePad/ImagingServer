@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera.utils;
+package com.ruautonomous.dronecamera.utils;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -10,9 +10,9 @@ import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.interfaces.DroneListener;
 import com.o3dr.android.client.interfaces.TowerListener;
-import com.o3dr.dronecamera.DroneActivity;
+import com.ruautonomous.dronecamera.DroneActivity;
 
-import com.o3dr.dronecamera.R;
+import com.ruautonomous.dronecamera.R;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;

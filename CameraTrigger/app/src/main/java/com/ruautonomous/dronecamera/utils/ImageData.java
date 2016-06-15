@@ -1,9 +1,9 @@
-package com.o3dr.dronecamera.utils;
+package com.ruautonomous.dronecamera.utils;
 
 import android.util.Log;
 
-import com.o3dr.dronecamera.DroneActivity;
-import com.o3dr.dronecamera.SensorTracker;
+import com.ruautonomous.dronecamera.DroneActivity;
+import com.ruautonomous.dronecamera.SensorTracker;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 
 import org.json.JSONException;

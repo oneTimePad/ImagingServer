@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
 import android.app.AlertDialog;
 import android.app.Service;

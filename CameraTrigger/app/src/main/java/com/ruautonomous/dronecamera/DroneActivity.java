@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
 import java.io.IOException;
 import android.content.Context;
@@ -14,9 +14,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
-import com.o3dr.dronecamera.utils.DroneTelemetry;
-import com.o3dr.dronecamera.utils.ImageQueue;
-import com.o3dr.dronecamera.utils.PictureStorage;
+import com.ruautonomous.dronecamera.utils.DroneTelemetry;
+import com.ruautonomous.dronecamera.utils.ImageQueue;
+import com.ruautonomous.dronecamera.utils.PictureStorage;
 import android.view.Window;
 import android.view.WindowManager;
 import java.net.ConnectException;

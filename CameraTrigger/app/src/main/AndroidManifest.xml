@@ -1,25 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.o3dr.dronecamera" >
-    <uses-feature android:name="android.hardware.bluetooth"/>
-    <uses-feature android:name="android.hardware.camera" />
+    package="com.ruautonomous.dronecamera" >
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.hardware.camera.autofocus" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.BLUETOOTH"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
 
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="Drone Camera"
+        android:label="RUautonomous Drone Camera"
         android:theme="@style/AppTheme" >
         <activity
-            android:name="com.o3dr.dronecamera.DroneActivity"
-            android:label="Drone Camera"
+            android:name="com.ruautonomous.dronecamera.DroneActivity"
+            android:label="RUautonomous Drone Camera"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

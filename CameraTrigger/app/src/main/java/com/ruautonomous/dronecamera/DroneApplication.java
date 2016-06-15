@@ -1,10 +1,10 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
 import android.app.Application;
 
-import com.o3dr.dronecamera.utils.DroneTelemetry;
-import com.o3dr.dronecamera.utils.ImageQueue;
-import com.o3dr.dronecamera.utils.PictureStorage;
+import com.ruautonomous.dronecamera.utils.DroneTelemetry;
+import com.ruautonomous.dronecamera.utils.ImageQueue;
+import com.ruautonomous.dronecamera.utils.PictureStorage;
 
 /**
  * Created by lie on 6/14/16.

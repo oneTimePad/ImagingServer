@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
 /**
  * Created by lie on 6/8/16.
@@ -6,7 +6,7 @@ package com.o3dr.dronecamera;
 
 import android.util.Log;
 
-import com.o3dr.dronecamera.utils.SimpleHttpClient;
+import com.ruautonomous.dronecamera.utils.SimpleHttpClient;
 
 import org.json.JSONArray;
 import org.json.JSONException;

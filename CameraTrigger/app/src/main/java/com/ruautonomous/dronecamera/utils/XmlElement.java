@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera.utils;
+package com.ruautonomous.dronecamera.utils;
 
 /*
  * Copyright 2014 Sony Corporation

@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
 import android.os.Handler;
 import android.os.HandlerThread;

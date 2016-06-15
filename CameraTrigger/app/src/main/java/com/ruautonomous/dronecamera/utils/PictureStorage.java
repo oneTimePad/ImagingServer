@@ -1,13 +1,10 @@
-package com.o3dr.dronecamera.utils;
+package com.ruautonomous.dronecamera.utils;
 
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
-
-import com.o3dr.dronecamera.DroneActivity;
-
-
+import com.ruautonomous.dronecamera.DroneActivity;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;

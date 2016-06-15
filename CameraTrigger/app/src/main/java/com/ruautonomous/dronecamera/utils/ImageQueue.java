@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera.utils;
+package com.ruautonomous.dronecamera.utils;
 
 import android.util.Log;
 

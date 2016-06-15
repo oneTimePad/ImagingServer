@@ -1,10 +1,11 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
+import android.content.Intent;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
-import com.o3dr.dronecamera.utils.ImageQueue;
+import com.ruautonomous.dronecamera.utils.ImageQueue;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -89,11 +90,11 @@ public class GroundStationHThread extends HandlerThread {
                     if (response != null && response.has("trigger")){
 
                             try {
-                                if (response.get("trigger") == 1 && response.has("time")) {
+                                if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
                                     DroneActivity.app.getCameraTriggerThread().setTriggerTime(Double.parseDouble(response.get("time").toString()));
                                     DroneActivity.app.getCameraTriggerThread().startCapture();
                                 }
-                                else if (response.get("trigger") == 0)
+                                else if (Integer.parseInt(response.getString("trigger")) == 0)
                                     DroneActivity.app.getCameraTriggerThread().stopCapture();
                             }
                             catch (JSONException e){

@@ -4,7 +4,7 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     android:orientation="vertical"
-    android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".MainActivity"
+    android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".DroneActivity"
     android:weightSum="1">
 
     <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -20,48 +20,29 @@
 
     </FrameLayout>
 
-
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp">
+        android:orientation="vertical">
+    <EditText
 
-        <Button
-            android:layout_marginRight="70dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Remote"
-            android:textSize="30dp"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:onClick="remoteCommunications"
-            android:id="@+id/remote"/>
-
-
-        <EditText
-
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:id="@+id/URL"
-            android:hint="@string/uriport"
-            android:layout_alignParentTop="true"
-            android:layout_toRightOf="@+id/remote"
-            android:minWidth="40dp"
-            android:nestedScrollingEnabled="true"
-            android:maxLength="20" />
-
-
-
-    </RelativeLayout>
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:id="@+id/URL"
+        android:hint="@string/ip"
+        android:layout_alignParentTop="true"
+        android:minWidth="40dp"
+        android:nestedScrollingEnabled="true"
+        android:maxLength="20" />
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/username"
         android:layout_gravity="center_horizontal"
-        android:hint="username" />
+        android:hint="@string/username"
+        />
 
     <EditText
         android:layout_width="match_parent"
@@ -69,7 +50,8 @@
         android:inputType="textPassword"
         android:ems="10"
         android:id="@+id/password"
-        android:hint="password" />
+        android:hint="@string/password" />
+    </LinearLayout>
 
     <RelativeLayout
         android:layout_width="wrap_content"
@@ -82,6 +64,14 @@
             android:text="Connect"
             android:id="@+id/droneconnect" />
 
+        <Button
+            android:layout_marginRight="70dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Remote"
+            android:onClick="remoteCommunications"
+            android:id="@+id/remote"
+            android:layout_toRightOf="@+id/droneconnect" />
 
 
     </RelativeLayout>

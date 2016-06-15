@@ -1,11 +1,11 @@
-package com.o3dr.dronecamera;
+package com.ruautonomous.dronecamera;
 
 import android.app.Application;
 import android.util.Log;
 
-import com.o3dr.dronecamera.utils.DroneTelemetry;
-import com.o3dr.dronecamera.utils.ImageData;
-import com.o3dr.dronecamera.utils.PictureStorage;
+import com.ruautonomous.dronecamera.utils.DroneTelemetry;
+import com.ruautonomous.dronecamera.utils.ImageData;
+import com.ruautonomous.dronecamera.utils.PictureStorage;
 
 import org.json.JSONArray;
 import org.json.JSONException;

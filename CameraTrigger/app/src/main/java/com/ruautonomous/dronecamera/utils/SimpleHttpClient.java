@@ -1,4 +1,4 @@
-package com.o3dr.dronecamera.utils;
+package com.ruautonomous.dronecamera.utils;
 
 
 
@@ -20,8 +20,6 @@ import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 
-
-import com.o3dr.dronecamera.JSONEncoder;
 
 import org.json.JSONException;
 import org.json.JSONObject;
