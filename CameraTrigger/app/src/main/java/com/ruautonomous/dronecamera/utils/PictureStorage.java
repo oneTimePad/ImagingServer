@@ -124,7 +124,7 @@ public class PictureStorage {
             @Override
             public void run() {
                 while(true){
-                    Log.i("ALIVE","ALIVE");
+                    //Log.i("ALIVE","ALIVE");
                     if(!imagePendingQueue.isEmpty()) {
                         synchronized (imagePendingQueue) {
                             HashMap<String, Object> image = imagePendingQueue.pop();

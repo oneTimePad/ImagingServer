@@ -43,7 +43,7 @@ public class ImageQueue {
         return hmap;
     }
     public boolean isEmpty(){
-        Log.i(TAG,"Empty");
+        //Log.i(TAG,"Empty");
         return pictureQueue.isEmpty();
     }
 

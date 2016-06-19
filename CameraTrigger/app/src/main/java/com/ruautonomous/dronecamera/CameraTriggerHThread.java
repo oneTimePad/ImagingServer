@@ -13,8 +13,8 @@ public class CameraTriggerHThread extends HandlerThread {
      */
         private Handler mHandler = null;
         double triggerTime =0.0;
-        private QXHandler qxHandler= null;
-        private boolean trigger = false;
+        public QXHandler qxHandler= null;
+        public boolean trigger = false;
         public long DEFAULT_TRIGGER_DELAY = 500;
         public String TAG = "CameraTriggerHThread";
 
@@ -43,12 +43,13 @@ public class CameraTriggerHThread extends HandlerThread {
         void startCapture(){
             if(trigger)return;
             if(triggerTime <= 0.0)return;
-            trigger = true;
+
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
 
-
+                    trigger = true;
+                    Log.i(TAG,"WTF");
                     //capture looop
                     while (trigger) {
 

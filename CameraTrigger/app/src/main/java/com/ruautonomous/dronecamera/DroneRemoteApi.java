@@ -52,7 +52,7 @@ public class DroneRemoteApi {
             responseData = SimpleHttpClient.httpPost(server+"/login",requestData,null);
 
             String token = responseData.getString("token");
-            access.put("accessToken",token);
+            access.put("accesstoken",token);
 
             //parse out expiration
             String[] token_split = token.split("\\.");
@@ -70,6 +70,7 @@ public class DroneRemoteApi {
                 Log.e(TAG,"Login failed");
                 throw  new IOException("DroneAPI: Authorization failed");
             }
+            Log.i(TAG,"Unknown error " + e.toString());
             throw new IOException("Unknown error"+e.toString());
         }
     }
@@ -83,11 +84,11 @@ public class DroneRemoteApi {
                 Log.w(TAG,"refresh requires a token to begin with");
                 throw  new IOException("DroneAPI: refresh need an old token");
             }
-            requestData.put("token", access.get("accessToken"));
+            requestData.put("token", access.get("accesstoken"));
             responseData =SimpleHttpClient.httpPost(server+"/refresh",requestData,null);
 
             String token = responseData.getString("token");
-            access.put("accessToken",token);
+            access.put("accesstoken",token);
 
             //parse out expiration
             String[] token_split = token.split("\\.");
@@ -150,8 +151,12 @@ public class DroneRemoteApi {
                 }
 
                 try{
-                    responseData =SimpleHttpClient.httpPostPicture(server+"/serverContact",requestData,imageName,imageBytes,access);
-
+                    if(image!=null) {
+                        responseData = SimpleHttpClient.httpPostPicture(server + "/serverContact", requestData, imageName, imageBytes, access);
+                    }
+                    else{
+                        responseData = SimpleHttpClient.httpPost(server+"/serverContact",requestData,access);
+                    }
                 }
                 catch (IOException e){
                     if(e.toString().contains("Response Error")){

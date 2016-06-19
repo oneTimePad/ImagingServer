@@ -54,7 +54,7 @@ public class DroneActivity extends ActionBarActivity {
 
         app = (DroneApplication)getApplication();
 
-        app.setContext((DroneActivity)getApplicationContext());
+        app.setContext(this);
 
         //settings up windows
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -100,10 +100,12 @@ public class DroneActivity extends ActionBarActivity {
         app.setSensorTracker(mSensor);
         mSensor.startSensors();
 
-        if(pictureStorage!=null && server!=null){
-            droneRemoteApi = new DroneRemoteApi();
-            app.setDroneRemoteApi(droneRemoteApi);
-        }
+        qxHandler = new QXHandler();
+        app.setQxHandler(qxHandler);
+        cameraTriggerThread = new CameraTriggerHThread();
+        app.setCameraTriggerHThread(cameraTriggerThread);
+
+
 
 
     }
@@ -147,7 +149,7 @@ public class DroneActivity extends ActionBarActivity {
                         alertUser("Drone connection succeeded");
                     }
                     catch (ConnectException e){
-                        alertUser("Drone conection failed");
+                        alertUser("Drone connection failed");
                     }
 
 
@@ -242,13 +244,6 @@ public class DroneActivity extends ActionBarActivity {
 
 
 
-
-
-
-
-
-
-
     //set up remote GCS commands for trigger and connect to drone
     public void remoteCommunications(View view){
 
@@ -260,6 +255,7 @@ public class DroneActivity extends ActionBarActivity {
             server = "192.168.2.1:2000";
             ed.setText(server,TextView.BufferType.EDITABLE);
             alertUser("Using Default IP:PORT");
+            alertUser("Using Default IP:PORT");
         }
         app.setServer(server);
 
@@ -270,6 +266,9 @@ public class DroneActivity extends ActionBarActivity {
             alertUser("Bad login");
             return;
         }
+
+        droneRemoteApi = new DroneRemoteApi();
+        app.setDroneRemoteApi(droneRemoteApi);
 
         if(groundStationHThread == null){
             groundStationHThread = new GroundStationHThread();
@@ -286,16 +285,6 @@ public class DroneActivity extends ActionBarActivity {
 
     }
 
-
-
-
-    private String getTime(){
-        long millis =System.currentTimeMillis();
-        String hms = String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
-                TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)),
-                TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
-        return  hms;
-    }
 
     //used for aleting user of messages
     public void alertUser(String message) {

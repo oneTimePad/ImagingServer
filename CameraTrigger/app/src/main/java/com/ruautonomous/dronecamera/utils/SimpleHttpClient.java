@@ -131,15 +131,15 @@ public final class SimpleHttpClient {
     }
 
 
-    public static JSONObject httpPostPicture(String url, JSONObject postData, String imageName, byte[] image, HashMap<String,String> authorzation)throws IOException{
-            return httpPostPicture(url,postData,imageName,image,authorzation,DEFAULT_READ_TIMEOUT);
+    public static JSONObject httpPostPicture(String url, JSONObject postData, String imageName, byte[] image, HashMap<String,String> authorization)throws IOException{
+            return httpPostPicture(url,postData,imageName,image,authorization,DEFAULT_READ_TIMEOUT);
 
 
 
     }
 
 
-    public static JSONObject httpPostPicture(String url, JSONObject postData,String imageName, byte[] image, HashMap<String,String> authorzation, int timeout)throws IOException{
+    public static JSONObject httpPostPicture(String url, JSONObject postData,String imageName, byte[] image, HashMap<String,String> authorization, int timeout)throws IOException{
         HttpURLConnection httpConn = null;
         InputStream inputStream = null;
         PrintWriter wrt = null;
@@ -159,8 +159,8 @@ public final class SimpleHttpClient {
         httpConn.setReadTimeout(timeout);
         httpConn.setDoInput(true);
         httpConn.setDoOutput(true);
-        if(authorzation!=null && authorzation.containsKey("accesstoken")) {
-            httpConn.setRequestProperty("Authorization", "JWT " + authorzation.get("accesstoken"));
+        if(authorization!=null && authorization.containsKey("accesstoken")) {
+            httpConn.setRequestProperty("Authorization", "JWT " + authorization.get("accesstoken"));
         }
         else{
             Log.e(TAG,"authorization required to make this method call");
@@ -316,9 +316,10 @@ public final class SimpleHttpClient {
             httpConn.setDoInput(true);
             httpConn.setDoOutput(true);
             httpConn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            if(authorization!=null) {
-                httpConn.setRequestProperty("Authorization", "JWT " + authorization.get("accessToken"));
+            if(authorization!=null && authorization.containsKey("accesstoken")) {
+                httpConn.setRequestProperty("Authorization", "JWT " + authorization.get("accesstoken"));
             }
+
             outputStream = httpConn.getOutputStream();
             writer = new OutputStreamWriter(outputStream, "UTF-8");
             writer.write(postData.toString());

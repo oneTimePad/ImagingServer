@@ -12,7 +12,7 @@ import com.ruautonomous.dronecamera.utils.PictureStorage;
 public class DroneApplication extends Application {
 
     public String server =null;
-    private QXHandler qxHandler;
+    private  QXHandler qxHandler;
     private DroneTelemetry droneTelem;
     private PictureStorage pictureStorage;
     private ImageQueue imageQueue;

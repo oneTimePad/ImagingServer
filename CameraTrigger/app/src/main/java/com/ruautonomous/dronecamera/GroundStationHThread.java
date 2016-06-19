@@ -54,52 +54,56 @@ public class GroundStationHThread extends HandlerThread {
         if(connect) return;
         if(timeout<=0.0)return;
         connect = true;
-        mHandler.post(new Runnable() {
+
+        Runnable task = new Runnable() {
             @Override
             public void run() {
                 try{
 
                     droneRemoteApi.getAccess(username,password);
                     connected = true;
-                    this.notify();
                 }
                 catch (IOException e){
                     connected = false;
+                    connect = false;
+
+                }
+                synchronized (this) {
+
                     this.notify();
-                    return;
                 }
 
                 while (connect){
                     HashMap<String,Object> image =null;
                     try{
-                      image= pendingUploadImages.pop();
+                        image= pendingUploadImages.pop();
                     }
                     catch (IndexOutOfBoundsException e){
                         //nothing
                     }
                     JSONObject response = null;
 
-                        try {
-                            response = droneRemoteApi.postServerContact(id, DroneActivity.app.getCameraTriggerThread().status(), image);
-                        }
-                        catch (IOException e){
-                            Log.e(TAG,"failed to post");
-                        }
+                    try {
+                        response = droneRemoteApi.postServerContact(id, DroneActivity.app.getCameraTriggerThread().status(), image);
+                    }
+                    catch (IOException e){
+                        Log.e(TAG,"failed to post");
+                    }
 
 
                     if (response != null && response.has("trigger")){
 
-                            try {
-                                if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
-                                    DroneActivity.app.getCameraTriggerThread().setTriggerTime(Double.parseDouble(response.get("time").toString()));
-                                    DroneActivity.app.getCameraTriggerThread().startCapture();
-                                }
-                                else if (Integer.parseInt(response.getString("trigger")) == 0)
-                                    DroneActivity.app.getCameraTriggerThread().stopCapture();
+                        try {
+                            if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
+                                DroneActivity.app.getCameraTriggerThread().setTriggerTime(Double.parseDouble(response.get("time").toString()));
+                                DroneActivity.app.getCameraTriggerThread().startCapture();
                             }
-                            catch (JSONException e){
-                                Log.e(TAG,e.toString());
-                            }
+                            else if (Integer.parseInt(response.getString("trigger")) == 0)
+                                DroneActivity.app.getCameraTriggerThread().stopCapture();
+                        }
+                        catch (JSONException e){
+                            Log.e(TAG,e.toString());
+                        }
                     }
 
                     try{
@@ -113,15 +117,18 @@ public class GroundStationHThread extends HandlerThread {
                 }
 
             }
-        });
-        //waitfor login
-        try {
-            this.wait();
+        };
+        mHandler.post(task);
+        synchronized (task) {
+            //waitfor login
+            try {
+                task.wait();
+            } catch (InterruptedException e) {
+                Log.e(TAG, e.toString());
+            }
         }
-        catch (InterruptedException e){
-            Log.e(TAG,e.toString());
-        }
-        if(!connect) throw new ConnectException("Logn Failed");
+
+        if(!connected) throw new ConnectException("Login Failed");
     }
 
 }
