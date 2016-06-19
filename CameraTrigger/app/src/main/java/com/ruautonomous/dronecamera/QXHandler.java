@@ -6,12 +6,14 @@ import android.util.Log;
 import com.ruautonomous.dronecamera.utils.DroneTelemetry;
 import com.ruautonomous.dronecamera.utils.ImageData;
 import com.ruautonomous.dronecamera.utils.PictureStorage;
+import com.ruautonomous.dronecamera.utils.QxRemoteApi;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +48,7 @@ public class QXHandler {
 
 
 
+
     }
 
     public boolean status(){ return connectionStatus;}
@@ -59,18 +62,22 @@ public class QXHandler {
     }
 
 
-    public void searchQx(){
+    public void searchQx() throws ConnectException{
         mSsdpClient = new SimpleSsdpClient();
         mSsdpClient.search(new SimpleSsdpClient.SearchResultHandler(){
 
             @Override
             public void onDeviceFound(final ServerDevice device){
+                Log.i(TAG,"qx found");
                 mTargetServer = device;
                 mRemoteApi = new QxRemoteApi(mTargetServer);
                 mEventObserver = new SimpleCameraEventObserver(app,mRemoteApi);
                 mEventObserver.activate();
                 prepareOpenConnection();
                 connectionStatus = true;
+                synchronized (mSsdpClient){
+                    mSsdpClient.notify();
+                }
 
             }
 
@@ -82,8 +89,22 @@ public class QXHandler {
             @Override
             public void onErrorFinished(){
                Log.e(TAG,"failed to find device");
+                synchronized (mSsdpClient){
+                    mSsdpClient.notify();
+                }
             }
         });
+
+        try{
+            synchronized (mSsdpClient) {
+                mSsdpClient.wait();
+            }
+        }
+        catch (InterruptedException e){
+            Log.e(TAG,"interrupeted on wait");
+        }
+
+        if(!connectionStatus) throw new ConnectException("failed to find device");
     }
 
     /**

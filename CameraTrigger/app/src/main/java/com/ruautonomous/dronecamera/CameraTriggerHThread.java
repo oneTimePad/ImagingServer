@@ -59,6 +59,7 @@ public class CameraTriggerHThread extends HandlerThread {
                         //wait given time interval
                         try {
                             qxHandler.capture();
+                            Log.i(TAG,"Capture");
                             //time at end of loop
                             long timeAfterCapture = System.currentTimeMillis();
                             //necessary delay
@@ -72,6 +73,8 @@ public class CameraTriggerHThread extends HandlerThread {
                                 //almost never gets executed...to stop crashes
                                 Thread.sleep(DEFAULT_TRIGGER_DELAY);
                             }
+
+
 
 
                         } catch (InterruptedException e) {

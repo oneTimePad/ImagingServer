@@ -5,6 +5,8 @@
     <string name="ip">GCS IP</string>
     <string name="username">username</string>
     <string name="password">password</string>
+    <string name="gcstitle">GCS Login</string>
+    <string name="qxtitle">QX Configure</string>
 
     <string-array name="drone_connection_types">
         <item>USB</item>

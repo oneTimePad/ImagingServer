@@ -1,6 +1,9 @@
 package com.ruautonomous.dronecamera;
 
 import java.io.IOException;
+
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.res.Resources;
@@ -99,18 +102,54 @@ public class DroneActivity extends ActionBarActivity {
         mSensor = new SensorTracker(getApplicationContext());
         app.setSensorTracker(mSensor);
         mSensor.startSensors();
-
         qxHandler = new QXHandler();
         app.setQxHandler(qxHandler);
         cameraTriggerThread = new CameraTriggerHThread();
         app.setCameraTriggerHThread(cameraTriggerThread);
+
+        searchQx();
+
+
 
 
 
 
     }
 
+    private void searchQx(){
+        if(qxHandler== null)return;;
+        final ProgressDialog searching = ProgressDialog.show(this,"","Searching for QX device...",true);
+        searching.setCancelable(false);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    qxHandler.searchQx();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            searching.hide();
+                            new AlertDialog.Builder(DroneActivity.this)
+                                    .setMessage("Found QX device!").show();
+                        }
+                    });
 
+                }
+                catch (ConnectException e){
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            searching.hide();
+                            new AlertDialog.Builder(DroneActivity.this)
+                                    .setMessage("Failed to find QX device!").show();
+                        }
+                    });
+
+                }
+            }
+        }).start();
+
+    }
 
 
     @Override
@@ -160,9 +199,7 @@ public class DroneActivity extends ActionBarActivity {
         findViewById(R.id.button_searchqx).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                    qxHandler = new QXHandler();
-                    app.setQxHandler(qxHandler);
-                    qxHandler.searchQx();
+                   searchQx();
             }
         });
 
@@ -170,7 +207,7 @@ public class DroneActivity extends ActionBarActivity {
         findViewById(R.id.button_triggerqx).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final double TRIGGER_TIME = 2000;
+                final double TRIGGER_TIME = 2;
                 if(qxHandler!=null && cameraTriggerThread == null){
                     cameraTriggerThread = new CameraTriggerHThread();
                     app.setCameraTriggerHThread(cameraTriggerThread);
@@ -236,6 +273,10 @@ public class DroneActivity extends ActionBarActivity {
             groundStationHThread.disconnect();
         }
 
+        if(cameraTriggerThread!=null && cameraTriggerThread.status()){
+            cameraTriggerThread.stopCapture();
+        }
+
         Log.i(TAG,"Destroyed");
         super.onDestroy();
 
@@ -275,10 +316,13 @@ public class DroneActivity extends ActionBarActivity {
             groundStationHThread.setTimeout(SERVER_TIMEOUT);
             try {
                 groundStationHThread.connect(username, password);
+                new AlertDialog.Builder(DroneActivity.this)
+                        .setMessage("Connection Successful!").show();
             }
             catch (ConnectException e){
                 groundStationHThread = null;
-                alertUser("Bad login");
+                new AlertDialog.Builder(DroneActivity.this)
+                        .setMessage("Connection Failed!").show();
                 return;
             }
         }

@@ -24,6 +24,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical">
+        <TextView
+            android:layout_marginTop="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="@string/gcstitle"
+            android:textStyle="bold"
+            android:textSize="20dp"
+            android:layout_marginBottom="10dp"/>
     <EditText
 
         android:layout_width="fill_parent"
@@ -61,14 +69,14 @@
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Connect"
+            android:text="MAV connect"
             android:id="@+id/droneconnect" />
 
         <Button
             android:layout_marginRight="70dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Remote"
+            android:text="GCS connect"
             android:onClick="remoteCommunications"
             android:id="@+id/remote"
             android:layout_toRightOf="@+id/droneconnect" />
@@ -95,26 +103,44 @@
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:id="@+id/lon" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
-
-        <Button
-            android:layout_width="wrap_content"
+        <TextView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/button_searchqx"
-            android:text="Search"/>
+            android:textSize="20dp"
+            android:textStyle="bold"
+            android:text="@string/qxtitle"
+            />
 
-        <Button
+        <RelativeLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/button_triggerqx"
-            android:text="Trigger QX"
-            android:layout_toRightOf="@+id/button_searchqx"/>
+            android:layout_height="wrap_content">
 
 
-    </RelativeLayout>
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/button_searchqx"
+                android:text="Search QX"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentLeft="true" />
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/button_triggerqx"
+                android:text="Trigger QX"
+                android:layout_toRightOf="@+id/button_searchqx"/>
+
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
 
     <!--
         <RelativeLayout

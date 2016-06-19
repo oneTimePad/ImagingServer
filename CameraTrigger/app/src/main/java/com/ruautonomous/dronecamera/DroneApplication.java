@@ -66,6 +66,7 @@ public class DroneApplication extends Application {
         this.groundStationHThread = groundStationHThread;
     }
 
+
     public DroneActivity getContext(){return context;}
 
     public String getServer(){ return server;}

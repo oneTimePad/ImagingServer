@@ -7,8 +7,6 @@ package com.ruautonomous.dronecamera.utils;
 
 import android.util.Log;
 
-import com.ruautonomous.dronecamera.QxRemoteApi;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

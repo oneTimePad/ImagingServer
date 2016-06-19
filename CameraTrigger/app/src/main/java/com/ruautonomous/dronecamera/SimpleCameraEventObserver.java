@@ -9,6 +9,8 @@ import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
 
+import com.ruautonomous.dronecamera.utils.QxRemoteApi;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
