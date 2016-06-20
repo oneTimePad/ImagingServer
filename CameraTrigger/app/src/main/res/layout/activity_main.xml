@@ -42,7 +42,8 @@
         android:layout_alignParentTop="true"
         android:minWidth="40dp"
         android:nestedScrollingEnabled="true"
-        android:maxLength="20" />
+        android:maxLength="20"
+        android:imeOptions="actionDone"/>
 
     <EditText
         android:layout_width="match_parent"
@@ -118,7 +119,47 @@
 
         <RelativeLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
+            android:layout_height="40dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Interval: "
+                android:textStyle="italic"
+                android:id="@+id/labelforinterval"
+                android:textSize="20dp"/>
+            <HorizontalScrollView
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:fillViewport="true"
+                android:layout_toRightOf="@+id/labelforinterval"
+                android:background="@drawable/scrollviewborder"
+
+
+                >
+                <TableLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    >
+                    <TableRow
+                        android:id="@+id/numericintervals"
+                        >
+
+                    </TableRow>
+
+                </TableLayout>
+            </HorizontalScrollView>
+
+
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            >
 
 
             <Button
@@ -129,12 +170,24 @@
                 android:layout_alignParentTop="true"
                 android:layout_alignParentLeft="true" />
 
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/button_triggerqx"
-                android:text="Trigger QX"
-                android:layout_toRightOf="@+id/button_searchqx"/>
+
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/button_triggerqx"
+                    android:text="Trigger QX"
+                    android:layout_toRightOf="@+id/button_searchqx"/>
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Stop Trigger QX"
+                    android:id="@+id/button_stoptriggerqx"
+                    android:layout_toRightOf="@+id/button_triggerqx"/>
+
+
+
 
 
         </RelativeLayout>

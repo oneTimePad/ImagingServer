@@ -111,13 +111,14 @@ public class DroneRemoteApi {
 
     }
 
-    public JSONObject postServerContact(String id,boolean triggering,HashMap<String,Object> image) throws IOException{
+    public JSONObject postServerContact(String id,boolean triggering,double time,HashMap<String,Object> image) throws IOException{
                 String imageName = null;
                 ImageData imageData = null;
                 JSONObject requestData = new JSONObject();
                 JSONObject responseData = null;
                 byte[] imageBytes = null;
                 if(image!=null) {
+
                     imageName = (String)image.get("pictureName") ;
                     imageData = (ImageData)image.get("pictureData");
 
@@ -141,7 +142,11 @@ public class DroneRemoteApi {
 
                 try{
                     requestData.put("id",id);
-                    requestData.put("triggering",triggering);
+                    if(triggering)
+                        requestData.put("trigger",1);
+                    else
+                        requestData.put("trigger",0);
+                    requestData.put("time",time);
 
                 }
                 catch (JSONException e) {

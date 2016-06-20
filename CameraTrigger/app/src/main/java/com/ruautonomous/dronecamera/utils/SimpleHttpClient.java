@@ -231,9 +231,7 @@ public final class SimpleHttpClient {
                 throw new IOException("Response Error:" + responseCode);
 
             }
-            wrt.close();
-            outputStream.close();
-            outputStreamWriter.close();
+
         } catch (final JSONException e) {
             Log.w(TAG, "httpPost: JSONException: " + url);
             throw new IOException();

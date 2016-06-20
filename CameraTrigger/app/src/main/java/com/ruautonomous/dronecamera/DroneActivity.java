@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
@@ -47,6 +48,9 @@ public class DroneActivity extends ActionBarActivity {
     public static DroneApplication app;
 
 
+    public int manualTriggerTime = 0;
+
+
 
 
 
@@ -64,6 +68,17 @@ public class DroneActivity extends ActionBarActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
+
+        /*
+        InputMethodManager inputManager =
+                (InputMethodManager) this.
+                        getSystemService(Context.INPUT_METHOD_SERVICE);
+
+
+        if(this.getCurrentFocus()!=null)
+         inputManager.hideSoftInputFromWindow(
+                this.getCurrentFocus().getWindowToken(),
+                InputMethodManager.HIDE_NOT_ALWAYS);*/
 
 
         //Here is the important stuff
@@ -151,6 +166,42 @@ public class DroneActivity extends ActionBarActivity {
 
     }
 
+    void hideKeyBoard(final View v){
+        v.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View view, int i, KeyEvent keyEvent) {
+                //on enter
+                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
+                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    //hide the keyboard
+                    mgr.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    void fillScrollView(final View v){
+        final int MAX_TRIGGER=10;
+        final int MIN_TRIGGER=1;
+        for(int i=MIN_TRIGGER; i<=MAX_TRIGGER; i++) {
+            TextView view = new TextView(this);
+            view.setText(" "+i+" ");
+            view.setTextSize(30);
+            view.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    manualTriggerTime = Integer.parseInt(((TextView)view).getText().toString().substring(1,2));
+                }
+            });
+            ((TableRow) v).addView(view);
+        }
+
+    }
+
+
+
 
     @Override
     protected void onResume() {
@@ -160,20 +211,10 @@ public class DroneActivity extends ActionBarActivity {
 
         final EditText ipText = (EditText)findViewById(R.id.URL);
         //make keyboard disappear at enter
-        ipText.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                //on enter
-                if ((keyEvent.getAction() == KeyEvent.ACTION_DOWN) && i == KeyEvent.KEYCODE_ENTER) {
-                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    //hide the keyboard
-                    mgr.hideSoftInputFromWindow(ipText.getWindowToken(), 0);
-                    return true;
-                }
-                return false;
-            }
-        });
-
+        hideKeyBoard(ipText);
+        hideKeyBoard(findViewById(R.id.username));
+        hideKeyBoard(findViewById(R.id.password));
+        fillScrollView(findViewById(R.id.numericintervals));
 
         findViewById(R.id.droneconnect).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -193,6 +234,7 @@ public class DroneActivity extends ActionBarActivity {
             }
         });
 
+
         findViewById(R.id.button_searchqx).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -204,18 +246,38 @@ public class DroneActivity extends ActionBarActivity {
         findViewById(R.id.button_triggerqx).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final double TRIGGER_TIME = 2;
+
+                if(qxHandler!=null &&!qxHandler.status()){
+                    alertUser("No QX device!");
+                    return;
+                }
+
                 if(qxHandler!=null && cameraTriggerThread == null){
                     cameraTriggerThread = new CameraTriggerHThread();
                     app.setCameraTriggerHThread(cameraTriggerThread);
 
                 }
                 else if(qxHandler!=null && !cameraTriggerThread.status()){
-                    cameraTriggerThread.setTriggerTime(TRIGGER_TIME);
+                    cameraTriggerThread.setTriggerTime((double)manualTriggerTime);
+                    cameraTriggerThread.startCapture();
+
+                }
+                else if(qxHandler!=null && cameraTriggerThread.status()){
+                    cameraTriggerThread.stopCapture();
+                    cameraTriggerThread.setTriggerTime((double)manualTriggerTime);
                     cameraTriggerThread.startCapture();
                 }
 
 
+            }
+        });
+
+        findViewById(R.id.button_stoptriggerqx).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(qxHandler!=null && cameraTriggerThread.status()){
+                    cameraTriggerThread.stopCapture();
+                }
             }
         });
 
@@ -328,7 +390,7 @@ public class DroneActivity extends ActionBarActivity {
 
     //used for aleting user of messages
     public void alertUser(String message) {
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
     }
 
 

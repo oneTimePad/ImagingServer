@@ -315,6 +315,8 @@ class DroneViewset(viewsets.ModelViewSet):
 			cache.set("checkallowed",True,None)
             #if no set its cache entry
 			cache.set("android","contacted",EXPIRATION)
+			cache.delete("trigger")
+			cache.delete("time")
 		else:
             #else delete the old one
 			cache.delete("android")
@@ -329,15 +331,15 @@ class DroneViewset(viewsets.ModelViewSet):
 			'''
 			if dataDict['triggering'] == 'true':
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-				redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true'})))
+				redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':dataDict['time']})))
 			elif dataDict['triggering']:
 				redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-				redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
-
-			#set cache to say that just send pic
-			if cache.has_key(androidId+"pic"):
-				cache.delete(androidId+"pic")
+				redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false','time':dataDict['time']})))
 			'''
+			#set cache to say that just send pic
+			#if cache.has_key(androidId+"pic"):
+			#	cache.delete(androidId+"pic")
+
             #form image dict
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt','timeTaken')}
 			imageData['fileName'] = IMAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
@@ -366,10 +368,9 @@ class DroneViewset(viewsets.ModelViewSet):
 
 
 		if not cache.has_key('trigger'):
-
-			cache.set("trigger",0,None)
+			cache.set("trigger",dataDict['trigger'],None)
 		if not cache.has_key('time'):
-			cache.set("time",0,None)
+			cache.set("time",dataDict['time'],None)
 
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())

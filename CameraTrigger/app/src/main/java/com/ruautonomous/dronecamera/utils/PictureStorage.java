@@ -43,6 +43,7 @@ public class PictureStorage {
     private ImageQueue imageUploadQueue;
     public String TAG ="PictureStorage";
     public final long CONSUMER_SLEEP_TIME= 500;
+    private boolean allowed = true;
 
 
 
@@ -130,7 +131,7 @@ public class PictureStorage {
         pendingPicFetcher = new Thread(new Runnable() {
             @Override
             public void run() {
-                while(true){
+                while(allowed){
                     //Log.i("ALIVE","ALIVE");
                     if(!imagePendingQueue.isEmpty()) {
                         synchronized (imagePendingQueue) {
@@ -171,8 +172,7 @@ public class PictureStorage {
     }
 
     public void close(){
-        if(pendingPicFetcher==null) return;
-        pendingPicFetcher.stop();
+        if(pendingPicFetcher!=null) allowed = false;
         if(fileWriter!=null) {
             try {
 

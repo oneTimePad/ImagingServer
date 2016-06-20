@@ -20,7 +20,7 @@ public class CameraTriggerHThread extends HandlerThread {
 
 
         CameraTriggerHThread(){
-            super("CamerTriggerHThread");
+            super("CameraTriggerHThread");
             start();
             mHandler = new Handler(getLooper());
             this.qxHandler = DroneActivity.app.getQxHandler();
@@ -33,6 +33,7 @@ public class CameraTriggerHThread extends HandlerThread {
 
         void stopCapture(){
             trigger = false;
+            DroneActivity.app.getContext().alertUser("Capture Stopped");
         }
 
         boolean status(){
@@ -42,14 +43,18 @@ public class CameraTriggerHThread extends HandlerThread {
         //tell thread to start capturing
         void startCapture(){
             if(trigger)return;
-            if(triggerTime <= 0.0)return;
+            if(triggerTime <= 0.0){
+                DroneActivity.app.getContext().alertUser("Bad Trigger Time");
+                return;
+            }
+            DroneActivity.app.getContext().alertUser("Capture Start at "+triggerTime);
 
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
 
                     trigger = true;
-                    Log.i(TAG,"WTF");
+
                     //capture looop
                     while (trigger) {
 

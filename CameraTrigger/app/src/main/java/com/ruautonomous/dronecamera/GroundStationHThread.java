@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
+import com.ruautonomous.dronecamera.utils.DroneTelemetry;
 import com.ruautonomous.dronecamera.utils.ImageQueue;
 
 import org.json.JSONException;
@@ -77,6 +78,7 @@ public class GroundStationHThread extends HandlerThread {
                     HashMap<String,Object> image =null;
                     try{
                         image= pendingUploadImages.pop();
+
                     }
                     catch (IndexOutOfBoundsException e){
                         //nothing
@@ -84,7 +86,7 @@ public class GroundStationHThread extends HandlerThread {
                     JSONObject response = null;
 
                     try {
-                        response = droneRemoteApi.postServerContact(id, DroneActivity.app.getCameraTriggerThread().status(), image);
+                        response = droneRemoteApi.postServerContact(id, DroneActivity.app.getCameraTriggerThread().status(), DroneActivity.app.getCameraTriggerThread().triggerTime, image);
                     }
                     catch (IOException e){
                         Log.e(TAG,"failed to post");
