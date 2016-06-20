@@ -59,6 +59,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
         switch (event){
             case AttributeEvent.STATE_CONNECTED:
+                status = true;
                 context.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -69,6 +70,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
                 break;
             case AttributeEvent.STATE_DISCONNECTED:
+                status = false;
                 context.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -113,14 +115,14 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
     public void connect(){
         //if(!drone.isConnected()){
-            //Bundle extraParams = new Bundle();
-            //extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
-            //ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
-            //drone.connect(connnectionParams);
             Bundle extraParams = new Bundle();
-            extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default baud rate to 57600
-            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
-            drone.connect(connectionParams);
+            extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
+            ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
+            drone.connect(connnectionParams);
+            //Bundle extraParams = new Bundle();
+            //extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default baud rate to 57600
+            //ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
+            //drone.connect(connectionParams);
             Log.i(TAG, "attempted connection");
             //if(false){
              //   throw new ConnectException("Drone Connection Failed");

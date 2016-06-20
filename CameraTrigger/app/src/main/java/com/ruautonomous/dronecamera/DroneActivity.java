@@ -133,6 +133,7 @@ public class DroneActivity extends ActionBarActivity {
 
     private void searchQx(){
         if(qxHandler== null)return;;
+
         final ProgressDialog searching = ProgressDialog.show(this,"","Searching for QX device...",true);
         searching.setCancelable(false);
         new Thread(new Runnable() {

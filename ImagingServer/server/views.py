@@ -46,8 +46,8 @@ import pdb
 
 
 #constants from Environment Vars
-IMAGE_STORAGE = "http://localhost:80/PHOTOS"
-TARGET_STORAGE = "http://localhost:80/TARGETS"
+IMAGE_STORAGE = "http://localhost:8888/html/PHOTOS"
+TARGET_STORAGE = "http://localhost:8888/html/TARGETS"
 
 IMAGE  = os.getenv("IMAGE",IMAGE_STORAGE)
 TARGET = os.getenv("TARGET",TARGET_STORAGE)
@@ -55,7 +55,7 @@ TARGET = os.getenv("TARGET",TARGET_STORAGE)
 
 #important time constants
 PICTURE_SEND_DELAY = 7
-DRONE_DISCONNECT_TIMEOUT = 20
+DRONE_DISCONNECT_TIMEOUT = 50
 EXPIRATION = 10
 #can be removed for compeition
 connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
@@ -293,7 +293,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		global EXPIRATION
 		global DRONE_DISCONNECT_TIMEOUT
 		global GCS_SEND_TIMEOUT
-
+		#pdb.set_trace()
 		#fetch phone client information
 		dataDict = {}
 		androidId=0

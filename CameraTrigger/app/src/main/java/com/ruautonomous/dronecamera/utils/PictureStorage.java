@@ -145,6 +145,7 @@ public class PictureStorage {
                                 if (istream != null) {
                                     String imageFileName = writeToStorage(istream);
                                     //writeLog(imageData);
+                                    Log.i(TAG,imageData.toString());
                                     istream.close();
                                     synchronized (imageUploadQueue) {
                                         imageUploadQueue.push(imageFileName, imageData);

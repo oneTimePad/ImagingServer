@@ -91,11 +91,18 @@ public class GroundStationHThread extends HandlerThread {
                     catch (IOException e){
                         Log.e(TAG,"failed to post");
                     }
+                    try {
+                        Log.i(TAG, response.getString("trigger"));
+                    }
+                    catch (JSONException e){
 
+                    }
 
                     if (response != null && response.has("trigger")){
 
+
                         try {
+
                             if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
                                 DroneActivity.app.getCameraTriggerThread().setTriggerTime(Double.parseDouble(response.get("time").toString()));
                                 DroneActivity.app.getCameraTriggerThread().startCapture();
