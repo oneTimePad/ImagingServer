@@ -1,5 +1,6 @@
 package com.ruautonomous.dronecamera.utils;
 
+import android.util.AndroidException;
 import android.util.Log;
 
 import com.ruautonomous.dronecamera.DroneActivity;
@@ -29,7 +30,7 @@ public class ImageData extends JSONObject {
 
     public ImageData(long time) throws IOException{
         SensorTracker mSensor = DroneActivity.app.getSensorTracker();
-        DroneTelemetry droneTelem = DroneActivity.app.getDroneTelem();
+        final DroneTelemetry droneTelem = DroneActivity.app.getDroneTelem();
         //fetch data from sensors
         try {
             this.put("azimuth", mSensor.getAzimuth());

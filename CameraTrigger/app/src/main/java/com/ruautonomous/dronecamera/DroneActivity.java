@@ -183,13 +183,10 @@ public class DroneActivity extends ActionBarActivity {
 
                 }
                 else{
-                    try {
-                        droneTelem.connect();
-                        alertUser("Drone connection succeeded");
-                    }
-                    catch (ConnectException e){
-                        alertUser("Drone connection failed");
-                    }
+
+                    droneTelem.connect();
+
+
 
 
                 }

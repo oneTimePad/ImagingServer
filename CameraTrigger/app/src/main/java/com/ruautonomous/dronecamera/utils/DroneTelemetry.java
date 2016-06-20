@@ -46,6 +46,8 @@ public class DroneTelemetry implements DroneListener,TowerListener {
         drone = new Drone();
         controlTower = new ControlTower(DroneActivity.app.getContext());
         this.context = DroneActivity.app.getContext();
+        controlTower.connect(this);
+
     }
 
     public boolean status(){
@@ -60,7 +62,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                 context.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        ((Button)context.findViewById(R.id.droneconnect)).setText("Disconnect");
+                        ((Button)context.findViewById(R.id.droneconnect)).setText("MAV Disconnect");
                         context.alertUser("Connected!");
                     }
                 });
@@ -70,7 +72,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                 context.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        ((Button)context.findViewById(R.id.droneconnect)).setText("Connect");
+                        ((Button)context.findViewById(R.id.droneconnect)).setText("MAV Connect");
                     }
                 });
 
@@ -109,19 +111,23 @@ public class DroneTelemetry implements DroneListener,TowerListener {
         }
     }
 
-    public void connect() throws ConnectException{
-        if(!drone.isConnected()){
+    public void connect(){
+        //if(!drone.isConnected()){
+            //Bundle extraParams = new Bundle();
+            //extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
+            //ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
+            //drone.connect(connnectionParams);
             Bundle extraParams = new Bundle();
-            extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
-            ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
-            drone.connect(connnectionParams);
+            extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default baud rate to 57600
+            ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
+            drone.connect(connectionParams);
             Log.i(TAG, "attempted connection");
-            if(!drone.isConnected()){
-                throw new ConnectException("Drone Connection Failed");
-            }
-            Log.i(TAG,"connection successful");
+            //if(false){
+             //   throw new ConnectException("Drone Connection Failed");
+            //}
+            //Log.i(TAG,"connection successful");
 
-        }
+//        }
     }
 
     public void disconnect(){
@@ -147,6 +153,13 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
 
     public void onDroneConnectionFailed(ConnectionResult result){
+        context.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                context.alertUser("connection failed!");
+            }
+        });
+
         Log.w(TAG,"connection failed");
     }
 
@@ -158,6 +171,13 @@ public class DroneTelemetry implements DroneListener,TowerListener {
     public void onTowerConnected(){
         controlTower.registerDrone(drone,handler);
         drone.registerDroneListener(this);
+
+        context.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                context.alertUser("3DR Services Connected!");
+            }
+        });
         Log.i(TAG,"3DR services connected");
     }
 
