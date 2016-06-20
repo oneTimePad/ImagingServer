@@ -296,7 +296,6 @@ public class DroneActivity extends ActionBarActivity {
             server = "192.168.2.1:2000";
             ed.setText(server,TextView.BufferType.EDITABLE);
             alertUser("Using Default IP:PORT");
-            alertUser("Using Default IP:PORT");
         }
         app.setServer(server);
 

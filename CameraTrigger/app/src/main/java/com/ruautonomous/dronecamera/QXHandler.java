@@ -510,12 +510,13 @@ public class QXHandler {
                         return;
                     }
 
-                    Log.i("REAL",postImageUrl);
+                    //Log.i("REAL",postImageUrl);
                     pictureStorage.writePicture(postImageUrl,imageData);
+                    pictureStorage.writeLog(imageData);
 
-                    Log.i("IMAGE","STORED"+System.currentTimeMillis()/1000+"::"+up);
-                    up++;
-                    Log.i("CAPTUREWATCH","took "+up);
+                    //Log.i("IMAGE","STORED"+System.currentTimeMillis()/1000+"::"+up);
+                    //up++;
+                    //Log.i("CAPTUREWATCH","took "+up);
 
 
 
