@@ -91,12 +91,7 @@ public class GroundStationHThread extends HandlerThread {
                     catch (IOException e){
                         Log.e(TAG,"failed to post");
                     }
-                    try {
-                        Log.i(TAG, response.getString("trigger"));
-                    }
-                    catch (JSONException e){
 
-                    }
 
                     if (response != null && response.has("trigger")){
 

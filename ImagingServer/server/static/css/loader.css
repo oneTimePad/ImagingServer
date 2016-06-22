@@ -19,6 +19,15 @@
         width:50%;
         float:left;
     }
+
+.box{
+   width:100px;
+   height:100px;
+}
+
+.red{
+  background-color:#f00;
+}
     #right-panel
     {
         background-color:transparent;

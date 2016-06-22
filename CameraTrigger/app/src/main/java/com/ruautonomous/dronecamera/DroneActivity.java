@@ -144,7 +144,7 @@ public class DroneActivity extends ActionBarActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            searching.hide();
+                            searching.dismiss();
                             new AlertDialog.Builder(DroneActivity.this)
                                     .setMessage("Found QX device!").show();
                         }
@@ -155,7 +155,7 @@ public class DroneActivity extends ActionBarActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            searching.hide();
+                            searching.dismiss();
                             new AlertDialog.Builder(DroneActivity.this)
                                     .setMessage("Failed to find QX device!").show();
                         }

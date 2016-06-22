@@ -33,7 +33,7 @@ public class CameraTriggerHThread extends HandlerThread {
 
         void stopCapture(){
             trigger = false;
-            DroneActivity.app.getContext().alertUser("Capture Stopped");
+            //DroneActivity.app.getContext().alertUser("Capture Stopped");
         }
 
         boolean status(){

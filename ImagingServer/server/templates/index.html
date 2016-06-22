@@ -373,30 +373,33 @@ function PictureArray(){
 	function parseWebSkt(response){
 		//parse json server response
 		var json_response = JSON.parse(response);
+
 		if (json_response.hasOwnProperty("disconnected")) {
+			console.log(json_response);
 			//bootbox.alert("Android Device Disconnected");
-			if(document.getElementById("connectinfo").text =="Disconnected"){
-				return;
-			}
-			$("span.label").toggleClass("label-warning");
-			$("#connectinfo").html("Disconnected");
+
+			document.getElementById("connectinfo").class="box red";
+
 		}
 		else if (json_response.hasOwnProperty("connected")) {
+			console.log(json_response);
 			//bootbox.alert("Android Device Connected");
-			if(document.getElementById("connectinfo").text =="Connected"){
-				return;
-			}
-			$("span.label").toggleClass("label-success");
-			$("#connectinfo").html("Connected");
+
+
+			document.getElementById("connectinfo").className="box green";
 		}
 
 		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
 			$("#trigger_on").html("Stop Triggering");
 			document.getElementById("trigger_on").value = 0;
+			if(json_response.hasOwnProperty("time")){
+					document.getElementById("timeinfo").text=json_response['time'];
+			}
 		}
 		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false"){
 			$("#trigger_on").html("Start Triggering");
 			document.getElementById("trigger_on").value = 1;
+			document.getElementById("timeinfo").text="0";
 		}
 		else if (json_response.hasOwnProperty("target") && json_response["target"] == "create") {
 			var div = document.createElement("div");
@@ -504,7 +507,9 @@ function PictureArray(){
 
 	//wanna do some testing before I add this
 	function loop(){
-			looping = setInterval(function(){image_cache.next();},$("#loop_interval").val()*1000);
+			if(image_cache!=null){
+				looping = setInterval(function(){image_cache.next();},$("#loop_interval").val()*1000);
+			}
 	}
 
 	function stoploop(){
@@ -673,13 +678,13 @@ function PictureArray(){
 			var lat = pic_curr_props.lat;
 			var latdeg = Math.trunc(lat);
 			var latmin = Math.trunc((lat-latdeg)*60);
-			var latsec = Math.trunc((((lat-latdeg)*60)-latmin)*3600);
+			var latsec = Math.trunc((((lat-latdeg)*60)-latmin)*60);
 
 
 			var lon = pic_curr_props.lon;
 			var londeg = Math.trunc(lon);
 			var lonmin = Math.trunc((lon-londeg)*60);
-			var lonsec = Math.trunc((((lon-londeg)*60)-lonmin)*3600);
+			var lonsec = Math.trunc((((lon-londeg)*60)-lonmin)*60);
 
 
 			$("#focus-type").text("Picture Data");
@@ -691,9 +696,9 @@ function PictureArray(){
 				.append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
 				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>")
-				.append("<tr><td>TimeTaken</td><td>"+pic_curr_props.timeTaken+"</td></tr>")
-				.append("<tr><td>TimeReceived</td><td>"+pic_curr_props.timeReceived+"</td></tr>")
-				.append("<tr><td>TimeSent</td><td>"+timeSent+"</td></tr>");
+				.append("<tr><td>Taken</td><td>"+pic_curr_props.timeTaken+"</td></tr>")
+				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>");
+
 				//Add orientation
 			PictureArray.prototype.allow = true;
 		}
@@ -731,15 +736,15 @@ function PictureArray(){
 
 
 				$("#focus-data").empty()
-					.append("<tr><td>Shape</td><td>"+json.shape+"</td></tr>")
-					.append("<tr><td>Letter</td><td>"+json.alphanumeric+"</td></tr>")
-					.append("<tr><td>Color</td><td>"+json.background_color+"</td></tr>")
-					.append("<tr><td>Letter Color</td><td>"+json.alphanumeric_color+"</td></tr>")
-					.append("<tr><td>Orientation</td><td>"+json.orientation+"</td></tr>")
-					.append("<tr><td>Latitude</td><td>"+latdeg+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
-					.append("<tr><td>Longitude</td><td>"+londeg+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
-					.append("<tr><td>Type</td><td>"+json.ptype+"</td></tr>")
-					.append("<tr><td>Description</td><td>"+json.description+"</td></tr>")
+					.append("<tr><td>Shape: </td><td>"+json.shape+"</td></tr>")
+					.append("<tr><td>Letter: </td><td>"+json.alphanumeric+"</td></tr>")
+					.append("<tr><td>Color: </td><td>"+json.background_color+"</td></tr>")
+					.append("<tr><td>Letter Color: </td><td>"+json.alphanumeric_color+"</td></tr>")
+					.append("<tr><td>Orientation: </td><td>"+json.orientation+"</td></tr>")
+					.append("<tr><td>Latitude:</td><td>"+latdeg+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
+					.append("<tr><td>Longitude: </td><td>"+londeg+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
+					.append("<tr><td>Type: </td><td>"+json.ptype+"</td></tr>")
+					.append("<tr><td>Description:</td><td>"+json.description+"</td></tr>")
 					.append("<tr><td><button id='targsubmit' onclick='tsubmit(" + pk+");' class='btn btn-primary'>Submit Target</button></td></tr>");
 				$("#lpalette").val(json.alphanumeric_color);
 				$("#palette").val(json.background_color);
@@ -942,7 +947,7 @@ $(function(){
 		else{
 			//disable
 			stoploop();
-			$(this).html("loop");
+			$(this).html("Loop Pictures");
 		  this.value=1;
 		}
 	});
@@ -1002,26 +1007,38 @@ $(function(){
 
 	<nav id="navbar">
 		<div class="title">RU Autonomous</div>
-		<div class="form">
 
-			<form>
-				<label> <span id="connectinfo" class="label-warning">Disconnected</span></label>
-				<label for="time_interval">Trigger Time</label>
-				<input id="time_interval" type="text" value="0"/>
-				<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-				<!--<button onlick="interop_login();return false;" class="btn btn-primary">Interop Login</button>-->
-				<input id="loop_interval" maxlength=10 type="text" value="3"/>
-				<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop</button>
-				<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
-				<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
-				<!--<button onclick="set_smart_trigger();" class="btn btn-primary" name="smart_trigger" type="button" id="smart_trigger" value="0">Smart Trigger on</button>-->
 
-			</form>
-			<form method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-				{% csrf_token %}
-				<button type="submit" class="btn btn-primary">Logout</button>
-			</form>
+
+			<div class="form">
+
+
+
+
+
+						<form >
+
+									<input id="time_interval" type="number" value="0"/>
+
+									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+
+									<input id="loop_interval"  type="number" value="0"/>
+
+									<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button>
+
+									<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
+
+									<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
+
+							</form>
+							<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+								{% csrf_token %}
+								<button type="submit" class="btn btn-primary">Logout</button>
+							</form>
+
+
 		</div>
+
 	</nav>
 
 	<div id="left-panel">
@@ -1031,11 +1048,13 @@ $(function(){
 				<table>
 					{{form.as_table}}
 					<tr id ="bkcolor">
-						<th><label for="palette">Background Color</label></th>
+
+							<th><label for="palette">Background Color:</label></th>
+
 						<td><input name="background_color" value="black" type="text" id="palette"/></td>
 					</tr>
 					<tr id="ltcolor">
-						<th><label for="lpalette">Letter Color</label></th>
+						<th><label for="lpalette">Letter Color:</label></th>
 						<td><input name="alphanumeric_color" type="text" value="black" id="lpalette"/></td>
 					</tr>
 
@@ -1045,7 +1064,9 @@ $(function(){
 		</div>
 		<div id="data">
 			<h3 id="focus-type">Picture Data</h3>
-			<table id="focus-data"></table>
+
+				<table id="focus-data"></table>
+
 		</div>
 	</div>
 
@@ -1056,7 +1077,31 @@ $(function(){
 			<img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
  	</div>
 	</div>
-	<div id="targets"></div>
+
+
+
+
+
+
+	<div id="info">
+		<fieldset class="schedule-border">
+			<legend class="scheduler-border">Phone Status</legend>
+			<form>
+				<div>
+					<label for="connectinfo">GCS connection:    </label>
+					<input  id="connectinfo" class="box red"></input>
+				</div>
+				<div>
+					<label for="timeinfo">Trigger time:   </label>
+					<span ><b id="timeinfo">0</b></span>
+			</form>
+
+		</fieldset>
+		<h3 id="target-label">Targets</h3>
+		<div id="targets">
+
+		</div>
+	</div>
 
 </body>
 

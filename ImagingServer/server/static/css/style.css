@@ -42,9 +42,11 @@ nav .form {
 nav form {
   display: inline-block;
 }
-#time_interval {
+#time_interval,#loop_interval {
   max-width:5em;
 }
+
+
 /*set a max height for the following with JS*/
 #left-panel {
   width: 20%;
@@ -57,13 +59,20 @@ nav form {
   display: inline-block;
   float: left;
 }
-#targets {
+#info{
   width: 15%;
   display: inline-block;
   float: right;
-  overflow-y: scroll;
-  padding: 0px 10px;
+
+  padding: 5px 10px;
 }
+#targets {
+
+  overflow-y: scroll;
+
+}
+
+
 
 #form {
   display: inline-block;
@@ -104,6 +113,35 @@ img.sent {
 img.selected {
   border: 4px solid orange;
 }
+
+#id_alphanumeric {
+  max-width: 100px;
+}
+
+
+
+#id_description {
+  max-width: 100px;
+}
+
+.box{
+   width:10px;
+   height:10px;
+   border: 2px solid;
+}
+
+.red{
+  background-color:#f00;
+}
+
+.green{
+  background-color:#0f0;
+}
+
+#focus-data,td,tr{
+  border: 1px solid black;
+}
+
 
 
 label {

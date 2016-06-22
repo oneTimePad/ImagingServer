@@ -1,5 +1,5 @@
 #!/bin/sh
-rm db.sqlite3
+
 rm -rf server/migrations/*
 ./manage.py flush
 ./manage.py makemigrations server
