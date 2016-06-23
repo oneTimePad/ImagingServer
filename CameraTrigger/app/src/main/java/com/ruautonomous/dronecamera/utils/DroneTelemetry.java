@@ -140,10 +140,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                 DroneActivity.app.getContext().alertUser("Select Connection Type");
             }
             Log.i(TAG, "attempted connection");
-            //if(false){
-             //   throw new ConnectException("Drone Connection Failed");
-            //}
-            //Log.i(TAG,"connection successful");
+
 
         }
     }

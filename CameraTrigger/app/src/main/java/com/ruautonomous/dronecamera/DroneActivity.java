@@ -281,27 +281,31 @@ public class DroneActivity extends ActionBarActivity {
         findViewById(R.id.button_triggerqx).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                synchronized (cameraTriggerThread) {
+                    if (qxHandler != null && !qxHandler.status()) {
+                        alertUser("No QX device!");
+                        return;
+                    }
 
-                if(qxHandler!=null &&!qxHandler.status()){
-                    alertUser("No QX device!");
-                    return;
-                }
+                    if (qxHandler != null && cameraTriggerThread == null) {
+                        cameraTriggerThread = new CameraTriggerHThread();
+                        app.setCameraTriggerHThread(cameraTriggerThread);
 
-                if(qxHandler!=null && cameraTriggerThread == null){
-                    cameraTriggerThread = new CameraTriggerHThread();
-                    app.setCameraTriggerHThread(cameraTriggerThread);
+                    } else if (qxHandler != null && !cameraTriggerThread.status()) {
+                        cameraTriggerThread.setTriggerTime((double) manualTriggerTime);
+                        try {
+                            cameraTriggerThread.startCapture();
+                            ((Button) v).setText(R.string.stopcapture);
 
-                }
-                else if(qxHandler!=null && !cameraTriggerThread.status()){
-                    cameraTriggerThread.setTriggerTime((double)manualTriggerTime);
-                    cameraTriggerThread.startCapture();
-                    ((Button)v).setText(R.string.stopcapture);
+                        }
+                        catch (IOException e){
 
-                }
-                else if(qxHandler!=null && cameraTriggerThread.status()){
-                    cameraTriggerThread.stopCapture();
-                    ((Button)v).setText(R.string.startcapture);
+                        }
+                    } else if (qxHandler != null && cameraTriggerThread.status()) {
+                        cameraTriggerThread.stopCapture();
+                        ((Button) v).setText(R.string.startcapture);
 
+                    }
                 }
 
 
@@ -421,6 +425,7 @@ public class DroneActivity extends ActionBarActivity {
                 groundStationHThread.connect(username, password);
                 new AlertDialog.Builder(DroneActivity.this)
                         .setMessage("Connection Successful!").show();
+                ((Button)view).setText(R.string.gcsdisconnect);
             }
             catch (ConnectException e){
                 groundStationHThread = null;
@@ -428,6 +433,13 @@ public class DroneActivity extends ActionBarActivity {
                         .setMessage("Connection Failed!").show();
                 return;
             }
+
+        }
+
+        else if(groundStationHThread!=null){
+            groundStationHThread.disconnect();
+            groundStationHThread = null;
+            ((Button)view).setText(R.string.gcsconnect);
         }
 
     }

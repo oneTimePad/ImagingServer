@@ -5,7 +5,7 @@
     <string name="ip">GCS IP</string>
     <string name="username">username</string>
     <string name="password">password</string>
-    <string name="gcstitle">GCS Login</string>
+    <string name="gcstitle">GCS Connect</string>
     <string name="qxtitle">QX Configure</string>
     <string name="telemtitle">MAV Configure</string>
     <string name="gcsconnect">GCS connect</string>
@@ -22,6 +22,7 @@
     <string name="stopcapture">Stop Capture</string>
     <string name="mavdisconnect">MAV Disconnect</string>
     <string name="zero">0</string>
+    <string name="gcsdisconnect">GCS Disconnect</string>
 
 
     <string-array name="drone_connection_types">

@@ -92,9 +92,12 @@ public class GroundStationHThread extends HandlerThread {
                     synchronized (qxHandler){
                         connectionStatus = qxHandler.status();
                     }
-
+                    CameraTriggerHThread cameraTriggerHThread = DroneActivity.app.getCameraTriggerThread();
                     try {
-                        response = droneRemoteApi.postServerContact(id, connectionStatus, DroneActivity.app.getCameraTriggerThread().status(), DroneActivity.app.getCameraTriggerThread().triggerTime, image);
+
+                        synchronized (cameraTriggerHThread) {
+                            response = droneRemoteApi.postServerContact(id, connectionStatus, cameraTriggerHThread.status(), cameraTriggerHThread.triggerTime, image);
+                        }
                     }
                     catch (IOException e){
                         Log.e(TAG,"failed to post");
@@ -108,7 +111,12 @@ public class GroundStationHThread extends HandlerThread {
 
                             if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
                                 DroneActivity.app.getCameraTriggerThread().setTriggerTime(Double.parseDouble(response.get("time").toString()));
-                                DroneActivity.app.getCameraTriggerThread().startCapture();
+                                try {
+                                    DroneActivity.app.getCameraTriggerThread().startCapture();
+                                }
+                                catch (IOException e){
+                                    Log.e(TAG, "failed to start remote capture");
+                                }
                             }
                             else if (Integer.parseInt(response.getString("trigger")) == 0)
                                 DroneActivity.app.getCameraTriggerThread().stopCapture();

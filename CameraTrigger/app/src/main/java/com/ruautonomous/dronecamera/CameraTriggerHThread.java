@@ -4,6 +4,8 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
+import java.io.IOException;
+
 /**
  * Created by lie on 6/14/16.
  */
@@ -41,11 +43,11 @@ public class CameraTriggerHThread extends HandlerThread {
         }
 
         //tell thread to start capturing
-        void startCapture(){
+        void startCapture() throws IOException{
             if(trigger)return;
             if(triggerTime <= 0.0){
                 DroneActivity.app.getContext().alertUser("Bad Trigger Time");
-                return;
+                throw new IOException("bad trigger time");
             }
             DroneActivity.app.getContext().alertUser("Capture Start at "+triggerTime);
 
