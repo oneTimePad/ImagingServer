@@ -382,24 +382,33 @@ function PictureArray(){
 
 		}
 		else if (json_response.hasOwnProperty("connected")) {
-			console.log(json_response);
+
 			//bootbox.alert("Android Device Connected");
 
 
 			document.getElementById("connectinfo").className="box green";
+
+			if(json_response['qxStatus']==true){
+				document.getElementById("qxinfo").className="box green";
+			}
+			else{
+				document.getElementById("qxinfo").className="box red";
+			}
 		}
 
 		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
 			$("#trigger_on").html("Stop Triggering");
 			document.getElementById("trigger_on").value = 0;
 			if(json_response.hasOwnProperty("time")){
-					document.getElementById("timeinfo").text=json_response['time'];
+
+				//	document.getElementById("timeinfo").innerHtml=json_response['time']+"";
+					$("#timeinfo").html(json_response['time']+"");
 			}
 		}
 		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false"){
 			$("#trigger_on").html("Start Triggering");
 			document.getElementById("trigger_on").value = 1;
-			document.getElementById("timeinfo").text="0";
+				$("#timeinfo").html("0");
 		}
 		else if (json_response.hasOwnProperty("target") && json_response["target"] == "create") {
 			var div = document.createElement("div");
@@ -408,6 +417,7 @@ function PictureArray(){
 			image.className = "thumbnail";
 			image.src = json_response.image;
 			image.id = json_response.pk;
+
 			image.addEventListener("click", function(e) {
 				if (e.ctrlKey) {
 					//ctrl+clicking to select/toggle targets to send
@@ -1090,6 +1100,11 @@ $(function(){
 				<div>
 					<label for="connectinfo">GCS connection:    </label>
 					<input  id="connectinfo" class="box red"></input>
+				</div>
+
+				<div>
+					<label for="qxinfo"> QX connection: </label>
+					<input id="qxinfo" class="box red"></input>
 				</div>
 				<div>
 					<label for="timeinfo">Trigger time:   </label>

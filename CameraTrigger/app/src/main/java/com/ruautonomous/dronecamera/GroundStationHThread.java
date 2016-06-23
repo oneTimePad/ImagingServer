@@ -5,6 +5,8 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
+import com.o3dr.android.client.Drone;
+import com.o3dr.android.client.DroneApiListener;
 import com.ruautonomous.dronecamera.utils.DroneTelemetry;
 import com.ruautonomous.dronecamera.utils.ImageQueue;
 
@@ -85,8 +87,14 @@ public class GroundStationHThread extends HandlerThread {
                     }
                     JSONObject response = null;
 
+                    QXHandler qxHandler = DroneActivity.app.getQxHandler();
+                    boolean connectionStatus = false;
+                    synchronized (qxHandler){
+                        connectionStatus = qxHandler.status();
+                    }
+
                     try {
-                        response = droneRemoteApi.postServerContact(id, DroneActivity.app.getCameraTriggerThread().status(), DroneActivity.app.getCameraTriggerThread().triggerTime, image);
+                        response = droneRemoteApi.postServerContact(id, connectionStatus, DroneActivity.app.getCameraTriggerThread().status(), DroneActivity.app.getCameraTriggerThread().triggerTime, image);
                     }
                     catch (IOException e){
                         Log.e(TAG,"failed to post");

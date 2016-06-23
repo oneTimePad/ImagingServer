@@ -9,6 +9,8 @@ import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
 
+import com.o3dr.android.client.Drone;
+import com.o3dr.android.client.DroneApiListener;
 import com.ruautonomous.dronecamera.utils.QxRemoteApi;
 
 import org.json.JSONArray;
@@ -206,7 +208,10 @@ public class SimpleCameraEventObserver {
                     try {
                         // Call getEvent API.
                         JSONObject replyJson = mRemoteApi.getEvent(longPolling);
-
+                        QXHandler qxHandler =DroneActivity.app.getQxHandler();
+                        synchronized (qxHandler){
+                            qxHandler.setQXConnectionStatus(true);
+                        }
                         // Check error code at first.
                         int errorCode = findErrorCode(replyJson);
                         Log.d(TAG, "getEvent errorCode: " + errorCode);
@@ -293,6 +298,12 @@ public class SimpleCameraEventObserver {
                         // Occurs when the server is not available now.
                         Log.d(TAG, "getEvent timeout by client trigger.");
                         fireResponseErrorListener();
+                        QXHandler qxHandler =DroneActivity.app.getQxHandler();
+                        synchronized (qxHandler){
+                            qxHandler.setQXConnectionStatus(false);
+                        }
+
+
                         break MONITORLOOP;
                     } catch (JSONException e) {
                         Log.w(TAG, "getEvent: JSON format error. " + e.getMessage());

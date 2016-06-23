@@ -53,6 +53,8 @@ public class QXHandler {
 
     public boolean status(){ return connectionStatus;}
 
+    public void setQXConnectionStatus(boolean connectionStatus){ this.connectionStatus = connectionStatus;}
+
     public void capture(){
         takeAndFetchPicture();
     }

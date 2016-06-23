@@ -324,7 +324,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			cache.set("android","contacted",EXPIRATION)
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
+		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected', 'qxStatus': dataDict['qxStatus']})))
 
 		try:
             #attempt to make picture model entry
@@ -388,7 +388,7 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		if user is not None:
 			#if user is active log use in and return redirect
 			if user.is_active:
-				pdb.set_trace()
+
 				login(request,user)
 
 
