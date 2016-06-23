@@ -7,8 +7,9 @@ import android.app.Activity;
         import android.hardware.SensorEventListener;
         import android.hardware.SensorManager;
         import android.util.Log;
+import android.widget.TextView;
 
-        import java.io.Serializable;
+import java.io.Serializable;
 
 public class SensorTracker extends Activity implements SensorEventListener,Serializable {
     private final Context mContext;
@@ -189,7 +190,25 @@ public class SensorTracker extends Activity implements SensorEventListener,Seria
         azimuth = (float) Math.toDegrees(azimuth);
         pitch = (float) Math.toDegrees(prefValues[1]);
         roll = (float) Math.toDegrees(prefValues[2]);
+
+
     }
+
+    public void updateUI(){
+            DroneActivity.app.getContext().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    ((TextView)DroneActivity.app.getContext().findViewById(R.id.roll)).setText(getRoll()+"");
+                    ((TextView)DroneActivity.app.getContext().findViewById(R.id.pitch)).setText(getPitch()+"");
+                    ((TextView)DroneActivity.app.getContext().findViewById(R.id.azimuth)).setText(getAzimuth()+"");
+                }
+            });
+
+
+
+    }
+
+
 
     public float getAzimuth() {
         return azimuth;

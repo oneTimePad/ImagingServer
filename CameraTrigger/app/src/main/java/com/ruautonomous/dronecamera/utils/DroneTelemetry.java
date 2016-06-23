@@ -38,7 +38,9 @@ public class DroneTelemetry implements DroneListener,TowerListener {
     public DroneActivity context;
     public String TAG = "Telemtry";
     public final int UDP_PORT = 14550;
+    public CharSequence connectionType ="";
     private boolean status= false;
+
 
 
     public DroneTelemetry(){
@@ -52,6 +54,11 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
     public boolean status(){
         return status;
+    }
+
+    public void setConnectionType(CharSequence s){
+        this.connectionType = s;
+
     }
 
 
@@ -75,9 +82,9 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                     @Override
                     public void run() {
                         ((Button)context.findViewById(R.id.droneconnect)).setText("MAV Connect");
+
                     }
                 });
-
 
                 break;
 
@@ -115,14 +122,23 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
     public void connect(){
         if(!drone.isConnected()){
-            Bundle extraParams = new Bundle();
-            extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
-            ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
-            drone.connect(connnectionParams);
-            //Bundle extraParams = new Bundle();
-            //extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default baud rate to 57600
-            //ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
-            //drone.connect(connectionParams);
+
+            if(connectionType.equals("UDP")) {
+                Bundle extraParams = new Bundle();
+                extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
+                ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
+                drone.connect(connnectionParams);
+            }
+
+            else if(connectionType.equals("USB")) {
+                Bundle extraParams = new Bundle();
+                extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default baud rate to 57600
+                ConnectionParameter connectionParams = new ConnectionParameter(ConnectionType.TYPE_USB, extraParams, null);
+                drone.connect(connectionParams);
+            }
+            else{
+                DroneActivity.app.getContext().alertUser("Select Connection Type");
+            }
             Log.i(TAG, "attempted connection");
             //if(false){
              //   throw new ConnectException("Drone Connection Failed");
@@ -135,9 +151,19 @@ public class DroneTelemetry implements DroneListener,TowerListener {
     public void disconnect(){
         if(drone.isConnected()){
             drone.disconnect();
+            controlTower.unregisterDrone(drone);
+            controlTower.disconnect();
+            context.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    ((Button)context.findViewById(R.id.droneconnect)).setText("MAV Connect");
+
+                }
+            });
+            status = false;
         }
-        controlTower.unregisterDrone(drone);
-        controlTower.disconnect();
+
+
     }
 
     public LatLong dronePosition(){

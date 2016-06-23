@@ -7,6 +7,22 @@
     <string name="password">password</string>
     <string name="gcstitle">GCS Login</string>
     <string name="qxtitle">QX Configure</string>
+    <string name="telemtitle">MAV Configure</string>
+    <string name="gcsconnect">GCS connect</string>
+    <string name="altlabel">Altitude: </string>
+    <string name="latlabel">Latitude: </string>
+    <string name="lonlabel">Longitude: </string>
+    <string name="rolllabel">Roll: </string>
+    <string name="pitchlabel">Pitch: </string>
+    <string name="azimuthlabel">Azimuth: </string>
+    <string name="mavconnect">MAV connect</string>
+    <string name="interval">Interval:</string>
+    <string name="search">Search</string>
+    <string name="startcapture">Start Capture</string>
+    <string name="stopcapture">Stop Capture</string>
+    <string name="mavdisconnect">MAV Disconnect</string>
+    <string name="zero">0</string>
+
 
     <string-array name="drone_connection_types">
         <item>USB</item>

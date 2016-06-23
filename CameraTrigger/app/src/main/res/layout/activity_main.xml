@@ -5,114 +5,269 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:orientation="vertical"
     android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".DroneActivity"
-    android:weightSum="1">
+    android:weightSum="3">
 
-    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/layout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
 
-        <SurfaceView
-            android:id="@+id/surfaceView"
-            android:layout_width="1dp"
-            android:layout_height="1dp"
-            android:layout_gravity="center_horizontal|bottom" />
 
-    </FrameLayout>
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
-        <TextView
-            android:layout_marginTop="20dp"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="@string/gcstitle"
-            android:textStyle="bold"
-            android:textSize="20dp"
-            android:layout_marginBottom="10dp"/>
-    <EditText
 
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:id="@+id/URL"
-        android:hint="@string/ip"
-        android:layout_alignParentTop="true"
-        android:minWidth="40dp"
-        android:nestedScrollingEnabled="true"
-        android:maxLength="20"
-        android:imeOptions="actionDone"/>
-
-    <EditText
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/username"
-        android:layout_gravity="center_horizontal"
-        android:hint="@string/username"
-        />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:layout_weight="1"
+        android:id="@+id/first">
+                <TextView
 
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textPassword"
-        android:ems="10"
-        android:id="@+id/password"
-        android:hint="@string/password" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/gcstitle"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp"/>
+                <EditText
+
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:id="@+id/URL"
+                    android:inputType="textUri"
+                    android:hint="@string/ip"
+                    android:imeOptions="actionDone"/>
+
+                <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/username"
+                    android:layout_gravity="center_horizontal"
+                    android:hint="@string/username"
+                    />
+
+                <EditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:id="@+id/password"
+                    android:hint="@string/password" />
+
+
+                <Button
+                    android:layout_marginRight="70dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/gcsconnect"
+                    android:onClick="remoteCommunications"
+                    android:id="@+id/remote"
+
+                  />
+
+
+
     </LinearLayout>
 
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:id="@+id/second"
+        android:layout_weight="1"
+
+       >
+
+        <TextView
+            android:layout_marginTop="20dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/telemtitle"
+            android:textStyle="bold"
+
+            android:layout_marginBottom="10dp"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:baselineAligned="false"
+
+            android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/spinnerlayout"
+                    android:orientation="vertical">
+                    <Spinner
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/connectionType"
+                        >
+
+                    </Spinner>
+                </LinearLayout>
+
+                <LinearLayout
+
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/data"
+                    android:orientation="vertical"
+
+                   >
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/altlabel"
+                            android:textStyle="italic"
+                            android:id="@+id/altlabel"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?android:attr/textAppearanceSmall"
+                            android:id="@+id/alt"
+                            android:layout_toRightOf="@id/altlabel"
+                            android:text="@string/zero"/>
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/latlabel"
+                            android:text="@string/latlabel"
+                            android:textStyle="italic"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?android:attr/textAppearanceSmall"
+                            android:id="@+id/lat"
+                            android:layout_toRightOf="@+id/latlabel"
+                            android:text="@string/zero"/>
+
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:id="@+id/lonlabel"
+                                android:text="@string/lonlabel"
+                                android:textStyle="italic" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?android:attr/textAppearanceSmall"
+                                android:id="@+id/lon"
+                                android:layout_toRightOf="@+id/lonlabel"
+                                android:text="@string/zero"/>
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/rolllabel"
+                            android:text="@string/rolllabel"
+                            android:textStyle="italic" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?android:attr/textAppearanceSmall"
+                            android:id="@+id/roll"
+                            android:layout_toRightOf="@+id/rolllabel"
+                            android:text="@string/zero"/>
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/pitchlabel"
+                            android:text="@string/pitchlabel"
+                            android:textStyle="italic" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?android:attr/textAppearanceSmall"
+                            android:id="@+id/pitch"
+                            android:layout_toRightOf="@+id/pitchlabel"
+                            android:text="@string/zero"/>
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/azimuthlabel"
+                            android:text="@string/azimuthlabel"
+                            android:textStyle="italic" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?android:attr/textAppearanceSmall"
+                            android:id="@+id/azimuth"
+                            android:layout_toRightOf="@+id/azimuthlabel"
+                            android:text="@string/zero"/>
+                    </RelativeLayout>
+
+
+                </LinearLayout>
+
+        </LinearLayout>
 
         <Button
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="MAV connect"
+            android:text="@string/mavconnect"
             android:id="@+id/droneconnect" />
 
-        <Button
-            android:layout_marginRight="70dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="GCS connect"
-            android:onClick="remoteCommunications"
-            android:id="@+id/remote"
-            android:layout_toRightOf="@+id/droneconnect" />
 
 
-    </RelativeLayout>
+    </LinearLayout>
 
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:id="@+id/alt" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:id="@+id/lat" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:id="@+id/lon" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_weight="1"
+        >
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="20dp"
+
             android:textStyle="bold"
             android:text="@string/qxtitle"
             />
@@ -126,10 +281,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Interval: "
+                android:text="@string/interval"
                 android:textStyle="italic"
                 android:id="@+id/labelforinterval"
-                android:textSize="20dp"/>
+                />
             <HorizontalScrollView
                 android:layout_width="40dp"
                 android:layout_height="wrap_content"
@@ -166,7 +321,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/button_searchqx"
-                android:text="Search QX"
+                android:text="@string/search"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentLeft="true" />
 
@@ -176,56 +331,17 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/button_triggerqx"
-                    android:text="Trigger QX"
+                    android:text="@string/startcapture"
                     android:layout_toRightOf="@+id/button_searchqx"/>
-
-                <Button
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Stop Trigger QX"
-                    android:id="@+id/button_stoptriggerqx"
-                    android:layout_toRightOf="@+id/button_triggerqx"/>
-
-
-
 
 
         </RelativeLayout>
 
     </LinearLayout>
 
-
-    <!--
-        <RelativeLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-
-            <EditText
-                android:layout_width="152dp"
-                android:layout_height="wrap_content"
-                android:id="@+id/calAlt"
-                android:hint="Current Altitude" />
-
-            <EditText
-                android:layout_width="152dp"
-                android:layout_height="wrap_content"
-                android:id="@+id/calPressure"
-                android:hint="MSL Pressure"
-                android:layout_toRightOf="@+id/calAlt"/>
+    </LinearLayout>
 
 
-
-        </RelativeLayout>-->
-
-
-<!--
-    <Button
-        android:layout_width="174dp"
-        android:layout_height="wrap_content"
-        android:text="Calibrate Sensors"
-        android:id="@+id/calibrate"
-        android:layout_weight="0.08"
-        android:onClick="onCalibrate" />-->
 
 
 </LinearLayout>

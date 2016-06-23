@@ -2,6 +2,7 @@ package com.ruautonomous.dronecamera;
 
 import java.io.IOException;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -13,7 +14,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,6 +28,8 @@ import com.ruautonomous.dronecamera.utils.ImageQueue;
 import com.ruautonomous.dronecamera.utils.PictureStorage;
 import android.view.Window;
 import android.view.WindowManager;
+
+import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
 
@@ -49,6 +56,8 @@ public class DroneActivity extends ActionBarActivity {
 
 
     public int manualTriggerTime = 0;
+    public boolean accelUpdate = true;
+    public final long ACELL_UI_UPDATE_DELAY=2000;
 
 
 
@@ -201,14 +210,38 @@ public class DroneActivity extends ActionBarActivity {
 
     }
 
+    void setDroneConnectionSpinner(final View v){
+
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+                this,
+                R.array.drone_connection_types,android.R.layout.simple_spinner_item
+        );
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ((Spinner)v).setAdapter(adapter);
+        ((Spinner)v).setOnItemSelectedListener(new SpinnerActivity());
+
+    }
 
 
+    private class SpinnerActivity extends Activity implements AdapterView.OnItemSelectedListener {
+
+        public void onItemSelected(AdapterView<?> parent, View view,
+                                   int pos, long id) {
+            // An item was selected. You can retrieve the selected item using
+            droneTelem.setConnectionType((CharSequence)parent.getItemAtPosition(pos));
+        }
+
+        public void onNothingSelected(AdapterView<?> parent) {
+            // Another interface callback
+        }
+    }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-
+        accelUpdate = true;
 
         final EditText ipText = (EditText)findViewById(R.id.URL);
         //make keyboard disappear at enter
@@ -216,6 +249,7 @@ public class DroneActivity extends ActionBarActivity {
         hideKeyBoard(findViewById(R.id.username));
         hideKeyBoard(findViewById(R.id.password));
         fillScrollView(findViewById(R.id.numericintervals));
+        setDroneConnectionSpinner(findViewById(R.id.connectionType));
 
         findViewById(R.id.droneconnect).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -261,26 +295,35 @@ public class DroneActivity extends ActionBarActivity {
                 else if(qxHandler!=null && !cameraTriggerThread.status()){
                     cameraTriggerThread.setTriggerTime((double)manualTriggerTime);
                     cameraTriggerThread.startCapture();
+                    ((Button)v).setText(R.string.stopcapture);
 
                 }
                 else if(qxHandler!=null && cameraTriggerThread.status()){
                     cameraTriggerThread.stopCapture();
-                    cameraTriggerThread.setTriggerTime((double)manualTriggerTime);
-                    cameraTriggerThread.startCapture();
+                    ((Button)v).setText(R.string.startcapture);
+
                 }
 
 
             }
         });
 
-        findViewById(R.id.button_stoptriggerqx).setOnClickListener(new View.OnClickListener() {
+        new Thread(new Runnable() {
             @Override
-            public void onClick(View view) {
-                if(qxHandler!=null && cameraTriggerThread.status()){
-                    cameraTriggerThread.stopCapture();
+            public void run() {
+                while(accelUpdate){
+                    mSensor.updateUI();
+                    try{
+                        Thread.sleep(ACELL_UI_UPDATE_DELAY);
+                    }
+                    catch (InterruptedException e){
+                        Log.e(TAG,e.toString());
+                    }
                 }
             }
-        });
+        }).start();
+
+
 
 
     }
@@ -289,7 +332,8 @@ public class DroneActivity extends ActionBarActivity {
     public void onPause(){
         super.onPause();
 
-        //Nothing...phone might have went to sleep...
+        //Nothing...phone might have went to sleep..
+        accelUpdate = false;
     }
 
     @Override
