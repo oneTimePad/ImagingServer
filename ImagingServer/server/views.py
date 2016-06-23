@@ -12,6 +12,7 @@ from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
 from django.contrib.auth.signals import user_logged_in
 from django.db import transaction
+from django.contrib.sessions.models import Session
 #websockets
 from ws4redis.publisher import RedisPublisher
 from ws4redis.redis_store import RedisMessage
@@ -69,10 +70,9 @@ connection.close()
 saves session for logged in gcs user
 '''
 def gcs_logged_in_handler(sender,request,user,**kwargs):
-	GCSSession.objects.get_or_create(
-		user=user,
-		session_id = request.session.session_key
-	)
+
+	sess, created =GCSSession.objects.get_or_create(user=user,session=request.session.session_key)
+
 	if user.userType == 'gcs':
 		request.session['picstack'] = []
 
@@ -82,7 +82,7 @@ user_logged_in.connect(gcs_logged_in_handler)
 receive current gcs sessions
 '''
 def gcsSessions():
-	return [ sess.session_id for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
+	return [ sess.session for sess in GCSSession.objects.all().filter(user__userType="gcs") ]
 
 '''
 callback to receive N, MQ messages
@@ -388,7 +388,10 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		if user is not None:
 			#if user is active log use in and return redirect
 			if user.is_active:
+				pdb.set_trace()
 				login(request,user)
+
+
 				#redirect to viewer page
 				return redirect(reverse('index'))
 		#failed to login
@@ -446,6 +449,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):
+		#pdb.set_trace()
 		connectionCheck()
         #attempting to trigger
 		triggerStatus = request.data['trigger']

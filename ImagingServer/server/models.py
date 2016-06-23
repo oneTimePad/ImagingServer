@@ -18,6 +18,7 @@ from django.contrib.sessions.models import Session
 from django.conf import settings
 from sanitizer.models import SanitizedCharField
 
+
 #django-rest
 from rest_framework.authtoken.models import Token
 
@@ -46,7 +47,7 @@ class ImagingUser(AbstractUser):
 
 class GCSSession(models.Model):
 	user = models.ForeignKey(settings.AUTH_USER_MODEL)
-	session =models.ForeignKey(Session)
+	session =models.CharField(max_length=40, null=True)
 
 
 class Picture(models.Model):
@@ -73,6 +74,8 @@ class Target(models.Model):
 		('W','W'),
 		('NW','NW'),
 	)
+
+
 
 	SHAPE_CHOICES = (
 		('circle','circle'),

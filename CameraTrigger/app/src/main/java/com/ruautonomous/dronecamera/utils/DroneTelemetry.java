@@ -114,7 +114,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
     }
 
     public void connect(){
-        //if(!drone.isConnected()){
+        if(!drone.isConnected()){
             Bundle extraParams = new Bundle();
             extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
             ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
@@ -129,7 +129,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
             //}
             //Log.i(TAG,"connection successful");
 
-//        }
+        }
     }
 
     public void disconnect(){

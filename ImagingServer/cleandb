@@ -1,6 +1,7 @@
 #!/bin/sh
 
 rm -rf server/migrations/*
+rm db.sqlite3
 ./manage.py flush
 ./manage.py makemigrations server
 ./manage.py migrate
