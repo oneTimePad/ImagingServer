@@ -10,6 +10,9 @@ import com.o3dr.android.client.ControlTower;
 import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.interfaces.DroneListener;
 import com.o3dr.android.client.interfaces.TowerListener;
+import com.o3dr.services.android.lib.drone.property.Attitude;
+import com.o3dr.services.android.lib.drone.property.Parameter;
+import com.o3dr.services.android.lib.drone.property.Parameters;
 import com.ruautonomous.dronecamera.DroneActivity;
 
 import com.ruautonomous.dronecamera.R;
@@ -22,7 +25,10 @@ import com.o3dr.services.android.lib.drone.connection.ConnectionType;
 import com.o3dr.services.android.lib.drone.property.Altitude;
 import com.o3dr.services.android.lib.drone.property.Gps;
 
+import org.w3c.dom.Attr;
+
 import java.net.ConnectException;
+import java.util.List;
 
 /**
  * Created by lie on 6/7/16.
@@ -75,6 +81,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                     }
                 });
 
+
                 break;
             case AttributeEvent.STATE_DISCONNECTED:
                 status = false;
@@ -98,6 +105,17 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                 });
 
                 break;
+
+            case AttributeEvent.ATTITUDE_UPDATED:
+                context.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ((TextView)context.findViewById(R.id.roll)).setText(String.format("%3.1f",droneRoll()));
+                        ((TextView)context.findViewById(R.id.pitch)).setText(String.format("%3.1f",dronePitch()));
+                        ((TextView)context.findViewById(R.id.azimuth)).setText(String.format("%3.1f",droneYaw()));
+                    }
+                });
+
             case AttributeEvent.GPS_POSITION:
 
                 LatLong vehiclePosition = dronePosition();
@@ -165,6 +183,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
     public LatLong dronePosition(){
         Gps droneGps = drone.getAttribute(AttributeType.GPS);
+
         return droneGps.getPosition();
     }
 
@@ -174,6 +193,26 @@ public class DroneTelemetry implements DroneListener,TowerListener {
         final double metersToFeet = 3.28084;
         return altitude*metersToFeet;
     }
+
+    public double droneRoll(){
+        Attitude att = drone.getAttribute(AttributeType.ATTITUDE);
+        return att.getRoll();//*180/Math.PI;
+
+    }
+
+    public double dronePitch(){
+        Attitude att = drone.getAttribute(AttributeType.ATTITUDE);
+        return att.getPitch();//*180/Math.PI;
+
+    }
+
+    public double droneYaw(){
+        Attitude att = drone.getAttribute(AttributeType.ATTITUDE);
+        return att.getYaw();//*180/Math.PI;
+
+    }
+
+
 
 
 

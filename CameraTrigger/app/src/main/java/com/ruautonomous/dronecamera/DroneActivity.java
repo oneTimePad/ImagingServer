@@ -51,7 +51,7 @@ public class DroneActivity extends ActionBarActivity {
     private DroneRemoteApi droneRemoteApi;
     private CameraTriggerHThread cameraTriggerThread;
     private GroundStationHThread groundStationHThread;
-    private SensorTracker mSensor;
+    //private SensorTracker mSensor;
     public static DroneApplication app;
 
 
@@ -123,9 +123,9 @@ public class DroneActivity extends ActionBarActivity {
         }
 
         //initialize sensor controller
-        mSensor = new SensorTracker(getApplicationContext());
-        app.setSensorTracker(mSensor);
-        mSensor.startSensors();
+        //mSensor = new SensorTracker(getApplicationContext());
+        //app.setSensorTracker(mSensor);
+        //mSensor.startSensors();
         qxHandler = new QXHandler();
         app.setQxHandler(qxHandler);
         cameraTriggerThread = new CameraTriggerHThread();
@@ -312,6 +312,7 @@ public class DroneActivity extends ActionBarActivity {
             }
         });
 
+        /*
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -325,7 +326,7 @@ public class DroneActivity extends ActionBarActivity {
                     }
                 }
             }
-        }).start();
+        }).start();*/
 
 
 
@@ -371,11 +372,11 @@ public class DroneActivity extends ActionBarActivity {
         if(pictureStorage!=null){
             pictureStorage.close();
         }
-
+        /*
         //clean up sensors
         if(mSensor!=null){
             mSensor.stopSensors();
-        }
+        }*/
 
         if(groundStationHThread !=null && groundStationHThread.status()){
             groundStationHThread.disconnect();

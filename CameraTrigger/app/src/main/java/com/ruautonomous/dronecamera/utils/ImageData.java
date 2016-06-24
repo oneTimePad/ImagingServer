@@ -29,13 +29,11 @@ public class ImageData extends JSONObject {
 
 
     public ImageData(long time) throws IOException{
-        SensorTracker mSensor = DroneActivity.app.getSensorTracker();
+        //SensorTracker mSensor = DroneActivity.app.getSensorTracker();
         final DroneTelemetry droneTelem = DroneActivity.app.getDroneTelem();
         //fetch data from sensors
         try {
-            this.put("azimuth", mSensor.getAzimuth());
-            this.put("pitch", -1 * mSensor.getPitch());
-            this.put("roll",  -1 * mSensor.getRoll());
+
             this.put("timeTaken", time);
 
             if(droneTelem.status()) {
@@ -43,6 +41,9 @@ public class ImageData extends JSONObject {
                 this.put("lat", position.getLatitude());
                 this.put("lon", position.getLongitude());
                 this.put("alt", droneTelem.droneAltitude());
+                this.put("azimuth", droneTelem.droneYaw());
+                this.put("pitch", -1 * droneTelem.dronePitch());
+                this.put("roll",  -1 * droneTelem.droneRoll());
             }
             else{
                 this.put("lat",0);
