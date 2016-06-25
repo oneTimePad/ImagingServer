@@ -1,14 +1,11 @@
 package com.ruautonomous.dronecamera;
 
-import android.content.Intent;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
-import com.o3dr.android.client.Drone;
-import com.o3dr.android.client.DroneApiListener;
-import com.ruautonomous.dronecamera.utils.DroneTelemetry;
-import com.ruautonomous.dronecamera.utils.ImageQueue;
+import com.ruautonomous.dronecamera.qxservices.QXCommunicationClient;
+import com.ruautonomous.dronecamera.qxservices.QXHandler;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -25,6 +22,7 @@ public class GroundStationHThread extends HandlerThread {
     private Handler mHandler = null;
     private DroneRemoteApi droneRemoteApi;
     private ImageQueue pendingUploadImages;
+    private QXCommunicationClient qxCommunicationClient;
     private String id;
     private boolean connect = false;
     private boolean connected = false;
@@ -40,6 +38,7 @@ public class GroundStationHThread extends HandlerThread {
 
         this.pendingUploadImages = DroneActivity.app.getImageQueue();
         this.id = DroneActivity.app.getId();
+        this.qxCommunicationClient = DroneActivity.app.getQxHandler();
 
     }
 
@@ -80,6 +79,7 @@ public class GroundStationHThread extends HandlerThread {
                     HashMap<String,Object> image =null;
                     try{
                         image= pendingUploadImages.pop();
+                        Log.i(TAG,"entry found");
 
                     }
                     catch (IndexOutOfBoundsException e){
@@ -87,10 +87,19 @@ public class GroundStationHThread extends HandlerThread {
                     }
                     JSONObject response = null;
 
-                    QXHandler qxHandler = DroneActivity.app.getQxHandler();
+
                     boolean connectionStatus = false;
-                    synchronized (qxHandler){
-                        connectionStatus = qxHandler.status();
+
+                    synchronized (qxCommunicationClient.getResponseClient()){
+                        qxCommunicationClient.status();
+                        try {
+                            qxCommunicationClient.getResponseClient().wait();
+                        }
+                        catch (InterruptedException e){
+                            Log.e(TAG, e.toString());
+                        }
+
+                        connectionStatus = qxCommunicationClient.getResponseClient().getQxStatus();
                     }
                     CameraTriggerHThread cameraTriggerHThread = DroneActivity.app.getCameraTriggerThread();
                     try {

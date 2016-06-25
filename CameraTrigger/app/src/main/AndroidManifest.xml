@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ruautonomous.dronecamera" >
-    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
+    package="com.ruautonomous.dronecamera">
+
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="true" />
+
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:name=".DroneApplication"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="RUautonomous Drone Camera"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme">
         <activity
-            android:name="com.ruautonomous.dronecamera.DroneActivity"
+            android:name=".DroneActivity"
             android:label="RUautonomous Drone Camera"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -22,6 +27,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".qxservices.QXCommunicationService"
+            android:enabled="true"
+
+            android:exported="true"
+            android:process=":background"
+
+            />
+
     </application>
+
+
 
 </manifest>

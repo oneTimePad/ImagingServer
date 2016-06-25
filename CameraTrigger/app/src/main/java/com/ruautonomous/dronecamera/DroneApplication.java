@@ -2,9 +2,7 @@ package com.ruautonomous.dronecamera;
 
 import android.app.Application;
 
-import com.ruautonomous.dronecamera.utils.DroneTelemetry;
-import com.ruautonomous.dronecamera.utils.ImageQueue;
-import com.ruautonomous.dronecamera.utils.PictureStorage;
+import com.ruautonomous.dronecamera.qxservices.QXCommunicationClient;
 
 /**
  * Created by lie on 6/14/16.
@@ -12,15 +10,18 @@ import com.ruautonomous.dronecamera.utils.PictureStorage;
 public class DroneApplication extends Application {
 
     public String server =null;
-    private  QXHandler qxHandler;
+
     private DroneTelemetry droneTelem;
-    private PictureStorage pictureStorage;
+    private LogStorage logStorage;
     private ImageQueue imageQueue;
     private DroneRemoteApi droneRemoteApi;
     private CameraTriggerHThread cameraTriggerHThread;
     private GroundStationHThread groundStationHThread;
     private DroneActivity context;
-    private SensorTracker sensorTracker;
+    private QXCommunicationClient qxHandler;
+    private PictureStorageClient pictureStorageClient;
+
+
     private String id;
 
 
@@ -34,11 +35,9 @@ public class DroneApplication extends Application {
         this.server = server;
     }
 
-    public void setSensorTracker(SensorTracker sensorTracker){
-        this.sensorTracker = sensorTracker;
-    }
 
-    public void setQxHandler(QXHandler qxHandler){
+
+    public void setQxHandler(QXCommunicationClient qxHandler){
         this.qxHandler = qxHandler;
     }
 
@@ -46,8 +45,12 @@ public class DroneApplication extends Application {
         this.droneTelem = droneTelem;
     }
 
-    public void setPictureStorage(PictureStorage pictureStorage){
-        this.pictureStorage = pictureStorage;
+    public void setLogStorage(LogStorage logStorage){
+        this.logStorage = logStorage;
+    }
+
+    public void setPictureStorageClient(PictureStorageClient pictureStorageClient){
+        this.pictureStorageClient = pictureStorageClient;
     }
 
     public void setDroneRemoteApi(DroneRemoteApi droneRemoteApi){
@@ -71,11 +74,11 @@ public class DroneApplication extends Application {
 
     public String getServer(){ return server;}
 
-    public QXHandler getQxHandler(){ return qxHandler;}
+    public QXCommunicationClient getQxHandler(){ return qxHandler;}
 
     public DroneTelemetry getDroneTelem(){ return droneTelem;}
 
-    public PictureStorage getPictureStorage(){ return  pictureStorage;}
+    public LogStorage getLogStorage(){ return  logStorage;}
 
     public DroneRemoteApi getDroneRemoteApi(){ return  droneRemoteApi;}
 
@@ -85,8 +88,9 @@ public class DroneApplication extends Application {
 
     public GroundStationHThread getGroundStationHThread(){return groundStationHThread;}
 
+    public PictureStorageClient getPictureStorageClient(){return pictureStorageClient;}
+
     public String getId(){return id;}
 
-    public SensorTracker getSensorTracker(){return sensorTracker;}
 
 }

@@ -1,10 +1,10 @@
 package com.ruautonomous.dronecamera.utils;
 
-import android.util.AndroidException;
 import android.util.Log;
 
 import com.ruautonomous.dronecamera.DroneActivity;
-import com.ruautonomous.dronecamera.SensorTracker;
+import com.ruautonomous.dronecamera.DroneTelemetry;
+
 import com.o3dr.services.android.lib.coordinate.LatLong;
 
 import org.json.JSONException;
@@ -12,9 +12,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 
-/**
- * Created by lie on 6/7/16.
- */
+
 //for holding image data
 public class ImageData extends JSONObject {
     private float azimuth=0;
@@ -46,6 +44,9 @@ public class ImageData extends JSONObject {
                 this.put("roll",  -1 * droneTelem.droneRoll());
             }
             else{
+                this.put("azimuth", 0);
+                this.put("pitch", 0);
+                this.put("roll",  0);
                 this.put("lat",0);
                 this.put("lon",0);
                 this.put("alt",0);

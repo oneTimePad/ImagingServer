@@ -3,7 +3,6 @@ package com.ruautonomous.dronecamera;
 import android.util.Base64;
 import android.util.Log;
 
-import com.ruautonomous.dronecamera.utils.PictureStorage;
 import com.ruautonomous.dronecamera.utils.SimpleHttpClient;
 
 import org.json.JSONException;
@@ -26,12 +25,12 @@ public class DroneRemoteApi {
     public final String TAG ="DroneApi";
     //not very secure, but ok for our purposes
     private HashMap<String,String> access = new HashMap<>();
-    private PictureStorage pictureStorage;
+    private PictureStorageClient pictureStorage;
 
 
     public DroneRemoteApi(){
         this.server = "http://"+DroneActivity.app.getServer()+"/drone";
-        this.pictureStorage = DroneActivity.app.getPictureStorage();
+        this.pictureStorage = DroneActivity.app.getPictureStorageClient();
 
     }
 

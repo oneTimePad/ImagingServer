@@ -4,6 +4,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
+import com.ruautonomous.dronecamera.qxservices.QXCommunicationClient;
+import com.ruautonomous.dronecamera.qxservices.QXHandler;
+
 import java.io.IOException;
 
 /**
@@ -14,6 +17,7 @@ public class CameraTriggerHThread extends HandlerThread {
     Thread for taking pictures in fixed interval
      */
         private Handler mHandler = null;
+        private QXCommunicationClient qxCommunicationClient;
         double triggerTime =0.0;
         public QXHandler qxHandler= null;
         public boolean trigger = false;
@@ -25,7 +29,7 @@ public class CameraTriggerHThread extends HandlerThread {
             super("CameraTriggerHThread");
             start();
             mHandler = new Handler(getLooper());
-            this.qxHandler = DroneActivity.app.getQxHandler();
+
         }
 
         //setter for telling thread what time to take pictures at
@@ -50,6 +54,7 @@ public class CameraTriggerHThread extends HandlerThread {
                 throw new IOException("bad trigger time");
             }
             DroneActivity.app.getContext().alertUser("Capture Start at "+triggerTime);
+            qxCommunicationClient = DroneActivity.app.getQxHandler();
 
             mHandler.post(new Runnable() {
                 @Override
@@ -65,7 +70,8 @@ public class CameraTriggerHThread extends HandlerThread {
 
                         //wait given time interval
                         try {
-                            qxHandler.capture();
+                            //add service
+                            qxCommunicationClient.trigger();
                             Log.i(TAG,"Capture");
                             //time at end of loop
                             long timeAfterCapture = System.currentTimeMillis();

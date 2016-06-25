@@ -1,13 +1,15 @@
 package com.ruautonomous.dronecamera;
 
-import java.io.IOException;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.res.Resources;
+
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkInfo;
 import android.provider.Settings;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -23,15 +25,14 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
-import com.ruautonomous.dronecamera.utils.DroneTelemetry;
-import com.ruautonomous.dronecamera.utils.ImageQueue;
-import com.ruautonomous.dronecamera.utils.PictureStorage;
+
+import com.ruautonomous.dronecamera.qxservices.QXCommunicationClient;
+
 import android.view.Window;
 import android.view.WindowManager;
 
-import java.io.InterruptedIOException;
+import java.io.IOException;
 import java.net.ConnectException;
-import java.util.concurrent.TimeUnit;
 
 
 public class DroneActivity extends ActionBarActivity {
@@ -44,21 +45,21 @@ public class DroneActivity extends ActionBarActivity {
     public final String TAG = "Main";
     public String server =null;
     private String android_id;
-    private QXHandler qxHandler;
+    private QXCommunicationClient qxHandler;
     private DroneTelemetry droneTelem;
-    private PictureStorage pictureStorage;
     private ImageQueue imageQueue;
     private DroneRemoteApi droneRemoteApi;
     private CameraTriggerHThread cameraTriggerThread;
     private GroundStationHThread groundStationHThread;
-    //private SensorTracker mSensor;
+    private LogStorage logStorage;
+    private PictureStorageClient pictureStorageClient;
     public static DroneApplication app;
 
 
     public int manualTriggerTime = 0;
     public boolean accelUpdate = true;
     public final long ACELL_UI_UPDATE_DELAY=2000;
-
+    public ProgressDialog searching;
 
 
 
@@ -77,17 +78,6 @@ public class DroneActivity extends ActionBarActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
-
-        /*
-        InputMethodManager inputManager =
-                (InputMethodManager) this.
-                        getSystemService(Context.INPUT_METHOD_SERVICE);
-
-
-        if(this.getCurrentFocus()!=null)
-         inputManager.hideSoftInputFromWindow(
-                this.getCurrentFocus().getWindowToken(),
-                InputMethodManager.HIDE_NOT_ALWAYS);*/
 
 
         //Here is the important stuff
@@ -114,65 +104,93 @@ public class DroneActivity extends ActionBarActivity {
 
         app.setDroneTelemetry(droneTelem);
         app.setImageQueue(imageQueue);
-        try {
-            pictureStorage = new PictureStorage();
-            app.setPictureStorage(pictureStorage);
-        }
-        catch (IOException e){
-            Log.e(TAG,e.toString()) ;
-        }
 
-        //initialize sensor controller
-        //mSensor = new SensorTracker(getApplicationContext());
-        //app.setSensorTracker(mSensor);
-        //mSensor.startSensors();
-        qxHandler = new QXHandler();
-        app.setQxHandler(qxHandler);
         cameraTriggerThread = new CameraTriggerHThread();
         app.setCameraTriggerHThread(cameraTriggerThread);
 
-        searchQx();
-
-
-
+        qxHandler = new QXCommunicationClient();
+        app.setQxHandler(qxHandler);
+        try {
+            logStorage = new LogStorage();
+            app.setLogStorage(logStorage);
+        }
+        catch (IOException e){
+            Log.e(TAG,e.toString());
+        }
 
 
 
     }
 
-    private void searchQx(){
+
+
+
+/*
+    public void ethernet(View v){
+
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        Network etherNetwork = null;
+        alertUser(connectivityManager.getAllNetworks().length+"");
+        for (Network network : connectivityManager.getAllNetworks()) {
+            NetworkInfo networkInfo = connectivityManager.getNetworkInfo(network);
+            if (networkInfo.getType() == ConnectivityManager.TYPE_ETHERNET) {
+                etherNetwork = network;
+                alertUser("FOUND ETHERNET!");
+            }
+        }
+        Network boundNetwork = connectivityManager.getBoundNetworkForProcess();
+        if (boundNetwork != null) {
+            NetworkInfo boundNetworkInfo = connectivityManager.getNetworkInfo(boundNetwork);
+            if (boundNetworkInfo.getType() != ConnectivityManager.TYPE_ETHERNET) {
+                if (etherNetwork != null) {
+                    connectivityManager.bindProcessToNetwork(etherNetwork);
+                    alertUser("BOUND ETHERNET!");
+                }
+            }
+        }
+        if(etherNetwork!=null)
+            connectivityManager.bindProcessToNetwork(etherNetwork);
+
+    }*/
+
+
+
+
+    public void searchQx(){
         if(qxHandler== null)return;;
 
-        final ProgressDialog searching = ProgressDialog.show(this,"","Searching for QX device...",true);
+        searching= ProgressDialog.show(this,"","Searching for QX device...",true);
         searching.setCancelable(false);
+
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    qxHandler.searchQx();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            searching.dismiss();
-                            new AlertDialog.Builder(DroneActivity.this)
-                                    .setMessage("Found QX device!").show();
-                        }
-                    });
 
-                }
-                catch (ConnectException e){
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            searching.dismiss();
-                            new AlertDialog.Builder(DroneActivity.this)
-                                    .setMessage("Failed to find QX device!").show();
-                        }
-                    });
+                qxHandler.search();
 
-                }
             }
         }).start();
+
+    }
+
+    public void setSearchQxStatus(boolean status){
+        if(searching==null) return;
+
+        searching.dismiss();
+
+        if(status){
+            new AlertDialog.Builder(DroneActivity.this)
+                    .setMessage("Found QX device!").show();
+            pictureStorageClient = new PictureStorageClient();
+            app.setPictureStorageClient(pictureStorageClient);
+
+
+        }
+        else{
+            new AlertDialog.Builder(DroneActivity.this)
+                    .setMessage("Failed to find QX device!").show();
+        }
+
 
     }
 
@@ -276,7 +294,7 @@ public class DroneActivity extends ActionBarActivity {
                    searchQx();
             }
         });
-
+        /*
         //manual trigger
         findViewById(R.id.button_triggerqx).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -310,23 +328,9 @@ public class DroneActivity extends ActionBarActivity {
 
 
             }
-        });
+        });*/
 
-        /*
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while(accelUpdate){
-                    mSensor.updateUI();
-                    try{
-                        Thread.sleep(ACELL_UI_UPDATE_DELAY);
-                    }
-                    catch (InterruptedException e){
-                        Log.e(TAG,e.toString());
-                    }
-                }
-            }
-        }).start();*/
+
 
 
 
@@ -358,10 +362,11 @@ public class DroneActivity extends ActionBarActivity {
         if(droneTelem!= null &&droneTelem.status()){
             droneTelem.disconnect();
         }
+        /*
         //cleam up qxHandler
         if(qxHandler!= null && qxHandler.status()){
             qxHandler.disconnect();
-        }
+        }*/
 
         //clean up camera Trigger thread
         if(cameraTriggerThread!=null && cameraTriggerThread.status()){
@@ -369,14 +374,10 @@ public class DroneActivity extends ActionBarActivity {
         }
 
         //clean up pic storage
-        if(pictureStorage!=null){
-            pictureStorage.close();
+        if(logStorage!=null){
+            logStorage.close();
         }
-        /*
-        //clean up sensors
-        if(mSensor!=null){
-            mSensor.stopSensors();
-        }*/
+
 
         if(groundStationHThread !=null && groundStationHThread.status()){
             groundStationHThread.disconnect();
