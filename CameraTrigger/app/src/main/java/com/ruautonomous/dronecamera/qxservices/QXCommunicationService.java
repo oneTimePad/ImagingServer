@@ -59,10 +59,12 @@ public class QXCommunicationService extends Service {
         Network boundNetwork = connectivityManager.getBoundNetworkForProcess();
         if (boundNetwork != null) {
             NetworkInfo boundNetworkInfo = connectivityManager.getNetworkInfo(boundNetwork);
-            if (boundNetworkInfo.getType() != ConnectivityManager.TYPE_WIFI) {
-                if (etherNetwork != null) {
-                    connectivityManager.bindProcessToNetwork(etherNetwork);
+            if(boundNetworkInfo!=null) {
+                if (boundNetworkInfo.getType() != ConnectivityManager.TYPE_WIFI) {
+                    if (etherNetwork != null) {
+                        connectivityManager.bindProcessToNetwork(etherNetwork);
 
+                    }
                 }
             }
         }
@@ -150,6 +152,8 @@ public class QXCommunicationService extends Service {
             switch(msg.what){
 
                 case SEARCHQX:
+                    service.setInterfaceWIFI();
+                    service.qx = new QXHandler(service.pictureStorageServer);
                     service.serviceSearchQX();
                     break;
                 case TRIGGERQX:

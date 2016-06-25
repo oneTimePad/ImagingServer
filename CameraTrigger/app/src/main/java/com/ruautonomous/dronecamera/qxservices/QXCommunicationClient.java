@@ -87,9 +87,28 @@ public class QXCommunicationClient {
 
     }
 
-    public void status(){
+    public void close(){
+        context.unbindService(mServerConn);
+    }
+
+    private void status(){
         send(QXCommunicationService.STATUSQX,null,null);
     }
+
+    public boolean qxStatus() {
+
+        synchronized (responseClient) {
+            status();
+            try {
+                responseClient.wait();
+            } catch (InterruptedException e) {
+                Log.e(TAG, e.toString());
+            }
+
+            return responseClient.getQxStatus();
+        }
+    }
+
 
     public void trigger(){
         long time = System.currentTimeMillis()/1000;

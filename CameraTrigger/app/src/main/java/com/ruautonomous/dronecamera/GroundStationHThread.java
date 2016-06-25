@@ -88,19 +88,7 @@ public class GroundStationHThread extends HandlerThread {
                     JSONObject response = null;
 
 
-                    boolean connectionStatus = false;
-
-                    synchronized (qxCommunicationClient.getResponseClient()){
-                        qxCommunicationClient.status();
-                        try {
-                            qxCommunicationClient.getResponseClient().wait();
-                        }
-                        catch (InterruptedException e){
-                            Log.e(TAG, e.toString());
-                        }
-
-                        connectionStatus = qxCommunicationClient.getResponseClient().getQxStatus();
-                    }
+                    boolean connectionStatus = qxCommunicationClient.qxStatus();
                     CameraTriggerHThread cameraTriggerHThread = DroneActivity.app.getCameraTriggerThread();
                     try {
 
@@ -121,7 +109,7 @@ public class GroundStationHThread extends HandlerThread {
                             if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
                                 DroneActivity.app.getCameraTriggerThread().setTriggerTime(Double.parseDouble(response.get("time").toString()));
                                 try {
-                                    DroneActivity.app.getCameraTriggerThread().startCapture();
+                                    DroneActivity.app.getCameraTriggerThread().startCapture(true);
                                 }
                                 catch (IOException e){
                                     Log.e(TAG, "failed to start remote capture");

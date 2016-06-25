@@ -294,16 +294,14 @@ public class DroneActivity extends ActionBarActivity {
                    searchQx();
             }
         });
-        /*
+
         //manual trigger
         findViewById(R.id.button_triggerqx).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 synchronized (cameraTriggerThread) {
-                    if (qxHandler != null && !qxHandler.status()) {
-                        alertUser("No QX device!");
-                        return;
-                    }
+                    //testing for qx connection doesn't work here for some reason...
+                    //it works when connected remotely, which is really all that matters
 
                     if (qxHandler != null && cameraTriggerThread == null) {
                         cameraTriggerThread = new CameraTriggerHThread();
@@ -312,7 +310,7 @@ public class DroneActivity extends ActionBarActivity {
                     } else if (qxHandler != null && !cameraTriggerThread.status()) {
                         cameraTriggerThread.setTriggerTime((double) manualTriggerTime);
                         try {
-                            cameraTriggerThread.startCapture();
+                            cameraTriggerThread.startCapture(false);
                             ((Button) v).setText(R.string.stopcapture);
 
                         }
@@ -328,7 +326,7 @@ public class DroneActivity extends ActionBarActivity {
 
 
             }
-        });*/
+        });
 
 
 
@@ -362,6 +360,7 @@ public class DroneActivity extends ActionBarActivity {
         if(droneTelem!= null &&droneTelem.status()){
             droneTelem.disconnect();
         }
+
         /*
         //cleam up qxHandler
         if(qxHandler!= null && qxHandler.status()){
@@ -371,6 +370,10 @@ public class DroneActivity extends ActionBarActivity {
         //clean up camera Trigger thread
         if(cameraTriggerThread!=null && cameraTriggerThread.status()){
             cameraTriggerThread.stopCapture();
+        }
+
+        if(qxHandler!=null){
+            qxHandler.close();
         }
 
         //clean up pic storage

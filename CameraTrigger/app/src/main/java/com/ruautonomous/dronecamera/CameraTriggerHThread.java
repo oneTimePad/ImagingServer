@@ -47,14 +47,19 @@ public class CameraTriggerHThread extends HandlerThread {
         }
 
         //tell thread to start capturing
-        void startCapture() throws IOException{
+        void startCapture(boolean check) throws IOException{
             if(trigger)return;
             if(triggerTime <= 0.0){
                 DroneActivity.app.getContext().alertUser("Bad Trigger Time");
                 throw new IOException("bad trigger time");
             }
-            DroneActivity.app.getContext().alertUser("Capture Start at "+triggerTime);
             qxCommunicationClient = DroneActivity.app.getQxHandler();
+            if(check) {
+
+                if (!qxCommunicationClient.qxStatus()) return;
+            }
+            DroneActivity.app.getContext().alertUser("Capture Start at "+triggerTime);
+
 
             mHandler.post(new Runnable() {
                 @Override
