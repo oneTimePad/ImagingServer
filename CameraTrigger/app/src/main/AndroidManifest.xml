@@ -14,13 +14,15 @@
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="RUautonomous Drone Camera"
+        android:label="RU Autonomous Drone Camera"
+
         android:theme="@style/AppTheme">
         <activity
             android:name=".DroneActivity"
-            android:label="RUautonomous Drone Camera"
+            android:label="RU Autonomous Drone Camera"
             android:screenOrientation="portrait">
-            <intent-filter>
+            <intent-filter android:label="Drone Camera">
+
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
