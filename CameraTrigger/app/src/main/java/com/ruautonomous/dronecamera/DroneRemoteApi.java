@@ -16,9 +16,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import com.ruautonomous.dronecamera.utils.ImageData;
-/**
- * Created by lie on 6/7/16.
- */
+
 public class DroneRemoteApi {
 
     public String server;

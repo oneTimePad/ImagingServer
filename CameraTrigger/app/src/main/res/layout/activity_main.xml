@@ -54,7 +54,9 @@
                     android:id="@+id/password"
                     android:hint="@string/password" />
 
-
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
                 <Button
                     android:layout_marginRight="70dp"
                     android:layout_width="wrap_content"
@@ -64,6 +66,16 @@
                     android:id="@+id/remote"
 
                   />
+
+                    <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/etheron"
+                        android:onClick="ethernet"
+                        android:id="@+id/ether"
+                        android:layout_toRightOf="@id/remote"/>
+
+                </RelativeLayout>
 
 
 

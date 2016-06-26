@@ -117,7 +117,9 @@ public class DroneActivity extends ActionBarActivity {
         catch (IOException e){
             Log.e(TAG,e.toString());
         }
-
+        pictureStorageClient = new PictureStorageClient();
+        app.setPictureStorageClient(pictureStorageClient);
+        ethernet(null);
 
 
     }
@@ -125,12 +127,12 @@ public class DroneActivity extends ActionBarActivity {
 
 
 
-/*
+
     public void ethernet(View v){
 
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         Network etherNetwork = null;
-        alertUser(connectivityManager.getAllNetworks().length+"");
+        //alertUser(connectivityManager.getAllNetworks().length+"");
         for (Network network : connectivityManager.getAllNetworks()) {
             NetworkInfo networkInfo = connectivityManager.getNetworkInfo(network);
             if (networkInfo.getType() == ConnectivityManager.TYPE_ETHERNET) {
@@ -144,14 +146,14 @@ public class DroneActivity extends ActionBarActivity {
             if (boundNetworkInfo.getType() != ConnectivityManager.TYPE_ETHERNET) {
                 if (etherNetwork != null) {
                     connectivityManager.bindProcessToNetwork(etherNetwork);
-                    alertUser("BOUND ETHERNET!");
+                //    alertUser("BOUND ETHERNET!");
                 }
             }
         }
         if(etherNetwork!=null)
             connectivityManager.bindProcessToNetwork(etherNetwork);
 
-    }*/
+    }
 
 
 
@@ -181,8 +183,7 @@ public class DroneActivity extends ActionBarActivity {
         if(status){
             new AlertDialog.Builder(DroneActivity.this)
                     .setMessage("Found QX device!").show();
-            pictureStorageClient = new PictureStorageClient();
-            app.setPictureStorageClient(pictureStorageClient);
+
 
 
         }

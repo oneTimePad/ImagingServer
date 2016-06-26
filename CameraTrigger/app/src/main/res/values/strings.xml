@@ -23,6 +23,7 @@
     <string name="mavdisconnect">MAV Disconnect</string>
     <string name="zero">0</string>
     <string name="gcsdisconnect">GCS Disconnect</string>
+    <string name="etheron">Ethernet On</string>
 
 
     <string-array name="drone_connection_types">
