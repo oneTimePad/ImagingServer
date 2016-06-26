@@ -17,6 +17,10 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.ConnectException;
 
+
+/**
+ * service to communicate with Qx, runs in a different Process than the application
+ */
 public class QXCommunicationService extends Service {
 
 
@@ -34,18 +38,30 @@ public class QXCommunicationService extends Service {
 
 
 
-
+    @Override
     public void  onCreate(){
         super.onCreate();
 
 
     }
+    @Override
+    public void onDestroy(){
+        if(qx!=null)
+            qx.disconnect();
+        if(pictureStorageServer!=null)
+            pictureStorageServer.close();
+    }
 
+    //Messenger so service can receive IPC
     final Messenger mMessenger = new Messenger(new IncomingHandler(this));
 
 
+    /**
+     * set process NIC to Wi-FI
+     */
     public void setInterfaceWIFI(){
 
+        //connectivity Manager to look for Wi-Fi
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         Network etherNetwork = null;
 
@@ -76,10 +92,14 @@ public class QXCommunicationService extends Service {
     public IBinder onBind(Intent intent) {
 
         setInterfaceWIFI();
+        //return service Messenger
         return mMessenger.getBinder();
     }
 
 
+    /**
+     * search for Qx device on Wi-Fi
+     */
     private void serviceSearchQX(){
         if(qx==null) return;
 
@@ -90,7 +110,7 @@ public class QXCommunicationService extends Service {
         catch (ConnectException e){
             Log.e(TAG,"failed");
         }
-
+        //tell client the status
         Bundle data = new Bundle();
         data.putBoolean("status",qx.status());
         send(QxCommunicationResponseClient.QXSEARCHUPDATE,null,data);
@@ -98,8 +118,9 @@ public class QXCommunicationService extends Service {
     }
 
 
-
-
+    /**
+     * trigger Qx for one pic
+     */
     public void serviceTriggerQX(){
 
 
@@ -113,12 +134,20 @@ public class QXCommunicationService extends Service {
 
     }
 
-
+    /**
+     * get Qx connection status
+     * @return boolean status
+     */
     private boolean serviceStatusQX(){
         return qx.status();
     }
 
-
+    /**
+     * send a message to the client
+     * @param message message number
+     * @param replyTo reply to messenger
+     * @param data bundle
+     */
     public void send(int message,Messenger replyTo,Bundle data){
         if(client!=null){
             Message msg = Message.obtain(null,message,0,0);
@@ -137,7 +166,9 @@ public class QXCommunicationService extends Service {
     }
 
 
-
+    /**
+     * Handler for client Messages
+     */
     private static class  IncomingHandler extends Handler{
 
         private WeakReference<QXCommunicationService> serviceWeakReference;
@@ -150,29 +181,31 @@ public class QXCommunicationService extends Service {
         public void handleMessage(Message msg){
             QXCommunicationService service = serviceWeakReference.get();
             switch(msg.what){
-
+                //search for a Qx device
                 case SEARCHQX:
                     service.setInterfaceWIFI();
-                    service.qx = new QXHandler(service.pictureStorageServer);
+                    QXCommunicationService.qx = new QXHandler(service.pictureStorageServer);
                     service.serviceSearchQX();
                     break;
+                //trigger qx
                 case TRIGGERQX:
                     service.serviceTriggerQX();
                     break;
+                //status update for Qx connection
                 case STATUSQX:
                     boolean status = service.serviceStatusQX();
-
 
                     Bundle data = new Bundle();
                     data.putBoolean("status",status);
                     service.send(QxCommunicationResponseClient.QXSTATUS,null,data);
 
                     break;
+                //client wants to register
                 case REGISTER:
                     service.client = msg.replyTo;
                     try {
                         service.pictureStorageServer = new PictureStorageServer(service.client,service.getApplicationContext());
-                        service.qx = new QXHandler(service.pictureStorageServer);
+                        QXCommunicationService.qx = new QXHandler(service.pictureStorageServer);
 
                     }
                     catch (IOException e){

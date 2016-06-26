@@ -40,7 +40,9 @@ public class JSONEncoder {
 
 
     }
-    //getter for response
+    /**
+     * getter for json response object
+     */
     public JSONObject encodeJSON(){
         return response;
     }

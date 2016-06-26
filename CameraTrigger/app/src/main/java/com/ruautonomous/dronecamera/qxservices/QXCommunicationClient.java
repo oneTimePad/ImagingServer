@@ -13,34 +13,46 @@ import android.util.Log;
 
 import com.o3dr.services.android.lib.drone.connection.ConnectionType;
 import com.ruautonomous.dronecamera.DroneActivity;
+import com.ruautonomous.dronecamera.DroneSingleton;
+import com.ruautonomous.dronecamera.ImageQueue;
 import com.ruautonomous.dronecamera.utils.ImageData;
 import com.ruautonomous.dronecamera.LogStorage;
 
 import java.io.IOException;
 
 
+/**
+ * client for drone app to communicate with qx service
+ */
 public class QXCommunicationClient {
 
-
+    //IPC Messenger
     private Messenger serviceBinder;
-    private DroneActivity context;
+
+    //service connection
     private ServiceConnection mServerConn;
+    //client to get responses from service
     private QxCommunicationResponseClient responseClient;
     private LogStorage logStorage;
+    private DroneActivity context;
 
     public final String TAG = "QXClient";
 
-    public QXCommunicationClient(){
-        this.responseClient = new QxCommunicationResponseClient();
-        this.context = DroneActivity.app.getContext();
-        this.logStorage = DroneActivity.app.getLogStorage();
+    public QXCommunicationClient(DroneActivity context){
+        this.context = context;
+
+
+
+        final DroneActivity finalContext = context;
         this.mServerConn = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
                 Log.d(TAG,"connected!");
+                //give server our messenger
                 serviceBinder  =new Messenger(iBinder);
                 register(responseClient.getMessenger());
-                context.searchQx();
+                //we are connected so call search qx device
+                finalContext.searchQx();
 
             }
 
@@ -51,11 +63,31 @@ public class QXCommunicationClient {
             }
         };
 
-        context.bindService(new Intent(DroneActivity.app.getContext(), QXCommunicationService.class), mServerConn,
+        //bind to service
+        context.bindService(new Intent(context, QXCommunicationService.class), mServerConn,
                 Context.BIND_AUTO_CREATE);
 
     }
 
+    public void set(){
+        ImageQueue imageQueue = DroneSingleton.imageQueue;
+        this.responseClient = new QxCommunicationResponseClient(context,imageQueue);
+        //initialize handler for righting to log files
+        try {
+            this.logStorage = new LogStorage(imageQueue);
+
+        }
+        catch (IOException e){
+            Log.e(TAG,e.toString());
+        }
+    }
+
+    /**
+     * send a message to qx service
+     * @param message message number
+     * @param replyTo a message object for service to use to reply
+     * @param data data to send in bundle
+     */
     private void send(int message,Messenger replyTo,Bundle data){
         if(mServerConn!=null){
             Message msg = Message.obtain(null,message,0,0);
@@ -73,28 +105,33 @@ public class QXCommunicationClient {
 
     }
 
-
-    public QxCommunicationResponseClient getResponseClient(){
-        return responseClient;
-    }
-
+    /**
+     * register with the service to get responses
+     * @param messenger client Messenger
+     */
     private void register(Messenger messenger){
             send(QXCommunicationService.REGISTER,messenger,null);
     }
 
+    /**
+     * tell service to search for Qx devices
+     */
     public void search(){
        send(QXCommunicationService.SEARCHQX,null,null);
 
     }
 
-    public void close(){
-        context.unbindService(mServerConn);
-    }
-
+    /**
+     * tell service to send status of Qx connection
+     */
     private void status(){
         send(QXCommunicationService.STATUSQX,null,null);
     }
 
+    /**
+     * wraps around status to tell caller to wait for response (makes synchronous)
+     * @return status
+     */
     public boolean qxStatus() {
 
         synchronized (responseClient) {
@@ -109,21 +146,35 @@ public class QXCommunicationClient {
         }
     }
 
-
+    /**
+     * tell service to trigger qx device (one picture)
+     */
     public void trigger(){
+        //capture time
         long time = System.currentTimeMillis()/1000;
         try {
+            //image data and write to logs
             ImageData imageData = new ImageData(time);
-            DroneActivity.app.getLogStorage().writeLog(imageData);
+            logStorage.writeLog(imageData);
 
         }
         catch (IOException e){
             Log.e(TAG, e.toString());
         }
 
-
-      send(QXCommunicationService.TRIGGERQX,null,null);
+        send(QXCommunicationService.TRIGGERQX,null,null);
     }
+
+    /**
+     * close connection to service
+     */
+    public void close(){
+        context.unbindService(mServerConn);
+        logStorage.close();
+    }
+
+
+
 
 
 }

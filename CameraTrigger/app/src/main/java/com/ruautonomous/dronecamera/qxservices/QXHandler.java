@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Created by lie on 6/5/16.
+ * used by Qx service to communicate with Qx device
  */
 public class QXHandler {
 
@@ -43,25 +43,46 @@ public class QXHandler {
 
     }
 
+    /**
+     * status of qx connection based on getEvent response
+     * @return boolean status
+     */
     public boolean status(){ return connectionStatus;}
 
+    /**
+     * used by getEvent to set Qx response status
+     * @param connectionStatus boolean status
+     */
     public void setQXConnectionStatus(boolean connectionStatus){ this.connectionStatus = connectionStatus;}
 
+
+    /**
+     * take one picture
+     */
     public void capture(){
         takeAndFetchPicture();
     }
 
+    /**
+     * disconnect from qx
+     */
     public void disconnect(){
         closeConnection();
     }
 
 
+    /**
+     * search for a qx device
+     * @param applc application
+     * @throws ConnectException
+     */
     public void searchQx(final Context applc) throws ConnectException{
         mSsdpClient = new SimpleSsdpClient();
         mSsdpClient.search(new SimpleSsdpClient.SearchResultHandler(){
 
             @Override
             public void onDeviceFound(final ServerDevice device){
+                //QX device was found
                 Log.i(TAG,"qx found");
                 mTargetServer = device;
                 mRemoteApi = new QxRemoteApi(mTargetServer);
@@ -82,6 +103,7 @@ public class QXHandler {
 
             @Override
             public void onErrorFinished(){
+                //timeout for search
                Log.e(TAG,"failed to find device");
                 synchronized (mSsdpClient){
                     mSsdpClient.notify();
@@ -486,13 +508,13 @@ public class QXHandler {
             @Override
             public void run() {
                 try {
-
+                    //contact Qx to take pic
                     JSONObject replyJson = mRemoteApi.actTakePicture();
                     JSONArray resultsObj = replyJson.getJSONArray("result");
                     JSONArray imageUrlsObj = resultsObj.getJSONArray(0);
 
 
-
+                    //get the URL to download the image
                     String postImageUrl = null;
                     if (1 <= imageUrlsObj.length()) {
                         postImageUrl = imageUrlsObj.getString(0);
@@ -503,20 +525,21 @@ public class QXHandler {
                         return;
                     }
 
+                    //put it in queue to download
                     pictureStorageServer.writePicture(postImageUrl);
 
 
 
 
 
-                } catch (IOException e) {
+                }
+                catch (JSONException e) {
+
+                    // Log.w(TAG, e.toString());
+
+                }
+                catch (IOException e) {
                     //Log.w(TAG, "IOException while closing slicer: " + e.getMessage());
-
-                } catch (JSONException e) {
-
-                    Log.w(TAG, e.toString());
-
-                } finally {
 
                 }
             }

@@ -17,21 +17,35 @@ import java.util.Iterator;
 
 import com.ruautonomous.dronecamera.utils.ImageData;
 
+/**
+ * Wrapper for contacting drone web api
+ */
 public class DroneRemoteApi {
-
-    public String server;
+    //service ip:port pair
+    public String server = null;
     public final String TAG ="DroneApi";
+
     //not very secure, but ok for our purposes
     private HashMap<String,String> access = new HashMap<>();
-    private PictureStorageClient pictureStorage;
+    private PictureStorageClient pictureStorageClient = new PictureStorageClient();
 
 
-    public DroneRemoteApi(){
-        this.server = "http://"+DroneActivity.app.getServer()+"/drone";
-        this.pictureStorage = DroneActivity.app.getPictureStorageClient();
 
+    /**
+     * set the service to contact
+     * @param server:ip:port pair
+     */
+    public void setServer(String server){
+
+        this.server = "http://"+server+"/drone";
     }
 
+    /**
+     * login to django and get JWT access token
+     * @param username
+     * @param password
+     * @throws IOException
+     */
     public void getAccess(String username,String password) throws IOException{
 
         JSONObject requestData = new JSONObject();
@@ -44,10 +58,12 @@ public class DroneRemoteApi {
             Log.w(TAG,e.toString());
             throw new IOException("JSONException: "+e.toString());
         }
+        if(server==null) throw new IOException("server not specified");
 
         try{
+            //contact django to login
             responseData = SimpleHttpClient.httpPost(server+"/login",requestData,null);
-
+            //get the access JWT
             String token = responseData.getString("token");
             access.put("accesstoken",token);
 
@@ -58,20 +74,28 @@ public class DroneRemoteApi {
             long expiration=Long.parseLong(payload.getString("exp"));
             access.put("expiration",expiration+"");
         }
+        //catch failure
         catch (JSONException e){
             Log.w(TAG,e.toString());
             throw new IOException("JSONException: "+e.toString());
         }
+        //catch login failure
         catch (IOException e){
+            //login failure
             if(e.toString().contains("Response Error")){
                 Log.e(TAG,"Login failed");
                 throw  new IOException("DroneAPI: Authorization failed");
             }
+            //other error
             Log.i(TAG,"Unknown error " + e.toString());
             throw new IOException("Unknown error"+e.toString());
         }
     }
 
+    /**
+     * allow for refresh token, not implemented yet
+     * @throws IOException
+     */
     public void refreshAccess() throws  IOException{
 
         JSONObject requestData = new JSONObject();
@@ -108,22 +132,35 @@ public class DroneRemoteApi {
 
     }
 
+    /**
+     * contact django server, acts as heartbeat and posts images
+     * @param id: device id
+     * @param qxStatus:status of qx connection
+     * @param triggering: triggering status
+     * @param time: triggering delay
+     * @param image: image to post
+     * @return: response from server
+     * @throws IOException
+     */
     public JSONObject postServerContact(String id,boolean qxStatus,boolean triggering,double time,HashMap<String,Object> image) throws IOException{
                 String imageName = null;
                 ImageData imageData = null;
                 JSONObject requestData = new JSONObject();
                 JSONObject responseData = null;
                 byte[] imageBytes = null;
+                //is there an image to be send
                 if(image!=null) {
-
+                    //fetch image name and associated data
                     imageName = (String)image.get("pictureName") ;
                     imageData = (ImageData)image.get("pictureData");
 
-                    File outFile = new File(pictureStorage.getPictureStorage(), imageName);
+                    //fetch image from fs
+                    File outFile = new File(pictureStorageClient.getPictureStorage(), imageName);
                     DataInputStream dataInputStream = new DataInputStream(new FileInputStream(outFile));
                     //read image at given string
                     imageBytes = new byte[(int) outFile.length()];
                     dataInputStream.readFully(imageBytes);
+                    //put image data into json request
                     Iterator<?> keys = imageData.keys();
                     while(keys.hasNext()){
                         String key = keys.next().toString();
@@ -138,12 +175,16 @@ public class DroneRemoteApi {
                 }
 
                 try{
+                    //these are always in a request regardless of whether there is an image t osend
                     requestData.put("id",id);
+                    //is qx connected
                     requestData.put("qxStatus",qxStatus);
+                    //is device triggering
                     if(triggering)
                         requestData.put("trigger",1);
                     else
                         requestData.put("trigger",0);
+                    //triggering timeout
                     requestData.put("time",time);
 
                 }
@@ -154,24 +195,30 @@ public class DroneRemoteApi {
                 }
 
                 try{
+                    //if there is an image, call image post fct
                     if(image!=null) {
                         responseData = SimpleHttpClient.httpPostPicture(server + "/serverContact", requestData, imageName, imageBytes, access);
                     }
+                    //else the normal heartbeat function
                     else{
                         responseData = SimpleHttpClient.httpPost(server+"/serverContact",requestData,access);
                     }
                 }
                 catch (IOException e){
+                    //some sort of response error
                     if(e.toString().contains("Response Error")){
                         Log.e(TAG,"Server contact failed");
                         throw  new IOException("DroneAPI: Server contact failed");
                     }
+                    //token bad
                     if(e.toString().contains("Authorization")){
                         throw  new IOException("DroneAPI: tokens required");
                     }
+                    //there's some sort of required argument missing
                     if(e.toString().contains("Missing")){
                         throw new IOException("DroneAPI: some arguments required arguments are null");
                     }
+                    //unknown strange error
                     throw new IOException("Unknown error"+e.toString());
                 }
                 return  responseData;

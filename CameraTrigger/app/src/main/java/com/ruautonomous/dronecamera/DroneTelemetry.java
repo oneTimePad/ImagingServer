@@ -11,11 +11,7 @@ import com.o3dr.android.client.Drone;
 import com.o3dr.android.client.interfaces.DroneListener;
 import com.o3dr.android.client.interfaces.TowerListener;
 import com.o3dr.services.android.lib.drone.property.Attitude;
-import com.o3dr.services.android.lib.drone.property.Parameter;
-import com.o3dr.services.android.lib.drone.property.Parameters;
-import com.ruautonomous.dronecamera.DroneActivity;
 
-import com.ruautonomous.dronecamera.R;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
@@ -25,39 +21,43 @@ import com.o3dr.services.android.lib.drone.connection.ConnectionType;
 import com.o3dr.services.android.lib.drone.property.Altitude;
 import com.o3dr.services.android.lib.drone.property.Gps;
 
-import org.w3c.dom.Attr;
-
-import java.net.ConnectException;
-import java.util.List;
 
 /**
- * Created by lie on 6/7/16.
+ * API for accessing MAVProxy
  */
 public class DroneTelemetry implements DroneListener,TowerListener {
 
 
-
+    //dronekit and 3dr stuff
     private Drone drone;
     private ControlTower controlTower;
     private final Handler handler = new Handler();
+    //telemetry connection status
+    private boolean status= false;
+
 
     public DroneActivity context;
     public String TAG = "Telemtry";
     public final int UDP_PORT = 14550;
     public CharSequence connectionType ="";
-    private boolean status= false;
 
 
 
-    public DroneTelemetry(){
 
+    public DroneTelemetry(DroneActivity context){
+
+        this.context = context;
+        //initialize 3dr connection
         drone = new Drone();
-        controlTower = new ControlTower(DroneActivity.app.getContext());
-        this.context = DroneActivity.app.getContext();
+        controlTower = new ControlTower(context);
         controlTower.connect(this);
 
     }
 
+    /**
+     * status of MAVProxy connection
+     * @return
+     */
     public boolean status(){
         return status;
     }
@@ -67,22 +67,29 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
     }
 
-
+    /**
+     * handler MAVProxy updates
+     * @param event:type of update
+     * @param extras
+     */
     public void onDroneEvent(String event, Bundle extras){
 
         switch (event){
+            // connected to MAVProxy
             case AttributeEvent.STATE_CONNECTED:
                 status = true;
                 context.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        //UI update
                         ((Button)context.findViewById(R.id.droneconnect)).setText("MAV Disconnect");
-                        context.alertUser("Connected!");
+                        context.alertUser("Telemetry Connected!");
                     }
                 });
 
 
                 break;
+            //disconnected from mavproxy
             case AttributeEvent.STATE_DISCONNECTED:
                 status = false;
                 context.runOnUiThread(new Runnable() {
@@ -94,7 +101,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                 });
 
                 break;
-
+            //update app UI with Drone state
             case AttributeEvent.ALTITUDE_UPDATED:
                 final double altitude = droneAltitude();
                 context.runOnUiThread(new Runnable() {
@@ -138,16 +145,19 @@ public class DroneTelemetry implements DroneListener,TowerListener {
         }
     }
 
+    /**
+     * Connect to MAVProxy
+     */
     public void connect(){
         if(!drone.isConnected()){
-
+            //UDP connection
             if(connectionType.equals("UDP")) {
                 Bundle extraParams = new Bundle();
                 extraParams.putInt(ConnectionType.EXTRA_UDP_SERVER_PORT, UDP_PORT);
                 ConnectionParameter connnectionParams = new ConnectionParameter(ConnectionType.TYPE_UDP, extraParams, null);
                 drone.connect(connnectionParams);
             }
-
+            //USB connection: wish this worked
             else if(connectionType.equals("USB")) {
                 Bundle extraParams = new Bundle();
                 extraParams.putInt(ConnectionType.EXTRA_USB_BAUD_RATE, 57600); // Set default baud rate to 57600
@@ -155,7 +165,7 @@ public class DroneTelemetry implements DroneListener,TowerListener {
                 drone.connect(connectionParams);
             }
             else{
-                DroneActivity.app.getContext().alertUser("Select Connection Type");
+                context.alertUser("Select Connection Type");
             }
             Log.i(TAG, "attempted connection");
 
@@ -163,6 +173,9 @@ public class DroneTelemetry implements DroneListener,TowerListener {
         }
     }
 
+    /**
+     * disconnect from MAVProxy
+     */
     public void disconnect(){
         if(drone.isConnected()){
             drone.disconnect();
@@ -181,12 +194,20 @@ public class DroneTelemetry implements DroneListener,TowerListener {
 
     }
 
+    /**
+     * get drone GPS
+     * @return: :LatLong object
+     */
     public LatLong dronePosition(){
         Gps droneGps = drone.getAttribute(AttributeType.GPS);
 
         return droneGps.getPosition();
     }
 
+    /**
+     * get drone altitude
+     * @return: double altitude in feet
+     */
     public double droneAltitude(){
         Altitude alt = drone.getAttribute(AttributeType.ALTITUDE);
         double altitude = alt.getAltitude();
@@ -194,18 +215,30 @@ public class DroneTelemetry implements DroneListener,TowerListener {
         return altitude*metersToFeet;
     }
 
+    /**
+     * get drone roll
+     * @return: double roll in degrees
+     */
     public double droneRoll(){
         Attitude att = drone.getAttribute(AttributeType.ATTITUDE);
         return att.getRoll();//*180/Math.PI;
 
     }
 
+    /**
+     * get drone pitch
+     * @return: double pitch in degrees
+     */
     public double dronePitch(){
         Attitude att = drone.getAttribute(AttributeType.ATTITUDE);
         return att.getPitch();//*180/Math.PI;
 
     }
 
+    /**
+     * get drone yaw
+     * @return: double yaw in degrees
+     */
     public double droneYaw(){
         Attitude att = drone.getAttribute(AttributeType.ATTITUDE);
         return att.getYaw();//*180/Math.PI;
@@ -213,24 +246,32 @@ public class DroneTelemetry implements DroneListener,TowerListener {
     }
 
 
-
-
-
+    /**
+     * on MAVProxy conneciton failed handler
+     * @param result: reason
+     */
     public void onDroneConnectionFailed(ConnectionResult result){
         context.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                context.alertUser("connection failed!");
+                context.alertUser(" Telemetry connection failed!");
             }
         });
 
         Log.w(TAG,"connection failed");
     }
 
+    /**
+     * MAVProxy conneciton interrupted
+     * @param errorMsg: reason
+     */
     public void onDroneServiceInterrupted(String errorMsg){
-        Log.w(TAG,"connection interrupted");
+        Log.w(TAG,"connection interrupted "+errorMsg);
     }
 
+    /**
+     * 3DR connection handlers
+     */
     @Override
     public void onTowerConnected(){
         controlTower.registerDrone(drone,handler);

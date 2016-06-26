@@ -130,7 +130,16 @@ public final class SimpleHttpClient {
         }
     }
 
-
+    /**
+     * wraps around post picture
+     * @param url: api url
+     * @param postData: data to post
+     * @param imageName: name of image
+     * @param image: image
+     * @param authorization: token
+     * @return response
+     * @throws IOException
+     */
     public static JSONObject httpPostPicture(String url, JSONObject postData, String imageName, byte[] image, HashMap<String,String> authorization)throws IOException{
             return httpPostPicture(url,postData,imageName,image,authorization,DEFAULT_READ_TIMEOUT);
 
@@ -138,7 +147,17 @@ public final class SimpleHttpClient {
 
     }
 
-
+    /**
+     * post an image
+     * @param url api url
+     * @param postData data to post
+     * @param imageName image name
+     * @param image image
+     * @param authorization token
+     * @param timeout timeout
+     * @return response
+     * @throws IOException
+     */
     public static JSONObject httpPostPicture(String url, JSONObject postData,String imageName, byte[] image, HashMap<String,String> authorization, int timeout)throws IOException{
         HttpURLConnection httpConn = null;
         InputStream inputStream = null;
@@ -159,6 +178,7 @@ public final class SimpleHttpClient {
         httpConn.setReadTimeout(timeout);
         httpConn.setDoInput(true);
         httpConn.setDoOutput(true);
+           //put token
         if(authorization!=null && authorization.containsKey("accesstoken")) {
             httpConn.setRequestProperty("Authorization", "JWT " + authorization.get("accesstoken"));
         }
@@ -166,6 +186,7 @@ public final class SimpleHttpClient {
             Log.e(TAG,"authorization required to make this method call");
             throw new IOException("Authentication will failed. Access token required");
         }
+           //image required for this method
         if(imageName==null || image==null || postData ==null){
             Log.e(TAG,"one or more required arguments is null");
             throw  new IOException("Missing arguments");
@@ -220,12 +241,14 @@ public final class SimpleHttpClient {
             wrt.append(LINE_FEED);
             wrt.flush();
 
+           //get response
             int responseCode = httpConn.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 inputStream = httpConn.getInputStream();
                 response = new JSONEncoder(inputStream).encodeJSON();
 
             }
+           //bad response
             if (inputStream == null) {
                 Log.w(TAG, "httpPost: Response Code Error: " + responseCode + ": " + url);
                 throw new IOException("Response Error:" + responseCode);
@@ -248,6 +271,7 @@ public final class SimpleHttpClient {
             }
             throw e;
         } finally {
+           //clean up
 
                 if (wrt != null) {
                     wrt.close();

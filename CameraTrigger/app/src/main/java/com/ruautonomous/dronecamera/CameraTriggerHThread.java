@@ -10,7 +10,7 @@ import com.ruautonomous.dronecamera.qxservices.QXHandler;
 import java.io.IOException;
 
 /**
- * Created by lie on 6/14/16.
+ * Thread handler for triggering Qx
  */
 public class CameraTriggerHThread extends HandlerThread {
     /*
@@ -23,13 +23,20 @@ public class CameraTriggerHThread extends HandlerThread {
         public boolean trigger = false;
         public long DEFAULT_TRIGGER_DELAY = 500;
         public String TAG = "CameraTriggerHThread";
+        public DroneActivity context;
 
 
-        CameraTriggerHThread(){
+        public CameraTriggerHThread(DroneActivity context){
             super("CameraTriggerHThread");
             start();
+            this.context = context;
             mHandler = new Handler(getLooper());
+            ;
 
+        }
+
+        public void set(){
+            this.qxCommunicationClient = DroneSingleton.qxCommunicationClient;
         }
 
         //setter for telling thread what time to take pictures at
@@ -39,7 +46,7 @@ public class CameraTriggerHThread extends HandlerThread {
 
         void stopCapture(){
             trigger = false;
-            //DroneActivity.app.getContext().alertUser("Capture Stopped");
+
         }
 
         boolean status(){
@@ -50,15 +57,15 @@ public class CameraTriggerHThread extends HandlerThread {
         void startCapture(boolean check) throws IOException{
             if(trigger)return;
             if(triggerTime <= 0.0){
-                DroneActivity.app.getContext().alertUser("Bad Trigger Time");
+                context.alertUser("Bad Trigger Time");
                 throw new IOException("bad trigger time");
             }
-            qxCommunicationClient = DroneActivity.app.getQxHandler();
+
             if(check) {
 
                 if (!qxCommunicationClient.qxStatus()) return;
             }
-            DroneActivity.app.getContext().alertUser("Capture Start at "+triggerTime);
+            context.alertUser("Capture Start at "+triggerTime);
 
 
             mHandler.post(new Runnable() {

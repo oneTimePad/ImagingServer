@@ -8,7 +8,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 /**
- * Created by root on 6/25/16.
+ * allows client (drone app) to read images that qx service writes
  */
 public class PictureStorageClient {
 
@@ -24,12 +24,12 @@ public class PictureStorageClient {
         //create the pic storage directory
         picDir = new File(sdCard.toString() + "/dronePictures");
 
-
-
-
     }
 
-
+    /**
+     * get the directory to read from
+     * @return : File object
+     */
     public File getPictureStorage(){
         return picDir;
     }

@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.ruautonomous.dronecamera.qxservices.QXCommunicationClient;
 import com.ruautonomous.dronecamera.qxservices.QXHandler;
+import com.ruautonomous.dronecamera.qxservices.QxCommunicationResponseClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -15,53 +16,98 @@ import java.net.ConnectException;
 import java.util.HashMap;
 
 /**
- * Created by lie on 6/14/16.
+ * Thread handler for contacting drone API
  */
 public class GroundStationHThread extends HandlerThread {
 
     private Handler mHandler = null;
-    private DroneRemoteApi droneRemoteApi;
-    private ImageQueue pendingUploadImages;
+
+    //shared resources
+    private final DroneRemoteApi droneRemoteApi = new DroneRemoteApi();
+    private ImageQueue imageQueue;
     private QXCommunicationClient qxCommunicationClient;
+    private  CameraTriggerHThread cameraTriggerHThread;
+    private  DroneActivity context;
     private String id;
+
+    //status variables
+    //continue loop
     private boolean connect = false;
+    //whether api connection succeeded
     private boolean connected = false;
+
+    //time between requests
+    private double timeout = 0.0;
+
     public String TAG = "GroundStationHThread";
-    public double timeout = 0.0;
 
 
-    GroundStationHThread(){
+
+   public GroundStationHThread(String id,DroneActivity context){
+
         super("GroundStationHThread");
         start();
         mHandler = new Handler(getLooper());
-        this.droneRemoteApi = DroneActivity.app.getDroneRemoteApi();
 
-        this.pendingUploadImages = DroneActivity.app.getImageQueue();
-        this.id = DroneActivity.app.getId();
-        this.qxCommunicationClient = DroneActivity.app.getQxHandler();
+        this.context = context;
+        this.id = id;
 
     }
 
+    public void set(){
+        this.imageQueue = DroneSingleton.imageQueue;
+
+        this.qxCommunicationClient = DroneSingleton.qxCommunicationClient;
+        this.cameraTriggerHThread = DroneSingleton.cameraTriggerHThread;
+    }
+    /**
+     * set server IP:PORT
+     */
+    public void setServer(String server){
+        droneRemoteApi.setServer(server);
+
+    }
+
+    /**
+     * status for drone api connection
+     * @return: boolean status
+     */
     boolean status(){
         return connect;
     }
 
+    /**
+     * stop thread nicely
+     */
     void disconnect(){
         connect = false;
     }
 
+    /**
+     * set time between requests
+     * @param timeout: double time
+     */
     void setTimeout(double timeout) {this.timeout = timeout;}
 
-    void connect(final String username, final String password) throws ConnectException{
+    /**
+     * start connection loop to drone api
+     * @param username
+     * @param password
+
+     */
+    void connect(final String username, final String password) {
+        //if already connected
         if(connect) return;
+        //if bad timeout
         if(timeout<=0.0)return;
+
         connect = true;
 
         Runnable task = new Runnable() {
             @Override
             public void run() {
                 try{
-
+                    //login to api
                     droneRemoteApi.getAccess(username,password);
                     connected = true;
                 }
@@ -70,28 +116,36 @@ public class GroundStationHThread extends HandlerThread {
                     connect = false;
 
                 }
-                synchronized (this) {
+                //notify main thread that we succeeded
+                context.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        context.setGCSConnectionStatus(connected);
+                    }
+                });
 
-                    this.notify();
-                }
-
+                //main connection loop
                 while (connect){
                     HashMap<String,Object> image =null;
+                    //attempt to get an imaging waiting to be posted to drone api
                     try{
-                        image= pendingUploadImages.pop();
-                        Log.i(TAG,"entry found");
+                        synchronized (imageQueue) {
+                            image = imageQueue.pop();
+                        }
 
                     }
                     catch (IndexOutOfBoundsException e){
-                        //nothing
+                        //nothing, there is no image waiting
                     }
                     JSONObject response = null;
+                    boolean connectionStatus = false;
+                    //get status of qx connection
+                    synchronized (qxCommunicationClient) {
+                         connectionStatus = qxCommunicationClient.qxStatus();
+                    }
 
-
-                    boolean connectionStatus = qxCommunicationClient.qxStatus();
-                    CameraTriggerHThread cameraTriggerHThread = DroneActivity.app.getCameraTriggerThread();
                     try {
-
+                        //use droneapi handler to contact api, post
                         synchronized (cameraTriggerHThread) {
                             response = droneRemoteApi.postServerContact(id, connectionStatus, cameraTriggerHThread.status(), cameraTriggerHThread.triggerTime, image);
                         }
@@ -100,29 +154,31 @@ public class GroundStationHThread extends HandlerThread {
                         Log.e(TAG,"failed to post");
                     }
 
-
+                    //if there is a response and it is not malformed
                     if (response != null && response.has("trigger")){
 
 
                         try {
-
+                            //is it telling device to trigger?
                             if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
-                                DroneActivity.app.getCameraTriggerThread().setTriggerTime(Double.parseDouble(response.get("time").toString()));
+                                //set trigger time and start capture
+                                cameraTriggerHThread.setTriggerTime(Double.parseDouble(response.get("time").toString()));
                                 try {
-                                    DroneActivity.app.getCameraTriggerThread().startCapture(true);
+                                    cameraTriggerHThread.startCapture(true);
                                 }
                                 catch (IOException e){
                                     Log.e(TAG, "failed to start remote capture");
                                 }
                             }
+                            //else stop trigger
                             else if (Integer.parseInt(response.getString("trigger")) == 0)
-                                DroneActivity.app.getCameraTriggerThread().stopCapture();
+                               cameraTriggerHThread.stopCapture();
                         }
                         catch (JSONException e){
                             Log.e(TAG,e.toString());
                         }
                     }
-
+                    //sleep for timeout
                     try{
                         Thread.sleep((long)timeout);
                     }
@@ -136,16 +192,7 @@ public class GroundStationHThread extends HandlerThread {
             }
         };
         mHandler.post(task);
-        synchronized (task) {
-            //waitfor login
-            try {
-                task.wait();
-            } catch (InterruptedException e) {
-                Log.e(TAG, e.toString());
-            }
-        }
 
-        if(!connected) throw new ConnectException("Login Failed");
     }
 
 }

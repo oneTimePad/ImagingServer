@@ -33,23 +33,24 @@ import java.util.Iterator;
 import java.util.TimeZone;
 
 /**
- * Created by lie on 6/8/16.
+ * used by qx service to storage images to fs
  */
 public class PictureStorageServer {
 
 
     private int picNum = 0;
     private Thread pendingPicFetcher = null;
-    public Context context;
-
-    //picture directory on phone
-    private File picDir;
-    private final ArrayList<String> imagePendingQueue = new ArrayList<>();
-
-    public String TAG ="PictureStorageServer";
-    public final long CONSUMER_SLEEP_TIME= 500;
     private boolean allowed = true;
     private Messenger responseClient;
+    //picture directory on phone
+    private File picDir;
+    //pending images to fetch from qx
+    private final ArrayList<String> imagePendingQueue = new ArrayList<>();
+
+    public Context context;
+    public String TAG ="PictureStorageServer";
+    public final long CONSUMER_SLEEP_TIME= 500;
+
 
 
 
@@ -77,61 +78,41 @@ public class PictureStorageServer {
         try {
             //if directory doesn't exist, make it
             if (!picDir.exists()) {
-                if(!picDir.mkdirs()){
+                picDir.mkdirs();
 
-                   /* context.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            context.alertUser("Storage creation Failed.");
-                        }
-                    });*/
 
-                }
+
             }
 
 
         } catch (SecurityException e) {
             Log.e(TAG,"Failed to create Picture Storage");
-
-            /*context.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    context.alertUser("Storage creation failed. Exiting");
-                }
-            });*/
-
-
         }
 
-        /*if(!picDir.exists()){
-            throw  new IOException("Failed to create Picture directory");
-        }*/
 
-
-
+        //loop to fetch picture urls from queue and download them from qx
         if(pendingPicFetcher!=null)return;
         pendingPicFetcher = new Thread(new Runnable() {
             @Override
             public void run() {
                 while(allowed){
-                    //Log.i("ALIVE","ALIVE");
+
                     if(!imagePendingQueue.isEmpty()) {
                         synchronized (imagePendingQueue) {
+                            //get image url
                             String image = imagePendingQueue.remove(0);
 
-
+                            //download
                             InputStream istream = downloadImage(image);
 
                             try {
                                 if (istream != null) {
+                                    //write the image to storage
                                     String imageFileName = writeToStorage(istream);
                                     istream.close();
+                                    //push image to client (drone app)
                                     pushImage(imageFileName);
 
-                                    /*
-                                    synchronized (imageUploadQueue) {
-                                        imageUploadQueue.push(imageFileName, imageData);
-                                    }*/
                                 }
                             } catch (IOException e) {
                                 Log.e(TAG,"consumer died");
@@ -140,6 +121,7 @@ public class PictureStorageServer {
                         }
                         }
                         else{
+                        //if nothing in queue just sleep for a little
                             try {
                                 Thread.sleep(CONSUMER_SLEEP_TIME);
                             } catch (InterruptedException e) {
@@ -154,8 +136,14 @@ public class PictureStorageServer {
 
     }
 
+    /**
+     * push image to client (drone app)
+     * @param image : image name in fs
+     */
     private void pushImage(String image){
+        //use Messenger IPC to send image name in fs
         if(responseClient!=null){
+            //send it
             Message msg = Message.obtain(null, QxCommunicationResponseClient.IMAGE,0,0);
             Bundle data = new Bundle();
             data.putString("pictureName",image);
@@ -169,28 +157,36 @@ public class PictureStorageServer {
         }
     }
 
+    /**
+     * clean up
+     */
     public void close(){
         if(pendingPicFetcher!=null) allowed = false;
 
-
     }
 
-
+    /**
+     * push picture to queue
+     * @param imageName image url
+     * @throws IOException
+     */
     public void writePicture(String imageName) throws IOException{
         synchronized (imagePendingQueue){
-
                 imagePendingQueue.add(imageName);
-
 
         }
     }
 
+    /**
+     * download image from qx
+     * @param imageUrl url for image
+     * @return input stream for download image to get bytes
+     */
     private InputStream downloadImage(String imageUrl) {
         InputStream istream = null;
         try {
             Log.i("URL",imageUrl);
            istream = (InputStream) new URL(imageUrl).getContent();
-
 
         }
         catch (MalformedURLException e){
@@ -203,11 +199,13 @@ public class PictureStorageServer {
 
     }
 
-
+    /**
+     * write dowloaded image to fs
+     * @param image input stream for image bytes
+     * @return name of image in fs
+     * @throws IOException
+     */
     private String writeToStorage(InputStream image) throws IOException{
-
-
-
 
 
 
@@ -221,21 +219,14 @@ public class PictureStorageServer {
 
             int bufferSize = 2048;
             byte[] buffer = new byte[bufferSize];
-            int total =0;
             int len =0;
-
+            //read and write loop
             while((len = image.read(buffer))!=-1){
-                //Log.i("READ",len+"");
+
                 outStream.write(buffer,0,len);
-                //Log.i("ENDREAD","ENDREAD");
 
-                total+=len;
-
-                //if(image.available()<=0) break;
             }
-            //Log.i("TOTALSIZE","PicNUM"+picNum+"TOTAL"+total+"");
             refreshGallery(outFile);
-            //Log.i("CAPTUREWATCH","just saved "+picNum);
         }
         catch (IOException e){
             Log.e(TAG,e.toString());

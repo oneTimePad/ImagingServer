@@ -1,8 +1,6 @@
 package com.ruautonomous.dronecamera.qxservices;
 
-/**
- * Created by lie on 6/8/16.
- */
+
 
 import android.util.Log;
 

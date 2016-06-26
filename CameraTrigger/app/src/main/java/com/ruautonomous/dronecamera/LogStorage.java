@@ -19,23 +19,22 @@ import java.util.Iterator;
 import java.util.TimeZone;
 
 /**
- * Created by root on 6/25/16.
+ * Allows write to log file
  */
 public class LogStorage {
 
 
-    private File logDir;
-    private File logFile;
     //for writing to log files
-    private FileWriter wrt =null;
-    private BufferedWriter logOut = null;
     private BufferedWriter fileWriter;
     private ImageQueue imageQueue;
     public final String TAG = "LogStorage";
 
 
-    public LogStorage() throws IOException{
-        this.imageQueue = DroneActivity.app.getImageQueue();
+    public LogStorage(ImageQueue imageQueue) throws IOException{
+        this.imageQueue = imageQueue;
+
+        File logDir;
+        File logFile;
 
         //used for setting current time log file was made
         Calendar cal = Calendar.getInstance(TimeZone.getDefault());
@@ -48,7 +47,7 @@ public class LogStorage {
         logDir = new File(sdCard.toString() + "/droneLogs");
 
         try {
-
+            //check if it exists
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }
@@ -57,20 +56,18 @@ public class LogStorage {
             fileWriter = new BufferedWriter(new FileWriter(logFile));
 
         } catch (SecurityException e) {
-            //context.runOnUiThread(new Runnable() {
-              //  @Override
-               // public void run() {
-                 //   context.alertUser("Storage creation failed. Exiting");
-               // }
-            //});
+
             throw new IOException("Failed to create logs");
         }
-        finally {
-        }
+
 
     }
 
+    /**
+     * clean up
+     */
     public void close(){
+        //close log file writer
         if(fileWriter!=null) {
             try {
 
@@ -83,7 +80,11 @@ public class LogStorage {
         }
     }
 
-
+    /**
+     * write image data to log file when it is captured
+     * @param data : image data object
+     * @throws IOException
+     */
     public void writeLog(ImageData data) throws IOException {
 
         synchronized (imageQueue){
