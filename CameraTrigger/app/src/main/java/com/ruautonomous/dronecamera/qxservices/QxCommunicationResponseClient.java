@@ -11,6 +11,7 @@ import com.ruautonomous.dronecamera.ImageQueue;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
 
 /**
  * wraps around handler for responses from Qx service
@@ -20,6 +21,7 @@ public class QxCommunicationResponseClient {
     public static  final int IMAGE = 1;
     public static  final int QXSEARCHUPDATE = 2;
     public static final int QXSTATUS = 3;
+    public static final int FULLIMAGE = 4;
     public final static String TAG = "ResponseClient";
 
     private ImageQueue imageQueue;
@@ -72,8 +74,32 @@ public class QxCommunicationResponseClient {
                 case IMAGE:
                     if(msg.getData()!=null) {
                         String pictureName = msg.getData().getString("pictureName");
+                        String url = msg.getData().getString("url");
+
                         try {
-                           responseClient.imageQueue.pushImage(pictureName);
+                            synchronized (responseClient.imageQueue) {
+                                responseClient.imageQueue.pushImage(pictureName, url);
+                            }
+                        }
+                        catch (IOException e){
+                            Log.e(TAG,e.toString());
+                        }
+                    }
+                    break;
+                //service sent full sized image
+                case FULLIMAGE:
+                    if(msg.getData()!=null){
+                        String picture = msg.getData().getString("pictureName");
+                        String session = msg.getData().getString("session");
+                        HashMap<String,String> hash = new HashMap<>();
+                        hash.put("pictureName",picture);
+                        hash.put("session",session);
+
+                        try{
+                            synchronized (responseClient.imageQueue){
+                                responseClient.imageQueue.pushFullImage(hash);
+                            }
+
                         }
                         catch (IOException e){
                             Log.e(TAG,e.toString());

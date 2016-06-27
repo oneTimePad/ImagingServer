@@ -27,6 +27,8 @@ public class ImageData extends JSONObject {
         final DroneTelemetry droneTelemetry = DroneSingleton.droneTelemetry;
         //fetch data from sensors
         try {
+            //url
+
             //put time image was captured
             this.put("timeTaken", time);
             //attempt to get drone telemetry

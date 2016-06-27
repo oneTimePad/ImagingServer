@@ -114,6 +114,19 @@ public class QXCommunicationClient {
     }
 
     /**
+     * request service to fetch a fullsize version of an image
+     * @param request contains session token of requesiting user and image url
+     */
+    public void getFullSizedImage(String request){
+        Bundle data = new Bundle();
+        String[] splitter = request.split("~");
+        data.putString("session",splitter[0]);
+        data.putString("url",splitter[1]);
+        send(QXCommunicationService.FULLSIZE,null,data);
+
+    }
+
+    /**
      * tell service to search for Qx devices
      */
     public void search(){

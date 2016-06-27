@@ -15,7 +15,6 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="RU Autonomous Drone Camera"
-
         android:theme="@style/AppTheme">
         <activity
             android:name=".DroneActivity"

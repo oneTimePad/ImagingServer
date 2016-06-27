@@ -325,15 +325,20 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected', 'qxStatus': dataDict['qxStatus']})))
-
+		fullSizedResponse = ''
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
 
+
+			imageData = {}
+			if dataDict['url'] != 'FULL':
             #form image dict
-			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt','timeTaken')}
+				imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt','timeTaken')}
+			imageData['url'] = dataDict['url']
 			imageData['fileName'] = IMAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
 			imageData['timeReceived'] = timeReceived
+
 			#make obj
 			pictureObj = PictureSerializer(data = imageData)
 			if pictureObj.is_valid():
@@ -343,14 +348,33 @@ class DroneViewset(viewsets.ModelViewSet):
 
 				pictureObj.save()
 				#pdb.set_trace()
-				connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
-				channel = connection.channel()
 
-				channel.queue_declare(queue = 'pictures')
-				channel.basic_publish(exchange='',
-									routing_key='pictures',
-									body=str(pictureObj.pk))
-				connection.close()
+				if dataDict['url'] != 'FULL':
+					connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
+					channel = connection.channel()
+
+					channel.queue_declare(queue = 'pictures')
+					channel.basic_publish(exchange='',
+										routing_key='pictures',
+										body=str(pictureObj.pk))
+					connection.close()
+					fullSizeList = []
+					connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+					channel = connection.channel()
+					queue = channel.queue_declare(queue='fullSize')
+					callback = CountCallback(queue.method.message_count,1,fullSizeList)
+					channel.basic_consume(callback,queue='fullSize')
+					channel.start_consuming()
+					fullSizedResponse = fullSizeList[0]
+
+				else:
+					redis_publisher = RedisPublisher(facility='viewer',sessions=dataDict['session'])
+					redis_publisher.publish_message(RedisMessage(json.dumps({'fullSize':True,'pk':pictureObj.pk,'photo':pictureObj.fileName})))
+					#get session token and picture
+					#push pic to client
+
+
+
 
 		except MultiValueDictKeyError:
             #there was no picture sent
@@ -364,10 +388,10 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time"),'fullSize': fullSizedResponse})))
 		elif cache.get('trigger')== 0:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false','fullSize':fullSizedResponse})))
 
 		return Response({'trigger':cache.get("trigger"),'time':cache.get("time")})
 
@@ -512,6 +536,25 @@ class GCSViewset(viewsets.ModelViewSet):
 		serPic = PictureSerializer(picture)
 		return Response({'type':'picture','pk':picture.pk,'image':serPic.data})
 
+	@list_route(methods=['post'])
+	def getFullSize(self,request,pk=None):
+		connectionCheck()
+		if not "pk" in request.data:
+			return HttpResponseForbidden()
+
+		try:
+			picture = Picture.objects.get(pk= request.data['pk'])
+		except Picture.DoesNotExist:
+			return HttpResponseForbidden()
+		connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
+		channel = connection.channel()
+
+		channel.queue_declare(queue = 'fullsize')
+		channel.basic_publish(exchange='',
+							routing_key='fullsize',
+							body=str(request.session.session_key+'~'+picture.url))
+		connection.close()
+		return Response({'ok':'ok'})
 
 
 	@list_route(methods=['post'])

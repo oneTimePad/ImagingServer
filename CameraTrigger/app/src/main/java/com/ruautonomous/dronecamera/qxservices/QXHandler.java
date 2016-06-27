@@ -335,7 +335,7 @@ public class QXHandler {
                     }*/
 
                     Log.d(TAG, "openConnection(): completed.");
-                    mRemoteApi.setPostviewImageSize();
+                    mRemoteApi.setPostviewImageSize("2M");
                 } catch (IOException e) {
                     Log.w(TAG, "openConnection : IOException: " + e.getMessage());
                     //DisplayHelper.setProgressIndicator(SampleCameraActivity.this, false);
@@ -344,6 +344,16 @@ public class QXHandler {
             }
         }.start();
 
+    }
+
+    public JSONObject setPostViewSize(String size){
+        try {
+           return  mRemoteApi.setPostviewImageSize(size);
+        }
+        catch (IOException e){
+            Log.e(TAG, e.toString());
+        }
+        return null;
     }
 
     /**

@@ -152,8 +152,26 @@ public class DroneRemoteApi {
                 if(image!=null) {
                     //fetch image name and associated data
                     imageName = (String)image.get("pictureName") ;
-                    imageData = (ImageData)image.get("pictureData");
+                    String [] splitter = imageName.split("~");
+                    imageName = splitter[0];
+                    String url = splitter[1];
 
+                    if(url.equals("FULL")){
+                        try {
+                            requestData.put("session", image.get("session"));
+                        }
+                        catch (JSONException e){
+                            Log.e(TAG,e.toString());
+                        }
+                    }
+                    imageData = (ImageData)image.get("pictureData");
+                    try {
+                        requestData.put("url", url);
+
+                    }
+                    catch (JSONException e){
+                        Log.e(TAG,e.toString());
+                    }
                     //fetch image from fs
                     File outFile = new File(pictureStorageClient.getPictureStorage(), imageName);
                     DataInputStream dataInputStream = new DataInputStream(new FileInputStream(outFile));
@@ -161,15 +179,16 @@ public class DroneRemoteApi {
                     imageBytes = new byte[(int) outFile.length()];
                     dataInputStream.readFully(imageBytes);
                     //put image data into json request
-                    Iterator<?> keys = imageData.keys();
-                    while(keys.hasNext()){
-                        String key = keys.next().toString();
-                        try {
-                            requestData.put(key, imageData.get(key));
-                        }
-                        catch (JSONException e) {
-                            Log.w(TAG,"JSONException: "+e.toString());
-                            throw  new IOException("JSONException: "+e.toString());
+                    if(imageData!=null) {
+                        Iterator<?> keys = imageData.keys();
+                        while (keys.hasNext()) {
+                            String key = keys.next().toString();
+                            try {
+                                requestData.put(key, imageData.get(key));
+                            } catch (JSONException e) {
+                                Log.w(TAG, "JSONException: " + e.toString());
+                                throw new IOException("JSONException: " + e.toString());
+                            }
                         }
                     }
                 }

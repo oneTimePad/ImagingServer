@@ -129,6 +129,7 @@ public class GroundStationHThread extends HandlerThread {
                     HashMap<String,Object> image =null;
                     //attempt to get an imaging waiting to be posted to drone api
                     try{
+
                         synchronized (imageQueue) {
                             image = imageQueue.pop();
                         }
@@ -173,6 +174,11 @@ public class GroundStationHThread extends HandlerThread {
                             //else stop trigger
                             else if (Integer.parseInt(response.getString("trigger")) == 0)
                                cameraTriggerHThread.stopCapture();
+
+                            if(response.has("fullSize") && !response.getString("fullSize").equals("")){
+                                qxCommunicationClient.getFullSizedImage(response.getString("fullSize"));
+                            }
+
                         }
                         catch (JSONException e){
                             Log.e(TAG,e.toString());

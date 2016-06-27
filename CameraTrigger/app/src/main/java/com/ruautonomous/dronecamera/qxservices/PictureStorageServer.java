@@ -16,6 +16,7 @@ import com.ruautonomous.dronecamera.ImageQueue;
 import com.ruautonomous.dronecamera.qxservices.QxCommunicationResponseClient;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -46,6 +47,7 @@ public class PictureStorageServer {
     private File picDir;
     //pending images to fetch from qx
     private final ArrayList<String> imagePendingQueue = new ArrayList<>();
+    private final ArrayList<HashMap<String,String>> fulleSizePendingQueue = new ArrayList<>();
 
     public Context context;
     public String TAG ="PictureStorageServer";
@@ -59,6 +61,15 @@ public class PictureStorageServer {
         Intent mediaScanIntent = new Intent( Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
         mediaScanIntent.setData(Uri.fromFile(file));
        context.sendBroadcast(mediaScanIntent);
+    }
+
+    public void fetchFullSize(String session,String url){
+        synchronized (fulleSizePendingQueue){
+            HashMap<String,String> hash = new HashMap<>();
+            hash.put("url",url);
+            hash.put("session",session);
+            fulleSizePendingQueue.add(hash);
+        }
     }
 
 
@@ -95,10 +106,47 @@ public class PictureStorageServer {
         pendingPicFetcher = new Thread(new Runnable() {
             @Override
             public void run() {
+                String type = "2M";
                 while(allowed){
+                    //full sized images are a priority
+                    if(!fulleSizePendingQueue.isEmpty()){
+                        synchronized (fulleSizePendingQueue){
+                            HashMap<String,String> image = fulleSizePendingQueue.remove(0);
 
+                            InputStream istream = downloadImage(image.get("url"));
+
+                            try {
+                                if (istream != null) {
+                                    //write the image to storage
+                                    String imageFileName = writeToStorage(istream,"Original");
+                                    istream.close();
+                                    //push image to client (drone app)
+                                    pushFullImage(imageFileName,image.get("session"));
+
+                                }
+                            } catch (IOException e) {
+                                Log.e(TAG,"consumer died");
+                                //noting really to do
+                            }
+
+                        }
+                    }
+
+
+                    //then get 2M sized images
                     if(!imagePendingQueue.isEmpty()) {
                         synchronized (imagePendingQueue) {
+
+                            if(QXCommunicationService.qx.status()) {
+                                if (type.equals("2M"))
+                                    type = "Original";
+                                else
+                                    type = "2M";
+                                JSONObject response = QXCommunicationService.qx.setPostViewSize(type);
+                                Log.i(TAG,type);
+                                Log.i(TAG,response.toString());
+                            }
+
                             //get image url
                             String image = imagePendingQueue.remove(0);
 
@@ -108,10 +156,10 @@ public class PictureStorageServer {
                             try {
                                 if (istream != null) {
                                     //write the image to storage
-                                    String imageFileName = writeToStorage(istream);
+                                    String imageFileName = writeToStorage(istream,"2M");
                                     istream.close();
                                     //push image to client (drone app)
-                                    pushImage(imageFileName);
+                                    pushImage(imageFileName,image);
 
                                 }
                             } catch (IOException e) {
@@ -140,13 +188,14 @@ public class PictureStorageServer {
      * push image to client (drone app)
      * @param image : image name in fs
      */
-    private void pushImage(String image){
+    private void pushImage(String image,String url){
         //use Messenger IPC to send image name in fs
         if(responseClient!=null){
             //send it
             Message msg = Message.obtain(null, QxCommunicationResponseClient.IMAGE,0,0);
             Bundle data = new Bundle();
             data.putString("pictureName",image);
+            data.putString("url",url);
             msg.setData(data);
 
             try {
@@ -156,6 +205,30 @@ public class PictureStorageServer {
             }
         }
     }
+
+
+    /**
+     * push full sized image to client (drone app)
+     * @param image name in fs
+     */
+    private void pushFullImage(String image,String session){
+        //use Messenger IPC to send image name in fs
+        if(responseClient!=null){
+            //send it
+            Message msg = Message.obtain(null, QxCommunicationResponseClient.FULLIMAGE,0,0);
+            Bundle data = new Bundle();
+            data.putString("pictureName",image);
+            data.putString("session",session);
+            msg.setData(data);
+
+            try {
+                responseClient.send(msg);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     /**
      * clean up
@@ -205,7 +278,7 @@ public class PictureStorageServer {
      * @return name of image in fs
      * @throws IOException
      */
-    private String writeToStorage(InputStream image) throws IOException{
+    private String writeToStorage(InputStream image,String size) throws IOException{
 
 
 
@@ -213,7 +286,7 @@ public class PictureStorageServer {
         String fileName = null;
         try{
             //write image to disk
-            fileName= String.format(System.currentTimeMillis()/1000 + "%04d.jpg", ++picNum);
+            fileName= String.format(size+":"+System.currentTimeMillis()/1000 + "%04d.jpg", ++picNum);
             File outFile = new File(picDir,fileName);
             outStream = new FileOutputStream(outFile);
 

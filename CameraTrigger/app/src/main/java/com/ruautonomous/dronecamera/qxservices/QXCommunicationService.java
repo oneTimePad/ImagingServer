@@ -29,6 +29,7 @@ public class QXCommunicationService extends Service {
     public static final int TRIGGERQX=2;
     public static final int STATUSQX=3;
     public static final int REGISTER = 4;
+    public static final int FULLSIZE = 5;
     public static  QXHandler qx;
     private Messenger client;
     private PictureStorageServer pictureStorageServer;
@@ -190,6 +191,10 @@ public class QXCommunicationService extends Service {
                 //trigger qx
                 case TRIGGERQX:
                     service.serviceTriggerQX();
+                    break;
+                //get full size image
+                case FULLSIZE:
+                    service.pictureStorageServer.fetchFullSize(msg.getData().getString("session"),msg.getData().getString("url"));
                     break;
                 //status update for Qx connection
                 case STATUSQX:

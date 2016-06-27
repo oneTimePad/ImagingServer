@@ -155,12 +155,12 @@ public class QxRemoteApi {
     }
 
 
-    public JSONObject setPostviewImageSize() throws IOException{
+    public JSONObject setPostviewImageSize(String size) throws IOException{
         String service = "camera";
         try {
             JSONObject requestJson =
                     new JSONObject().put("method", "setPostviewImageSize") //
-                            .put("params", new JSONArray().put("2M")).put("id", id()) //
+                            .put("params", new JSONArray().put(size)).put("id", id()) //
                             .put("version", "1.0");
             String url = findActionListUrl(service) + "/" + service;
 
@@ -314,107 +314,8 @@ public class QxRemoteApi {
         }
     }
 
-    /**
-     * Calls startLiveview API to the target server. Request JSON data is such
-     * like as below.
-     *
-     * <pre>
-     * {
-     *   "method": "startLiveview",
-     *   "params": [],
-     *   "id": 2,
-     *   "version": "1.0"
-     * }
-     * </pre>
-     *
-     * @return JSON data of response
-     * @throws IOException all errors and exception are wrapped by this
-     *             Exception.
-     */
-    public JSONObject startLiveview() throws IOException {
-        String service = "camera";
-        try {
-            JSONObject requestJson =
-                    new JSONObject().put("method", "startLiveview").put("params", new JSONArray()) //
-                            .put("id", id()).put("version", "1.0");
-            String url = findActionListUrl(service) + "/" + service;
 
-            log("Request:  " + requestJson.toString());
-            JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson,null);
-            log("Response: " + responseJson.toString());
-            return responseJson;
-        } catch (JSONException e) {
-            throw new IOException(e);
-        }
-    }
 
-    /**
-     * Calls stopLiveview API to the target server. Request JSON data is such
-     * like as below.
-     *
-     * <pre>
-     * {
-     *   "method": "stopLiveview",
-     *   "params": [],
-     *   "id": 2,
-     *   "version": "1.0"
-     * }
-     * </pre>
-     *
-     * @return JSON data of response
-     * @throws IOException all errors and exception are wrapped by this
-     *             Exception.
-     */
-    public JSONObject stopLiveview() throws IOException {
-        String service = "camera";
-        try {
-            JSONObject requestJson =
-                    new JSONObject().put("method", "stopLiveview").put("params", new JSONArray()) //
-                            .put("id", id()).put("version", "1.0");
-            String url = findActionListUrl(service) + "/" + service;
-
-            log("Request:  " + requestJson.toString());
-            JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson,null);
-            log("Response: " + responseJson.toString());
-            return responseJson;
-        } catch (JSONException e) {
-            throw new IOException(e);
-        }
-    }
-
-    /**
-     * Calls startRecMode API to the target server. Request JSON data is such
-     * like as below.
-     *
-     * <pre>
-     * {
-     *   "method": "startRecMode",
-     *   "params": [],
-     *   "id": 2,
-     *   "version": "1.0"
-     * }
-     * </pre>
-     *
-     * @return JSON data of response
-     * @throws IOException all errors and exception are wrapped by this
-     *             Exception.
-     */
-    public JSONObject startRecMode() throws IOException {
-        String service = "camera";
-        try {
-            JSONObject requestJson =
-                    new JSONObject().put("method", "startRecMode").put("params", new JSONArray()) //
-                            .put("id", id()).put("version", "1.0");
-            String url = findActionListUrl(service) + "/" + service;
-
-            log("Request:  " + requestJson.toString());
-            JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson,null);
-            log("Response: " + responseJson.toString());
-            return responseJson;
-        } catch (JSONException e) {
-            throw new IOException(e);
-        }
-    }
 
     /**
      * Calls actTakePicture API to the target server. Request JSON data is such

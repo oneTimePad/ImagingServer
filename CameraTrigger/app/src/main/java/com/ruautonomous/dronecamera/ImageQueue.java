@@ -14,6 +14,7 @@ import java.util.HashMap;
 
 /**
  * holds images to be uploaded to api
+ * acts as a priority queue
  */
 public class ImageQueue {
 
@@ -21,6 +22,7 @@ public class ImageQueue {
     //parallel queues
     private  ArrayList<ImageData> dataQueue = new ArrayList<>();
     private  ArrayList<String> pictureQueue = new ArrayList<>();
+    private  ArrayList<HashMap<String,String>> fullPictureQueue = new ArrayList<>();
 
 
     public final String TAG = "Imagequeue";
@@ -31,13 +33,14 @@ public class ImageQueue {
      * @param imageName : name of image in fs
      * @throws IOException
      */
-    public void pushImage(String imageName) throws  IOException{
+    public void pushImage(String imageName,String url) throws  IOException{
         if(imageName ==null){
             Log.w(TAG,"Required args are null");
             throw new IOException("Required args are null");
         }
 
         synchronized (pictureQueue) {
+            imageName = imageName+"~"+url;
             pictureQueue.add(imageName);
         }
     }
@@ -60,6 +63,24 @@ public class ImageQueue {
 
     }
 
+
+
+
+    public void pushFullImage(HashMap<String,String> image) throws  IOException{
+        if(image ==null){
+            Log.w(TAG,"Required args are null");
+            throw new IOException("Required args are null");
+        }
+
+        synchronized (fullPictureQueue) {
+
+            fullPictureQueue.add(image);
+        }
+    }
+
+
+
+
     /**
      * pops image and data from queues, if the corresponding image is not pushed yet, don't pop the data
      * @return: hashmap with image fs name and image data
@@ -67,6 +88,19 @@ public class ImageQueue {
      */
     public HashMap<String,Object> pop() throws IndexOutOfBoundsException{
         HashMap<String,Object> hmap = new HashMap<>();
+
+        try{
+            HashMap<String,String> hash = fullPictureQueue.remove(0);
+            hmap.put("pictureName",hash.get("pictureName")+"~FULL");
+            hmap.put("session",hash.get("session"));
+            hmap.put("pictureData",null);
+            return hmap;
+        }
+        catch (IndexOutOfBoundsException e){
+            //just means there is no full image in the queue, they take priority
+        }
+
+
         try {
             //check if the image has been pushed yet
             hmap.put("pictureName", pictureQueue.remove(0));

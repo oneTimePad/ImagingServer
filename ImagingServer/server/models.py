@@ -59,6 +59,7 @@ class Picture(models.Model):
 	lat = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	lon = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	alt = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	url = models.CharField(max_length=300,default='url')
 	timeTaken = models.FloatField(default=0)
 	timeReceived = models.FloatField(default=0)
 

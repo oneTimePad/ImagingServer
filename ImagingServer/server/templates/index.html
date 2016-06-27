@@ -381,6 +381,10 @@ function PictureArray(){
 			document.getElementById("connectinfo").class="box red";
 
 		}
+
+		else if(json_response.hasOwnProperty('fullSize')){
+			console.log(json_response);
+		}
 		else if (json_response.hasOwnProperty("connected")) {
 
 			//bootbox.alert("Android Device Connected");
@@ -513,6 +517,13 @@ function PictureArray(){
 				}
 			}
 		});
+	}
+
+	function getFullSize(pk){
+		$.ajax({
+			url:"{% url 'gcs-getFullSize'%}",
+			type: "POST",
+			data: {'pk': pk}});
 	}
 
 	//wanna do some testing before I add this
@@ -707,7 +718,8 @@ function PictureArray(){
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
 				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>")
 				.append("<tr><td>Taken</td><td>"+pic_curr_props.timeTaken+"</td></tr>")
-				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>");
+				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>")
+				.append("<tr><td><button id='picfullSize' onclick='getFullSize(" + curr+");' class='btn btn-primary'>Full Sized</button></td></tr>");
 
 				//Add orientation
 			PictureArray.prototype.allow = true;
