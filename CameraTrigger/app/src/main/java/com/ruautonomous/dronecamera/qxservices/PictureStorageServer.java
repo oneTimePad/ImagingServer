@@ -106,14 +106,17 @@ public class PictureStorageServer {
         pendingPicFetcher = new Thread(new Runnable() {
             @Override
             public void run() {
-                String type = "2M";
+
                 while(allowed){
                     //full sized images are a priority
                     if(!fulleSizePendingQueue.isEmpty()){
                         synchronized (fulleSizePendingQueue){
                             HashMap<String,String> image = fulleSizePendingQueue.remove(0);
+                            JSONObject response = QXCommunicationService.qx.setPostViewSize("Original");
+
 
                             InputStream istream = downloadImage(image.get("url"));
+                            Log.i("FULL",image.get("url"));
 
                             try {
                                 if (istream != null) {
@@ -121,6 +124,7 @@ public class PictureStorageServer {
                                     String imageFileName = writeToStorage(istream,"Original");
                                     istream.close();
                                     //push image to client (drone app)
+                                    Log.i("FULL","finished");
                                     pushFullImage(imageFileName,image.get("session"));
 
                                 }
@@ -138,12 +142,8 @@ public class PictureStorageServer {
                         synchronized (imagePendingQueue) {
 
                             if(QXCommunicationService.qx.status()) {
-                                if (type.equals("2M"))
-                                    type = "Original";
-                                else
-                                    type = "2M";
-                                JSONObject response = QXCommunicationService.qx.setPostViewSize(type);
-                                Log.i(TAG,type);
+
+                                JSONObject response = QXCommunicationService.qx.setPostViewSize("2M");
                                 Log.i(TAG,response.toString());
                             }
 

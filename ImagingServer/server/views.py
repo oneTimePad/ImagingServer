@@ -64,6 +64,11 @@ channel = connection.channel()
 channel.queue_delete(queue='pictures')
 connection.close()
 
+connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
+channel = connection.channel()
+channel.queue_delete(queue='fullsize')
+connection.close()
+
 
 
 '''
@@ -88,15 +93,19 @@ def gcsSessions():
 callback to receive N, MQ messages
 '''
 class CountCallback(object):
-	def __init__(self,size,sendNum,picList):
+	def __init__(self,size,sendNum,picList,type):
 		#pdb.set_trace()
+		self.type = type
 		self.picList = picList
 		self.count = (size if sendNum > size else sendNum)
 		self.count = self.count if self.count >0 else 1
 	def __call__(self,ch,method,properties,body):
 		#pdb.set_trace()
 		ch.basic_ack(delivery_tag=method.delivery_tag)
-		self.picList.append(int(body))
+		if self.type == 'int':
+			self.picList.append(int(body))
+		else:
+			self.picList.append(str(body))
 		self.count-=1
 		if self.count == 0:
 			ch.stop_consuming()
@@ -358,14 +367,21 @@ class DroneViewset(viewsets.ModelViewSet):
 										routing_key='pictures',
 										body=str(pictureObj.pk))
 					connection.close()
+					#pdb.set_trace()
 					fullSizeList = []
 					connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 					channel = connection.channel()
-					queue = channel.queue_declare(queue='fullSize')
-					callback = CountCallback(queue.method.message_count,1,fullSizeList)
-					channel.basic_consume(callback,queue='fullSize')
-					channel.start_consuming()
-					fullSizedResponse = fullSizeList[0]
+					queue = channel.queue_declare(queue='fullsize')
+					#pdb.set_trace()
+					if queue.method.message_count !=0:
+						#pdb.set_trace()
+						callback = CountCallback(queue.method.message_count,1,fullSizeList,"str")
+						channel.basic_consume(callback,queue='fullsize')
+						channel.start_consuming()
+						fullSizedResponse = fullSizeList[0][2:]
+						print(fullSizedResponse)
+					connection.close()
+
 
 				else:
 					redis_publisher = RedisPublisher(facility='viewer',sessions=dataDict['session'])
@@ -388,12 +404,12 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time"),'fullSize': fullSizedResponse})))
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
 		elif cache.get('trigger')== 0:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false','fullSize':fullSizedResponse})))
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
-		return Response({'trigger':cache.get("trigger"),'time':cache.get("time")})
+		return Response({'trigger':cache.get("trigger"),'time':cache.get("time"),'fullSize':fullSizedResponse})
 
 
 '''
@@ -510,7 +526,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		queue = channel.queue_declare(queue='pictures')
 		picList = []
 		numPics = int(request.POST['numPics'])
-		callback = CountCallback(queue.method.message_count,numPics,picList)
+		callback = CountCallback(queue.method.message_count,numPics,picList,"int")
 		channel.basic_consume(callback,queue='pictures')
 		channel.start_consuming()
 		#pdb.set_trace()
@@ -539,6 +555,7 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def getFullSize(self,request,pk=None):
 		connectionCheck()
+		#pdb.set_trace()
 		if not "pk" in request.data:
 			return HttpResponseForbidden()
 

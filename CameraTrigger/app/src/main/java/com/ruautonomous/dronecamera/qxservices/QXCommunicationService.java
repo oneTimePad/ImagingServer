@@ -181,8 +181,10 @@ public class QXCommunicationService extends Service {
         @Override
         public void handleMessage(Message msg){
             QXCommunicationService service = serviceWeakReference.get();
+            Log.i(TAG,msg.what+"");
             switch(msg.what){
                 //search for a Qx device
+
                 case SEARCHQX:
                     service.setInterfaceWIFI();
                     QXCommunicationService.qx = new QXHandler(service.pictureStorageServer);
