@@ -24,11 +24,17 @@
     <string name="zero">0</string>
     <string name="gcsdisconnect">GCS Disconnect</string>
     <string name="etheron">Ethernet On</string>
+    <string name="formatlabel">Format</string>
 
 
     <string-array name="drone_connection_types">
         <item>USB</item>
         <item>UDP</item>
+    </string-array>
+
+    <string-array name="image_format_type">
+        <item>2M</item>
+        <item>Original</item>
     </string-array>
 
 </resources>

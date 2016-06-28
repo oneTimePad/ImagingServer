@@ -402,6 +402,9 @@ class DroneViewset(viewsets.ModelViewSet):
 		if not cache.has_key('time'):
 			cache.set("time",dataDict['time'],None)
 
+		if not cache.has_key("imageformat"):
+			cache.set("imageformat","2M",None)
+
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
@@ -409,7 +412,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
-		return Response({'trigger':cache.get("trigger"),'time':cache.get("time"),'fullSize':fullSizedResponse})
+		return Response({'trigger':cache.get("trigger"),'time':cache.get("time"),'imageformat':cache.get("imageformat"),'fullSize':fullSizedResponse})
 
 
 '''
@@ -486,6 +489,13 @@ class GCSViewset(viewsets.ModelViewSet):
 		#redirect to login page
 		return redirect(reverse('gcs-login'))
 
+	@list_route(methods=['post'])
+	def postImageFormat(self,request,pk=None):
+		connectionCheck()
+		if "format" not in request.data:
+			return HttpResponseForbidden()
+		cache.set("imageformat",request.data['format'],None)
+		return Response({'ok':'ok'})
 
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):

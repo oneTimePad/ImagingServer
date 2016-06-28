@@ -29,6 +29,9 @@ public class QXHandler {
     private final Set<String> mAvailableCameraApiSet = new HashSet<String>();
     private final Set<String> mSupportedApiSet = new HashSet<String>();
 
+    //sanity check
+    private String size = "2M";
+
     private DroneTelemetry droneTelemetry;
     private PictureStorageServer pictureStorageServer;
     private boolean connectionStatus = false;
@@ -36,9 +39,10 @@ public class QXHandler {
 
 
 
-    public QXHandler(PictureStorageServer pictureStorageServer){
+    public QXHandler(PictureStorageServer pictureStorageServer, String format){
 
         this.pictureStorageServer = pictureStorageServer;
+        this.size = format;
 
 
     }
@@ -54,6 +58,21 @@ public class QXHandler {
      * @param connectionStatus boolean status
      */
     public void setQXConnectionStatus(boolean connectionStatus){ this.connectionStatus = connectionStatus;}
+
+
+    public void setPostViewImageFormat(final String format){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    mRemoteApi.setPostviewImageSize(format);
+                }
+                catch (IOException e){
+                    Log.e(TAG,e.toString());
+                }
+            }
+        }).start();
+    }
 
 
     /**
@@ -93,6 +112,7 @@ public class QXHandler {
                 synchronized (mSsdpClient){
                     mSsdpClient.notify();
                 }
+
 
             }
 
@@ -291,6 +311,7 @@ public class QXHandler {
                         //startLiveview();
                     }*/
 
+
                     // prepare UIs
                     if (isCameraApiAvailable("getAvailableShootMode")) {
                         Log.d(TAG, "openConnection(): prepareShootModeSpinner()");
@@ -335,7 +356,7 @@ public class QXHandler {
                     }*/
 
                     Log.d(TAG, "openConnection(): completed.");
-                    mRemoteApi.setPostviewImageSize("2M");
+
                 } catch (IOException e) {
                     Log.w(TAG, "openConnection : IOException: " + e.getMessage());
                     //DisplayHelper.setProgressIndicator(SampleCameraActivity.this, false);
@@ -346,15 +367,7 @@ public class QXHandler {
 
     }
 
-    public JSONObject setPostViewSize(String size){
-        try {
-           return  mRemoteApi.setPostviewImageSize(size);
-        }
-        catch (IOException e){
-            Log.e(TAG, e.toString());
-        }
-        return null;
-    }
+
 
     /**
      * Stop monitoring Camera events and close liveview connection.
@@ -372,7 +385,8 @@ public class QXHandler {
 
         // getEvent stop
         Log.d(TAG, "closeConnection(): EventObserver.release()");
-        mEventObserver.release();
+        if(mEventObserver!=null)
+            mEventObserver.release();
 
         Log.d(TAG, "closeConnection(): completed.");
     }
@@ -482,7 +496,14 @@ public class QXHandler {
                         } else {
                             throw new IOException();
                         }
+                        try {
 
+                            mRemoteApi.setPostviewImageSize(size);
+
+                        }
+                        catch (IOException e){
+                            Log.e(TAG,e.toString());
+                        }
                         if (isShootingStatus(cameraStatus)) {
                             Log.d(TAG, "camera function is Remote Shooting.");
                             openConnection();

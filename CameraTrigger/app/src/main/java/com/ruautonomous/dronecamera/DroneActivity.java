@@ -59,7 +59,7 @@ public class DroneActivity extends ActionBarActivity {
     public boolean accelUpdate = true;
     public ProgressDialog searching;
 
-
+    public String size = "2M";
 
 
 
@@ -160,11 +160,11 @@ public class DroneActivity extends ActionBarActivity {
         searching.setCancelable(false);
 
         //run the search of the Wi-Fi network
-        new Thread(new Runnable() {
+       new Thread(new Runnable() {
             @Override
             public void run() {
                 //this is asynchronous, the response will come later in setSearchQxStatus
-                qxCommunicationClient.search();
+                qxCommunicationClient.search(size);
 
             }
         }).start();
@@ -261,11 +261,11 @@ public class DroneActivity extends ActionBarActivity {
      * set the spinners dropdown to include USB/UDP for selecting Telemetry Interface
      * @param v: the spinner
      */
-    private void setDroneConnectionSpinner(final View v){
+    private void setDroneSpinner(final View v, final int array){
 
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
                 this,
-                R.array.drone_connection_types,android.R.layout.simple_spinner_item
+                array,android.R.layout.simple_spinner_item
         );
 
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -273,6 +273,23 @@ public class DroneActivity extends ActionBarActivity {
         ((Spinner)v).setOnItemSelectedListener(new SpinnerActivity());
 
     }
+
+    private void setImageSpinner(final View v, final int array){
+
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+                this,
+                array,android.R.layout.simple_spinner_item
+        );
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ((Spinner)v).setAdapter(adapter);
+        ((Spinner)v).setOnItemSelectedListener(new ImageSizeSpinnerActivity());
+
+    }
+
+
+
+
 
     /**
      * callback listener for selecting type on spinner
@@ -282,7 +299,24 @@ public class DroneActivity extends ActionBarActivity {
         public void onItemSelected(AdapterView<?> parent, View view,
                                    int pos, long id) {
             // An item was selected. You can retrieve the selected item using
-            droneTelemetry.setConnectionType((CharSequence)parent.getItemAtPosition(pos));
+
+            if(view.getId() == R.id.connectionType)
+                droneTelemetry.setConnectionType((CharSequence)parent.getItemAtPosition(pos));
+
+        }
+
+        public void onNothingSelected(AdapterView<?> parent) {
+            // Another interface callback
+        }
+    }
+
+    private class ImageSizeSpinnerActivity extends Activity implements AdapterView.OnItemSelectedListener {
+
+        public void onItemSelected(AdapterView<?> parent, View view,
+                                   int pos, long id) {
+            // An item was selected. You can retrieve the selected item using
+               size = (String) parent.getItemAtPosition(pos);
+
         }
 
         public void onNothingSelected(AdapterView<?> parent) {
@@ -305,7 +339,8 @@ public class DroneActivity extends ActionBarActivity {
         //fill the scrollview
         fillScrollView(findViewById(R.id.numericintervals));
         //fill the spinner
-        setDroneConnectionSpinner(findViewById(R.id.connectionType));
+        setDroneSpinner(findViewById(R.id.connectionType),R.array.drone_connection_types);
+        setImageSpinner(findViewById(R.id.imageformat),R.array.image_format_type);
 
         //callback for clicking telemetry(MAVlink connect button
         findViewById(R.id.droneconnect).setOnClickListener(new View.OnClickListener() {
@@ -313,7 +348,7 @@ public class DroneActivity extends ActionBarActivity {
             public void onClick(View v) {
                 //if connected, disconect
                 if(droneTelemetry.status()){
-                    droneTelemetry.disconnect();;
+                    droneTelemetry.disconnect();
 
                 }
                 //if not connected, connect

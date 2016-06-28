@@ -308,6 +308,7 @@
                 android:layout_toRightOf="@+id/labelforinterval"
                 android:background="@drawable/scrollviewborder"
                 android:backgroundTint="@color/gray"
+                android:id="@+id/intervals"
 
 
                 >
@@ -323,6 +324,22 @@
 
                 </TableLayout>
             </HorizontalScrollView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/formatlabel"
+                android:layout_toRightOf="@+id/intervals"
+                android:id="@+id/formatlabeltext"
+                android:paddingLeft="10dp"/>
+
+            <Spinner
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@+id/formatlabeltext"
+                android:id="@+id/imageformat">
+
+            </Spinner>
 
 
 

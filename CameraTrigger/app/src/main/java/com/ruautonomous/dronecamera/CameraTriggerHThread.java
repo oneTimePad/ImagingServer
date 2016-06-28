@@ -19,11 +19,12 @@ public class CameraTriggerHThread extends HandlerThread {
         private Handler mHandler = null;
         private QXCommunicationClient qxCommunicationClient;
         double triggerTime =0.0;
-        public QXHandler qxHandler= null;
+
         public boolean trigger = false;
         public long DEFAULT_TRIGGER_DELAY = 500;
         public String TAG = "CameraTriggerHThread";
         public DroneActivity context;
+
 
 
         public CameraTriggerHThread(DroneActivity context){
@@ -48,6 +49,10 @@ public class CameraTriggerHThread extends HandlerThread {
             trigger = false;
 
         }
+
+
+
+
 
         boolean status(){
             return trigger;

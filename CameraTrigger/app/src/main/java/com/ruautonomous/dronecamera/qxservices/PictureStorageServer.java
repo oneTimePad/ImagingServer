@@ -106,14 +106,16 @@ public class PictureStorageServer {
         pendingPicFetcher = new Thread(new Runnable() {
             @Override
             public void run() {
-
+                boolean fullsizedownload = false;
                 while(allowed){
+                    //determines if a fullsizedownload occured
+
                     //full sized images are a priority
                     if(!fulleSizePendingQueue.isEmpty()){
                         synchronized (fulleSizePendingQueue){
                             HashMap<String,String> image = fulleSizePendingQueue.remove(0);
-                            JSONObject response = QXCommunicationService.qx.setPostViewSize("Original");
-
+                            QXCommunicationService.qx.setPostViewImageFormat("Original");
+                            fullsizedownload = true;
 
                             InputStream istream = downloadImage(image.get("url"));
                             Log.i("FULL",image.get("url"));
@@ -140,11 +142,12 @@ public class PictureStorageServer {
                     //then get 2M sized images
                     if(!imagePendingQueue.isEmpty()) {
                         synchronized (imagePendingQueue) {
+                            //if a fullesize download happened switch back to thumbnails
+                            if(QXCommunicationService.qx.status() && fullsizedownload) {
 
-                            if(QXCommunicationService.qx.status()) {
-
-                                JSONObject response = QXCommunicationService.qx.setPostViewSize("2M");
-                                Log.i(TAG,response.toString());
+                                QXCommunicationService.qx.setPostViewImageFormat("2M");
+                                Log.i("DOWN","woops");
+                                fullsizedownload = false;
                             }
 
                             //get image url

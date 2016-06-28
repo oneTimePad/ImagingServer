@@ -30,6 +30,7 @@ public class QXCommunicationService extends Service {
     public static final int STATUSQX=3;
     public static final int REGISTER = 4;
     public static final int FULLSIZE = 5;
+
     public static  QXHandler qx;
     private Messenger client;
     private PictureStorageServer pictureStorageServer;
@@ -187,13 +188,14 @@ public class QXCommunicationService extends Service {
 
                 case SEARCHQX:
                     service.setInterfaceWIFI();
-                    QXCommunicationService.qx = new QXHandler(service.pictureStorageServer);
+                    QXCommunicationService.qx = new QXHandler(service.pictureStorageServer,msg.getData().getString("format"));
                     service.serviceSearchQX();
                     break;
                 //trigger qx
                 case TRIGGERQX:
                     service.serviceTriggerQX();
                     break;
+
                 //get full size image
                 case FULLSIZE:
                     service.pictureStorageServer.fetchFullSize(msg.getData().getString("session"),msg.getData().getString("url"));
@@ -212,7 +214,7 @@ public class QXCommunicationService extends Service {
                     service.client = msg.replyTo;
                     try {
                         service.pictureStorageServer = new PictureStorageServer(service.client,service.getApplicationContext());
-                        QXCommunicationService.qx = new QXHandler(service.pictureStorageServer);
+                        //QXCommunicationService.qx = new QXHandler(service.pictureStorageServer);
 
                     }
                     catch (IOException e){

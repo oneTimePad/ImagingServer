@@ -36,6 +36,8 @@ public class GroundStationHThread extends HandlerThread {
     //whether api connection succeeded
     private boolean connected = false;
 
+
+
     //time between requests
     private double timeout = 0.0;
 
@@ -160,10 +162,14 @@ public class GroundStationHThread extends HandlerThread {
 
 
                         try {
+
+
                             //is it telling device to trigger?
                             if (Integer.parseInt(response.getString("trigger")) == 1 && response.has("time")) {
                                 //set trigger time and start capture
                                 cameraTriggerHThread.setTriggerTime(Double.parseDouble(response.get("time").toString()));
+
+
                                 try {
                                     cameraTriggerHThread.startCapture(true);
                                 }

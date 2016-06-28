@@ -126,11 +126,15 @@ public class QXCommunicationClient {
 
     }
 
+
+
     /**
      * tell service to search for Qx devices
      */
-    public void search(){
-       send(QXCommunicationService.SEARCHQX,null,null);
+    public void search(String format){
+        Bundle data = new Bundle();
+        data.putString("format",format);
+       send(QXCommunicationService.SEARCHQX,null,data);
 
     }
 
