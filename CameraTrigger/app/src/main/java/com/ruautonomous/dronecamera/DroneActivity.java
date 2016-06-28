@@ -300,7 +300,7 @@ public class DroneActivity extends ActionBarActivity {
                                    int pos, long id) {
             // An item was selected. You can retrieve the selected item using
 
-            if(view.getId() == R.id.connectionType)
+
                 droneTelemetry.setConnectionType((CharSequence)parent.getItemAtPosition(pos));
 
         }
