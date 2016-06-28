@@ -202,11 +202,18 @@ public class QXCommunicationService extends Service {
                     break;
                 //status update for Qx connection
                 case STATUSQX:
-                    boolean status = service.serviceStatusQX();
+                    if(QXCommunicationService.qx == null){
+                        Bundle data = new Bundle();
+                        data.putBoolean("status",false);
+                        service.send(QxCommunicationResponseClient.QXSTATUS,null,data);
+                    }
+                    else {
+                        boolean status = service.serviceStatusQX();
 
-                    Bundle data = new Bundle();
-                    data.putBoolean("status",status);
-                    service.send(QxCommunicationResponseClient.QXSTATUS,null,data);
+                        Bundle data = new Bundle();
+                        data.putBoolean("status", status);
+                        service.send(QxCommunicationResponseClient.QXSTATUS, null, data);
+                    }
 
                     break;
                 //client wants to register
@@ -214,7 +221,7 @@ public class QXCommunicationService extends Service {
                     service.client = msg.replyTo;
                     try {
                         service.pictureStorageServer = new PictureStorageServer(service.client,service.getApplicationContext());
-                        //QXCommunicationService.qx = new QXHandler(service.pictureStorageServer);
+                        QXCommunicationService.qx = new QXHandler(service.pictureStorageServer,"2M");
 
                     }
                     catch (IOException e){

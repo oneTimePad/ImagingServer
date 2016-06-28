@@ -146,7 +146,7 @@ public class PictureStorageServer {
                             if(QXCommunicationService.qx.status() && fullsizedownload) {
 
                                 QXCommunicationService.qx.setPostViewImageFormat("2M");
-                                Log.i("DOWN","woops");
+
                                 fullsizedownload = false;
                             }
 
@@ -260,18 +260,21 @@ public class PictureStorageServer {
      */
     private InputStream downloadImage(String imageUrl) {
         InputStream istream = null;
-        try {
-            Log.i("URL",imageUrl);
-           istream = (InputStream) new URL(imageUrl).getContent();
 
-        }
-        catch (MalformedURLException e){
-            Log.e(TAG,"Failed while downloading image");
-        }
-        catch (IOException e){
-            Log.e(TAG,"Unknown error "+e.toString());
-        }
+            try {
+                Log.i("URL", imageUrl);
+                istream = (InputStream) new URL(imageUrl).getContent();
+
+
+            } catch (MalformedURLException e) {
+                Log.e(TAG, "Failed while downloading image");
+            } catch (IOException e) {
+                Log.e(TAG, "Unknown error " + e.toString());
+
+            }
+
         return istream;
+
 
     }
 
