@@ -24,8 +24,11 @@
     <string name="zero">0</string>
     <string name="gcsdisconnect">GCS Disconnect</string>
     <string name="etheron">Ethernet On</string>
-    <string name="formatlabel">Format</string>
-
+    <string name="formatlabel">Format:</string>
+    <string name="colon">:</string>
+    <string name="dot">.</string>
+    <string name="hint3">xxx</string>
+    <string name="hint4">xxxx</string>
 
     <string-array name="drone_connection_types">
         <item>USB</item>

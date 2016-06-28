@@ -276,13 +276,13 @@ public class DroneTelemetry implements DroneListener,TowerListener {
     public void onTowerConnected(){
         controlTower.registerDrone(drone,handler);
         drone.registerDroneListener(this);
-
+        /*
         context.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 context.alertUser("3DR Services Connected!");
             }
-        });
+        });*/
         Log.i(TAG,"3DR services connected");
     }
 

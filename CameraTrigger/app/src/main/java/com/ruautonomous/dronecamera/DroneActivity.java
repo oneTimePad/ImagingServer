@@ -126,7 +126,7 @@ public class DroneActivity extends ActionBarActivity {
             NetworkInfo networkInfo = connectivityManager.getNetworkInfo(network);
             if (networkInfo.getType() == ConnectivityManager.TYPE_ETHERNET) {
                 etherNetwork = network;
-                alertUser("FOUND ETHERNET!");
+                //alertUser("FOUND ETHERNET!");
             }
         }
         //if found, bound to it for this process
@@ -240,12 +240,12 @@ public class DroneActivity extends ActionBarActivity {
      * @param v: the scrollview
      */
     private void fillScrollView(final View v){
-        final int MAX_TRIGGER=10;
+        final int MAX_TRIGGER=9;
         final int MIN_TRIGGER=1;
         for(int i=MIN_TRIGGER; i<=MAX_TRIGGER; i++) {
             TextView view = new TextView(this);
             view.setText(" "+i+" ");
-            view.setTextSize(30);
+            view.setTextSize(20);
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -331,9 +331,9 @@ public class DroneActivity extends ActionBarActivity {
         accelUpdate = true;
 
 
-        final EditText ipText = (EditText)findViewById(R.id.URL);
+       // final EditText ipText = (EditText)findViewById(R.id.URL);
         //make keyboard disappear at enter
-        hideKeyBoard(ipText);
+        //hideKeyBoard(ipText);
         hideKeyBoard(findViewById(R.id.username));
         hideKeyBoard(findViewById(R.id.password));
         //fill the scrollview
@@ -409,13 +409,24 @@ public class DroneActivity extends ActionBarActivity {
             @Override
             public void onClick(View view) {
                 //grab IP address
-                EditText ed = (EditText) findViewById(R.id.URL);
-                server = ed.getText().toString();
+              //  EditText ed = (EditText) findViewById(R.id.URL);
+
+
+                String ip1 = ((EditText)findViewById(R.id.firstip)).getText().toString();
+                String ip2 = ((EditText)findViewById(R.id.secondip)).getText().toString();
+                String ip3 = ((EditText)findViewById(R.id.thirdip)).getText().toString();
+                String ip4 = ((EditText)findViewById(R.id.fourthip)).getText().toString();
+                String port = ((EditText)findViewById(R.id.port)).getText().toString();
+
+
                 //use default if empty
-                if(server.equals("")){
+                if(ip1.equals("")){
                     server = "192.168.2.1:2000";
-                    ed.setText(server,TextView.BufferType.EDITABLE);
+                    //ed.setText(server,TextView.BufferType.EDITABLE);
                     alertUser("Using Default IP:PORT");
+                }
+                else{
+                    server = ip1+"."+ip2+"."+ip3+"."+ip4+":"+port;
                 }
 
                 //get username/password

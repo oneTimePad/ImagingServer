@@ -52,7 +52,7 @@ public class QXCommunicationClient {
                 serviceBinder  =new Messenger(iBinder);
                 register(responseClient.getMessenger());
                 //we are connected so call search qx device
-                finalContext.searchQx();
+                //finalContext.searchQx();
 
             }
 

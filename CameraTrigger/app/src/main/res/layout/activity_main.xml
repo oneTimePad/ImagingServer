@@ -25,22 +25,106 @@
         android:orientation="vertical"
         android:layout_weight="1"
         android:id="@+id/first">
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
                 <TextView
 
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/gcstitle"
                     android:textStyle="bold"
-                    android:layout_marginBottom="10dp"/>
-                <EditText
-
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:layout_marginBottom="10dp"
-                    android:id="@+id/URL"
-                    android:inputType="textUri"
-                    android:hint="@string/ip"
-                    android:imeOptions="actionDone"/>
+                    android:id="@+id/gcstitle"/>
+
+
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_below="@+id/gcstitle"
+                    >
+
+
+                    <EditText
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/firstip"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:hint="@string/hint3"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/firstcolon"
+                        android:text="@string/dot"
+                        android:textSize="35sp"/>
+
+                    <EditText
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/secondip"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:hint="@string/hint3"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/secondcolon"
+                        android:text="@string/dot"
+                        android:textSize="35sp"/>
+
+                    <EditText
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/thirdip"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:hint="@string/hint3"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/thirdcolon"
+                        android:text="@string/dot"
+                        android:textSize="35sp"/>
+
+                    <EditText
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/fourthip"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:hint="@string/hint3"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/colon"
+                        android:text="@string/colon"
+                        android:textSize="20sp"/>
+                    <EditText
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="4"
+                        android:hint="@string/hint4"
+                        android:id="@+id/port"/>
+
+
+
+                </LinearLayout>
+            </RelativeLayout>
+
+
+
+
+
+
 
                 <EditText
                     android:layout_width="match_parent"
@@ -58,9 +142,7 @@
                     android:id="@+id/password"
                     android:hint="@string/password" />
 
-                <RelativeLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content">
+
                 <Button
                     android:layout_marginRight="70dp"
                     android:layout_width="wrap_content"
@@ -70,15 +152,6 @@
 
                   />
 
-                    <Button
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/etheron"
-                        android:onClick="ethernet"
-                        android:id="@+id/ether"
-                        android:layout_toRightOf="@id/remote"/>
-
-                </RelativeLayout>
 
 
 
@@ -121,6 +194,7 @@
                         android:layout_width="100dp"
                         android:layout_height="wrap_content"
                         android:id="@+id/connectionType"
+                        android:backgroundTint="@color/gray"
                         >
 
                     </Spinner>
@@ -290,22 +364,30 @@
 
         <RelativeLayout
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="10dp">
 
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:id="@+id/firstlinear">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/interval"
-                android:textStyle="italic"
+
                 android:id="@+id/labelforinterval"
+                android:textSize="20sp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
                 />
             <HorizontalScrollView
-                android:layout_width="40dp"
-                android:layout_height="wrap_content"
+                android:layout_width="20dp"
+                android:layout_height="25dp"
                 android:fillViewport="true"
-                android:layout_toRightOf="@+id/labelforinterval"
+
                 android:background="@drawable/scrollviewborder"
                 android:backgroundTint="@color/gray"
                 android:id="@+id/intervals"
@@ -324,22 +406,30 @@
 
                 </TableLayout>
             </HorizontalScrollView>
+            </LinearLayout>
 
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/formatlabel"
-                android:layout_toRightOf="@+id/intervals"
-                android:id="@+id/formatlabeltext"
-                android:paddingLeft="10dp"/>
+                android:orientation="horizontal"
+                android:layout_below="@+id/firstlinear">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/formatlabel"
+                            android:id="@+id/formatlabeltext"
+                            android:textSize="20sp"
+                            android:paddingLeft="10dp"/>
 
-            <Spinner
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_toRightOf="@+id/formatlabeltext"
-                android:id="@+id/imageformat">
+                        <Spinner
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/imageformat"
+                            android:backgroundTint="@color/gray"
+                            >
 
-            </Spinner>
+                        </Spinner>
+            </LinearLayout>
 
 
 
@@ -348,6 +438,7 @@
         <RelativeLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+
             >
 
 
