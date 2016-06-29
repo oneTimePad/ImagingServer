@@ -30,7 +30,7 @@ public class QXHandler {
     private final Set<String> mSupportedApiSet = new HashSet<String>();
 
     //sanity check
-    private String size = "2M";
+    private String imageFormat = "2M";
 
     private DroneTelemetry droneTelemetry;
     private PictureStorageServer pictureStorageServer;
@@ -42,9 +42,13 @@ public class QXHandler {
     public QXHandler(PictureStorageServer pictureStorageServer, String format){
 
         this.pictureStorageServer = pictureStorageServer;
-        this.size = format;
+        this.imageFormat = format;
 
 
+    }
+
+    public String getImageFormat(){
+        return imageFormat;
     }
 
     /**
@@ -498,7 +502,7 @@ public class QXHandler {
                         }
                         try {
 
-                            mRemoteApi.setPostviewImageSize(size);
+                            mRemoteApi.setPostviewImageSize(imageFormat);
                             mRemoteApi.setBeepMode();
 
                         }

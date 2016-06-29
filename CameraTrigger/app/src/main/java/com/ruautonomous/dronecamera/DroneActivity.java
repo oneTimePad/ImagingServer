@@ -59,7 +59,7 @@ public class DroneActivity extends ActionBarActivity {
     public boolean accelUpdate = true;
     public ProgressDialog searching;
 
-    public String size = "2M";
+    public String imageFormat = "2M";
 
 
 
@@ -157,14 +157,18 @@ public class DroneActivity extends ActionBarActivity {
 
         //show the progress bar to user
         searching= ProgressDialog.show(this,"","Searching for QX device...",true);
-        searching.setCancelable(false);
+
+        //this might be stupid to keep
+        //searching.setCancelable(false);
+        searching.setCancelable(true);
+
 
         //run the search of the Wi-Fi network
        new Thread(new Runnable() {
             @Override
             public void run() {
                 //this is asynchronous, the response will come later in setSearchQxStatus
-                qxCommunicationClient.search(size);
+                qxCommunicationClient.search(imageFormat);
 
             }
         }).start();
@@ -199,6 +203,10 @@ public class DroneActivity extends ActionBarActivity {
 
     }
 
+    /**
+     * callback for status of GCS, returned when ready
+     * @param status boolean showing connection status
+     */
     public void setGCSConnectionStatus(boolean status){
 
         if(status){
@@ -310,18 +318,38 @@ public class DroneActivity extends ActionBarActivity {
         }
     }
 
+    /**
+     * call back listener for selecting image format type...might not really need this, but just in case
+     */
     private class ImageSizeSpinnerActivity extends Activity implements AdapterView.OnItemSelectedListener {
 
         public void onItemSelected(AdapterView<?> parent, View view,
                                    int pos, long id) {
             // An item was selected. You can retrieve the selected item using
-               size = (String) parent.getItemAtPosition(pos);
+               imageFormat = (String) parent.getItemAtPosition(pos);
 
         }
 
         public void onNothingSelected(AdapterView<?> parent) {
             // Another interface callback
         }
+    }
+
+
+    public void setManualTriggerButtonText(final boolean status){
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if(status){
+                    ((Button)findViewById(R.id.button_triggerqx)).setText(R.string.stopcapture);
+                }
+                else{
+                    ((Button)findViewById(R.id.button_triggerqx)).setText(R.string.startcapture);
+                }
+            }
+        });
+
     }
 
     @Override
@@ -331,11 +359,8 @@ public class DroneActivity extends ActionBarActivity {
         accelUpdate = true;
 
 
-       // final EditText ipText = (EditText)findViewById(R.id.URL);
-        //make keyboard disappear at enter
-        //hideKeyBoard(ipText);
-        hideKeyBoard(findViewById(R.id.username));
-        hideKeyBoard(findViewById(R.id.password));
+        //hideKeyBoard(findViewById(R.id.username));
+        //hideKeyBoard(findViewById(R.id.password));
         //fill the scrollview
         fillScrollView(findViewById(R.id.numericintervals));
         //fill the spinner
@@ -346,7 +371,7 @@ public class DroneActivity extends ActionBarActivity {
         findViewById(R.id.droneconnect).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //if connected, disconect
+                //if connected, disconnect
                 if(droneTelemetry.status()){
                     droneTelemetry.disconnect();
 

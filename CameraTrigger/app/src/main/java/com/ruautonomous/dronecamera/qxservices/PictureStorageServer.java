@@ -159,7 +159,7 @@ public class PictureStorageServer {
                             try {
                                 if (istream != null) {
                                     //write the image to storage
-                                    String imageFileName = writeToStorage(istream,"2M");
+                                    String imageFileName = writeToStorage(istream,QXCommunicationService.qx.getImageFormat());
                                     istream.close();
                                     //push image to client (drone app)
                                     pushImage(imageFileName,image);

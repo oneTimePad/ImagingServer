@@ -36,7 +36,10 @@ public class CameraTriggerHThread extends HandlerThread {
 
         }
 
-        public void set(){
+    /**
+     * sets important instance variables based on other objects
+     */
+    public void set(){
             this.qxCommunicationClient = DroneSingleton.qxCommunicationClient;
         }
 
@@ -70,7 +73,13 @@ public class CameraTriggerHThread extends HandlerThread {
 
                 if (!qxCommunicationClient.qxStatus()) return;
             }
-            context.alertUser("Capture Start at "+triggerTime);
+            context.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    context.alertUser("Capture Started: "+triggerTime+"fps");
+                }
+            });
+
 
 
             mHandler.post(new Runnable() {

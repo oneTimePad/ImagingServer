@@ -172,14 +172,17 @@ public class GroundStationHThread extends HandlerThread {
 
                                 try {
                                     cameraTriggerHThread.startCapture(true);
+                                    context.setManualTriggerButtonText(true);
                                 }
                                 catch (IOException e){
                                     Log.e(TAG, "failed to start remote capture");
                                 }
                             }
                             //else stop trigger
-                            else if (Integer.parseInt(response.getString("trigger")) == 0)
-                               cameraTriggerHThread.stopCapture();
+                            else if (Integer.parseInt(response.getString("trigger")) == 0) {
+                                context.setManualTriggerButtonText(false);
+                                cameraTriggerHThread.stopCapture();
+                            }
 
                             if(response.has("fullSize") && !response.getString("fullSize").equals("")){
                                 qxCommunicationClient.getFullSizedImage(response.getString("fullSize"));
