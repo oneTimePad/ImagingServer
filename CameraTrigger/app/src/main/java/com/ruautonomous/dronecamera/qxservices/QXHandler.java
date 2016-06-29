@@ -499,6 +499,7 @@ public class QXHandler {
                         try {
 
                             mRemoteApi.setPostviewImageSize(size);
+                            mRemoteApi.setBeepMode();
 
                         }
                         catch (IOException e){

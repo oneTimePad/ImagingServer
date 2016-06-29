@@ -175,6 +175,29 @@ public class QxRemoteApi {
 
     }
 
+
+    public JSONObject setBeepMode() throws IOException{
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "setBeepMode") //
+                            .put("params", new JSONArray().put("Off")).put("id", id()) //
+                            .put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson,null);
+            log("Response: " + responseJson.toString());
+            return responseJson;
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+
+
+    }
+
+
+
     /**
      * Calls getShootMode API to the target server. Request JSON data is such
      * like as below.
