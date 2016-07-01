@@ -30,6 +30,8 @@ public class QXCommunicationService extends Service {
     public static final int STATUSQX=3;
     public static final int REGISTER = 4;
     public static final int FULLSIZE = 5;
+    public static final int BEEPMODE = 6;
+    public static final int ZOOM =7;
 
     public static  QXHandler qx;
     private Messenger client;
@@ -123,17 +125,33 @@ public class QXCommunicationService extends Service {
     /**
      * trigger Qx for one pic
      */
-    public void serviceTriggerQX(){
+    public void serviceTriggerQX() {
 
 
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    qx.capture();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                qx.capture();
 
-                }
-            }).start();
+            }
+        }).start();
+    }
 
+    /**
+     * change beep
+     */
+    public void serviceSetBeepMode(final String mode){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                qx.setBeepMode(mode);
+            }
+        }).start();
+    }
+
+
+    public void serviceActZoom(final String direction){
+        qx.actZoom(direction);
     }
 
     /**
@@ -216,6 +234,24 @@ public class QXCommunicationService extends Service {
                     }
 
                     break;
+                //set whether to make trigger sound
+                case BEEPMODE:
+                    if(QXCommunicationService.qx!=null){
+                        String beepStatus = msg.getData().getString("status");
+                        service.serviceSetBeepMode(beepStatus);
+                    }
+
+                    break;
+
+                //zoom
+                case ZOOM:
+                    if(QXCommunicationService.qx!=null){
+                        String zoomDirection = msg.getData().getString("direction");
+                        service.serviceActZoom(zoomDirection);
+                    }
+                    break;
+
+
                 //client wants to register
                 case REGISTER:
                     service.client = msg.replyTo;

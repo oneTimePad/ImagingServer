@@ -485,6 +485,22 @@ public class DroneActivity extends ActionBarActivity {
             }
         });
 
+        findViewById(R.id.togglebeep).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+               if(qxCommunicationClient.getBeepMode()){
+                   qxCommunicationClient.setBeepMode(false);
+                   ((Button)view).setText(R.string.beepon);
+               }
+                else{
+                   qxCommunicationClient.setBeepMode(true);
+                   ((Button)view).setText(R.string.beepoff);
+               }
+
+            }
+        });
+
 
 
 

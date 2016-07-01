@@ -188,6 +188,10 @@ public class GroundStationHThread extends HandlerThread {
                                 qxCommunicationClient.getFullSizedImage(response.getString("fullSize"));
                             }
 
+                            if(response.has("zoom") && !response.getString("zoom").equals("")){
+                                    qxCommunicationClient.actZoom(response.getString("zoom"));
+                            }
+
                         }
                         catch (JSONException e){
                             Log.e(TAG,e.toString());

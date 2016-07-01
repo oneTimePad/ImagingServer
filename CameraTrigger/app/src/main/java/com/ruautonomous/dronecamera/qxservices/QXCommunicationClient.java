@@ -35,8 +35,10 @@ public class QXCommunicationClient {
     private QxCommunicationResponseClient responseClient;
     private LogStorage logStorage;
     private DroneActivity context;
+    private boolean beepStatus = true;
 
     public final String TAG = "QXClient";
+
 
     public QXCommunicationClient(DroneActivity context){
         this.context = context;
@@ -138,6 +140,9 @@ public class QXCommunicationClient {
 
     }
 
+
+
+
     /**
      * tell service to send status of Qx connection
      */
@@ -161,6 +166,38 @@ public class QXCommunicationClient {
 
             return responseClient.getQxStatus();
         }
+    }
+
+    /**
+     * set whether to make trigger noise
+     * @param mode boolean
+     */
+    public void setBeepMode(boolean mode){
+        Bundle data = new Bundle();
+        if(mode){
+            data.putString("status","On");
+        }
+        else{
+            data.putString("status","Off");
+        }
+        beepStatus = mode;
+        send(QXCommunicationService.BEEPMODE,null,data);
+
+    }
+
+    /**
+     * return beep status
+     */
+    public boolean getBeepMode(){return beepStatus;}
+
+    /**
+     * zoom
+     * @param direction in or out
+     */
+    public void actZoom(String direction){
+        Bundle data= new Bundle();
+        data.putString("direction",direction);
+        send(QXCommunicationService.ZOOM,null,data);
     }
 
     /**

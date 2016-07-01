@@ -31,6 +31,7 @@ public class QXHandler {
 
     //sanity check
     private String imageFormat = "2M";
+    private long zoomDelay = 300;
 
     private DroneTelemetry droneTelemetry;
     private PictureStorageServer pictureStorageServer;
@@ -63,6 +64,25 @@ public class QXHandler {
      */
     public void setQXConnectionStatus(boolean connectionStatus){ this.connectionStatus = connectionStatus;}
 
+    /**
+     * tell qx whether to make trigger sound
+     * @param mode "On" or "Off"
+     */
+    public void setBeepMode(final String mode){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    mRemoteApi.setBeepMode(mode);
+                }
+                catch (IOException e){
+                    Log.e(TAG, e.toString());
+                }
+            }
+        }).start();
+
+    }
+
 
     public void setPostViewImageFormat(final String format){
         new Thread(new Runnable() {
@@ -78,6 +98,31 @@ public class QXHandler {
         }).start();
     }
 
+
+    public void actZoom(final String direction){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+                    try {
+
+                        mRemoteApi.actZoom(direction,"start");
+                        try{
+                            Thread.sleep(zoomDelay);
+                        }
+                        catch (InterruptedException e){
+
+                        }
+                        mRemoteApi.actZoom(direction,"stop");
+
+                    }
+                    catch (IOException e){
+                        Log.e(TAG,e.toString());
+                    }
+
+            }
+        }).start();
+    }
 
     /**
      * take one picture
@@ -116,6 +161,9 @@ public class QXHandler {
                 synchronized (mSsdpClient){
                     mSsdpClient.notify();
                 }
+
+
+
 
 
             }
@@ -395,6 +443,8 @@ public class QXHandler {
         Log.d(TAG, "closeConnection(): completed.");
     }
 
+
+
     private static boolean isShootingStatus(String currentStatus) {
         Set<String> shootingStatus = new HashSet<String>();
         shootingStatus.add("IDLE");
@@ -503,7 +553,7 @@ public class QXHandler {
                         try {
 
                             mRemoteApi.setPostviewImageSize(imageFormat);
-                            mRemoteApi.setBeepMode();
+                            mRemoteApi.setBeepMode("On");
 
                         }
                         catch (IOException e){

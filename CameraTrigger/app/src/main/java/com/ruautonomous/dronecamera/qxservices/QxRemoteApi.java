@@ -158,6 +158,7 @@ public class QxRemoteApi {
     public JSONObject setPostviewImageSize(String size) throws IOException{
         String service = "camera";
         try {
+
             JSONObject requestJson =
                     new JSONObject().put("method", "setPostviewImageSize") //
                             .put("params", new JSONArray().put(size)).put("id", id()) //
@@ -176,12 +177,13 @@ public class QxRemoteApi {
     }
 
 
-    public JSONObject setBeepMode() throws IOException{
+    public JSONObject setBeepMode(String mode) throws IOException{
         String service = "camera";
         try {
+            Log.i("sound",mode);
             JSONObject requestJson =
                     new JSONObject().put("method", "setBeepMode") //
-                            .put("params", new JSONArray().put("Off")).put("id", id()) //
+                            .put("params", new JSONArray().put(mode)).put("id", id()) //
                             .put("version", "1.0");
             String url = findActionListUrl(service) + "/" + service;
 
@@ -195,6 +197,8 @@ public class QxRemoteApi {
 
 
     }
+
+
 
 
 

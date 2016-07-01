@@ -719,8 +719,8 @@ function PictureArray(){
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
 				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>")
 				.append("<tr><td>Taken</td><td>"+pic_curr_props.timeTaken+"</td></tr>")
-				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>")
-				.append("<tr><td><button id='picfullSize' onclick='getFullSize(" + curr+");' class='btn btn-primary'>Full Sized</button></td></tr>");
+				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>");
+				//.append("<tr><td><button id='picfullSize' onclick='getFullSize(" + curr+");' class='btn btn-primary'>Full Sized</button></td></tr>");
 
 				//Add orientation
 			PictureArray.prototype.allow = true;
@@ -1022,7 +1022,21 @@ $(function(){
 
 });
 
+function zoomIn(){
+	$.ajax({
+		url:"{%url 'gcs-postZoom' %}",
+		type:"POST",
+		data:{'direction':"in"}
+	});
+}
 
+function zoomOut(){
+	$.ajax({
+		url:"{%url 'gcs-postZoom' %}",
+		type:"POST",
+		data:{'direction':"out"}
+	});
+}
 </script>
 </head>
 
@@ -1040,7 +1054,10 @@ $(function(){
 
 
 						<form >
-									
+									<button onclick="zoomIn()" type="button" class ="btn btn-primary"/>Zoom In </button>
+
+									<button onclick="zoomOut()" type="button" class ="btn btn-primary"/>Zoom Out </button>
+
 									<input id="time_interval" type="number" value="0"/>
 
 									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>

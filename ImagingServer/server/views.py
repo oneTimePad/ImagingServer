@@ -335,6 +335,12 @@ class DroneViewset(viewsets.ModelViewSet):
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected', 'qxStatus': dataDict['qxStatus']})))
 		fullSizedResponse = ''
+
+		zoomSetting = ''
+		if cache.has_key('zoom'):
+			zoom = cache.get('zoom')
+			cache.delete('zoom')
+			zoomSetting = zoom['direction']
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
@@ -402,8 +408,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		if not cache.has_key('time'):
 			cache.set("time",dataDict['time'],None)
 
-		if not cache.has_key("imageformat"):
-			cache.set("imageformat","2M",None)
+
 
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
@@ -412,7 +417,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
-		return Response({'trigger':cache.get("trigger"),'time':cache.get("time"),'imageformat':cache.get("imageformat"),'fullSize':fullSizedResponse})
+		return Response({'trigger':cache.get("trigger"),'time':cache.get("time"),'imageformat':cache.get("imageformat"),'fullSize':fullSizedResponse,'zoom':zoomSetting})
 
 
 '''
@@ -489,13 +494,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		#redirect to login page
 		return redirect(reverse('gcs-login'))
 
-	@list_route(methods=['post'])
-	def postImageFormat(self,request,pk=None):
-		connectionCheck()
-		if "format" not in request.data:
-			return HttpResponseForbidden()
-		cache.set("imageformat",request.data['format'],None)
-		return Response({'ok':'ok'})
+
 
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):
@@ -561,6 +560,16 @@ class GCSViewset(viewsets.ModelViewSet):
 		picture = Picture.objects.get(pk=picStack[int(index)])
 		serPic = PictureSerializer(picture)
 		return Response({'type':'picture','pk':picture.pk,'image':serPic.data})
+
+	@list_route(methods=['post'])
+	def postZoom(self,request,pk=None):
+		connectionCheck()
+
+		if not "direction" in request.data:
+			return HttpResponseForbidden()
+		cache.set("zoom",request.data)
+		return Response({'ok':'ok'})
+
 
 	@list_route(methods=['post'])
 	def getFullSize(self,request,pk=None):
