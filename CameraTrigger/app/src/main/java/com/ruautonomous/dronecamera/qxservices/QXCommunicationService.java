@@ -32,6 +32,7 @@ public class QXCommunicationService extends Service {
     public static final int FULLSIZE = 5;
     public static final int BEEPMODE = 6;
     public static final int ZOOM =7;
+    public static final int CAPTUREMODES =8;
 
     public static  QXHandler qx;
     private Messenger client;
@@ -132,6 +133,9 @@ public class QXCommunicationService extends Service {
             @Override
             public void run() {
                 qx.capture();
+                //qx.capture();
+               // qx.capture();
+
 
             }
         }).start();
@@ -148,6 +152,8 @@ public class QXCommunicationService extends Service {
             }
         }).start();
     }
+
+    public void serviceCaptureModes(){qx.setCaptureModes();}
 
 
     public void serviceActZoom(final String direction){
@@ -248,6 +254,12 @@ public class QXCommunicationService extends Service {
                     if(QXCommunicationService.qx!=null){
                         String zoomDirection = msg.getData().getString("direction");
                         service.serviceActZoom(zoomDirection);
+                    }
+                    break;
+
+                case CAPTUREMODES:
+                    if(QXCommunicationService.qx!=null){
+                        service.serviceCaptureModes();
                     }
                     break;
 

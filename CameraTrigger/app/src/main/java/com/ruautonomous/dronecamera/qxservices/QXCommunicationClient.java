@@ -185,6 +185,10 @@ public class QXCommunicationClient {
 
     }
 
+    public void setCaptureMode(){
+        send(QXCommunicationService.CAPTUREMODES,null,null);
+    }
+
     /**
      * return beep status
      */

@@ -80,6 +80,8 @@ public class CameraTriggerHThread extends HandlerThread {
                 }
             });
 
+            qxCommunicationClient.setCaptureMode();
+
 
 
             mHandler.post(new Runnable() {

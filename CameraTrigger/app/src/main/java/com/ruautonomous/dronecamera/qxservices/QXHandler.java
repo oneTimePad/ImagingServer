@@ -65,6 +65,25 @@ public class QXHandler {
     public void setQXConnectionStatus(boolean connectionStatus){ this.connectionStatus = connectionStatus;}
 
     /**
+     * set captuere modes
+     */
+    public void setCaptureModes(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    mRemoteApi.setExposureMode();
+                    mRemoteApi.setFocusMode();
+                    Log.i(TAG,"MODES SET");
+                }
+                catch (IOException e){
+                    Log.e("MODE ERROR",e.toString());
+                }
+            }
+        }).start();
+    }
+
+    /**
      * tell qx whether to make trigger sound
      * @param mode "On" or "Off"
      */
@@ -161,6 +180,7 @@ public class QXHandler {
                 synchronized (mSsdpClient){
                     mSsdpClient.notify();
                 }
+
 
 
 
@@ -559,6 +579,7 @@ public class QXHandler {
                         catch (IOException e){
                             Log.e(TAG,e.toString());
                         }
+
                         if (isShootingStatus(cameraStatus)) {
                             Log.d(TAG, "camera function is Remote Shooting.");
                             openConnection();

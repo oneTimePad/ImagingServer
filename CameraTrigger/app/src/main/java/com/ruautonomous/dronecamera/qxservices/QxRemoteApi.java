@@ -80,6 +80,52 @@ public class QxRemoteApi {
         }
     }
 
+    /**
+     * set focus mode to manual focus
+     * @return
+     * @throws IOException
+     */
+    public JSONObject setFocusMode() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "setFocusMode").put("params", new JSONArray().put("MF")) //
+                            .put("id", id()).put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson, null);
+            log("Response: " + responseJson.toString());
+
+            return responseJson;
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+    /**
+     * set exposure mode to manual
+     * @return
+     * @throws IOException
+     */
+    public JSONObject setExposureMode() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "setExposureMode").put("params", new JSONArray().put("Manual")) //
+                            .put("id", id()).put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson, null);
+            log("Response: " + responseJson.toString());
+
+            return responseJson;
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
     // Camera Service APIs
 
     /**
@@ -170,6 +216,7 @@ public class QxRemoteApi {
             log("Response: " + responseJson.toString());
             return responseJson;
         } catch (JSONException e) {
+            Log.e("POST","POST");
             throw new IOException(e);
         }
 

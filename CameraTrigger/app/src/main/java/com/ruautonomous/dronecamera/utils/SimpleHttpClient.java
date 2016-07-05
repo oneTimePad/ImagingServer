@@ -350,11 +350,12 @@ public final class SimpleHttpClient {
             writer = null;
             outputStream.close();
             outputStream = null;
-
+            Log.i("RESP","REQ");
             int responseCode = httpConn.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 inputStream = httpConn.getInputStream();
                 response = new JSONEncoder(inputStream).encodeJSON();
+                Log.i("RESP",response.toString());
 
             }
             if (inputStream == null) {

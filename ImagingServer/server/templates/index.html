@@ -530,7 +530,9 @@ function PictureArray(){
 	//wanna do some testing before I add this
 	function loop(){
 			if(image_cache!=null){
-				looping = setInterval(function(){image_cache.next();},$("#loop_interval").val()*1000);
+				looping = setInterval(function(){
+
+					image_cache.next();},$("#loop_interval").val()*1000);
 			}
 	}
 
@@ -667,6 +669,7 @@ function PictureArray(){
 	}
 	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
+		console.log(new Date().getTime()/1000);
 		if(image_cache!=null&&image_cache!="null"){
 			//save all state data
 			image_cache.serializePrep();
@@ -698,13 +701,23 @@ function PictureArray(){
 			timeSent = image['timeSent'];
 
 			var lat = pic_curr_props.lat;
-			var latdeg = Math.trunc(lat);
-			var latmin = Math.trunc((lat-latdeg)*60);
-			var latsec = Math.trunc((((lat-latdeg)*60)-latmin)*60);
+			var latT = lat;
+			if(lat<0){
+				latT = -1*lat;
+			}
+			var latdeg = Math.trunc(latT);
 
+			var latmin = Math.trunc((latT-latdeg)*60);
+
+			var latsec = Math.trunc((((latT-latdeg)*60)-latmin)*60);
+
+			var lonT = lon;
+			if(lon<0){
+				lonT = -1*lon;
+			}
 
 			var lon = pic_curr_props.lon;
-			var londeg = Math.trunc(lon);
+			var londeg = Math.trunc(lonT);
 			var lonmin = Math.trunc((lon-londeg)*60);
 			var lonsec = Math.trunc((((lon-londeg)*60)-lonmin)*60);
 
@@ -712,8 +725,8 @@ function PictureArray(){
 			$("#focus-type").text("Picture Data");
 
 			$("#focus-data").empty()
-				.append("<tr><td>Latitude</td><td>"+latdeg+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
-				.append("<tr><td>Longitude</td><td>"+londeg+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
+				.append("<tr><td>Latitude</td><td>"+Math.trunc(lat)+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
+				.append("<tr><td>Longitude</td><td>"+Math.trunc(lon)+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
 				.append("<tr><td>Altitude</td><td>"+pic_curr_props.alt+"</td></tr>")
 				.append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
