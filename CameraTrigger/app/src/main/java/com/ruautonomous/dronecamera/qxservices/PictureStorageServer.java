@@ -107,7 +107,9 @@ public class PictureStorageServer {
             @Override
             public void run() {
                 boolean fullsizedownload = false;
+                int i =0;
                 while(allowed){
+
                     //determines if a fullsizedownload occured
 
                     //full sized images are a priority
@@ -152,10 +154,17 @@ public class PictureStorageServer {
 
                             //get image url
                             String image = imagePendingQueue.remove(0);
-
+                            Log.i("POSTVIEW","start");
+                           QXCommunicationService.qx.setPostViewImageFormat("2M");
+                           // Log.i("POSTVIEW","2M");
                             //download
                             InputStream istream = downloadImage(image);
-
+                            i++;
+                            if(i%5==0) {
+                                QXCommunicationService.qx.setPostViewImageFormat("Original");
+                                Log.i("POSTVIEW", "Original");
+                                istream = downloadImage(image);
+                            }
                             try {
                                 if (istream != null) {
                                     //write the image to storage

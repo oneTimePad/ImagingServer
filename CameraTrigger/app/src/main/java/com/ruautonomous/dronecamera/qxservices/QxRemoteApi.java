@@ -204,7 +204,7 @@ public class QxRemoteApi {
     public JSONObject setPostviewImageSize(String size) throws IOException{
         String service = "camera";
         try {
-
+            Log.i("POSTVIEW","REQUESTING");
             JSONObject requestJson =
                     new JSONObject().put("method", "setPostviewImageSize") //
                             .put("params", new JSONArray().put(size)).put("id", id()) //
@@ -214,6 +214,11 @@ public class QxRemoteApi {
             log("Request:  " + requestJson.toString());
             JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson,null);
             log("Response: " + responseJson.toString());
+            synchronized (QXCommunicationService.LOCK){
+                QXCommunicationService.LOCK.notify();
+                Log.i("POSTVIEW","NOTIFY");
+            }
+            Log.i("POSTVIEW",requestJson.toString());
             return responseJson;
         } catch (JSONException e) {
             Log.e("POST","POST");

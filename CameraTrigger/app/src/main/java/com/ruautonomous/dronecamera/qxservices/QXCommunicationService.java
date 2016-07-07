@@ -33,6 +33,7 @@ public class QXCommunicationService extends Service {
     public static final int BEEPMODE = 6;
     public static final int ZOOM =7;
     public static final int CAPTUREMODES =8;
+    public static final Object LOCK = new Object();
 
     public static  QXHandler qx;
     private Messenger client;

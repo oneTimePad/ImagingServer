@@ -29,6 +29,7 @@ public class QXHandler {
     private final Set<String> mAvailableCameraApiSet = new HashSet<String>();
     private final Set<String> mSupportedApiSet = new HashSet<String>();
 
+
     //sanity check
     private String imageFormat = "2M";
     private long zoomDelay = 300;
@@ -104,6 +105,7 @@ public class QXHandler {
 
 
     public void setPostViewImageFormat(final String format){
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -115,6 +117,15 @@ public class QXHandler {
                 }
             }
         }).start();
+
+        synchronized (QXCommunicationService.LOCK){
+            try {
+                QXCommunicationService.LOCK.wait();
+            }
+            catch (InterruptedException e){
+                Log.e(TAG,e.toString());
+            }
+        }
     }
 
 
@@ -180,6 +191,7 @@ public class QXHandler {
                 synchronized (mSsdpClient){
                     mSsdpClient.notify();
                 }
+
 
 
 
