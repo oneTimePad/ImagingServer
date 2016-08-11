@@ -423,6 +423,7 @@ public class QxRemoteApi {
             log("Request:  " + requestJson.toString());
             JSONObject responseJson = SimpleHttpClient.httpPost(url, requestJson, null);
             log("Response: " + responseJson.toString());
+            Log.i("PICRESPONSE",requestJson.toString());
             return responseJson;
         } catch (JSONException e) {
             throw new IOException(e);

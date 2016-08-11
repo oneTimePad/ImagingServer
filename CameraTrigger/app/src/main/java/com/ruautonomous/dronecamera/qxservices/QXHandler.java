@@ -10,7 +10,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -585,7 +587,7 @@ public class QXHandler {
                         try {
 
                             mRemoteApi.setPostviewImageSize(imageFormat);
-                            mRemoteApi.setBeepMode("On");
+                            //mRemoteApi.setBeepMode("On");
 
                         }
                         catch (IOException e){
@@ -621,13 +623,35 @@ public class QXHandler {
      */
     private void takeAndFetchPicture() {
         if(mRemoteApi == null) return;
+       /* QXCommunicationService.qx.setPostViewImageFormat("2M");
+        try{
+            Thread.sleep(1000);
+        }
+        catch (InterruptedException e){
 
+        }*/
         new Thread() {
 
             @Override
             public void run() {
                 try {
+
+                    /*
+                    URL url = new URL("http://10.0.0.1:60152/pict160708_1954500000.JPG?%211234%21http%2dget%3a%2a%3aimage%2fjpeg%3a%2a%21%21%21%21%21\n");
+                    InputStream stream = (InputStream)url.getContent();
+
+                    if(stream!=null){
+                        Log.i("YEAHHHHH","LOLZ");
+                    }
+                    else{
+                        Log.i("GG","GG");
+                    }
+                    pictureStorageServer.writeToStorage(stream,"LOLZ");*/
+
+
+
                     //contact Qx to take pic
+
                     JSONObject replyJson = mRemoteApi.actTakePicture();
                     JSONArray resultsObj = replyJson.getJSONArray("result");
                     JSONArray imageUrlsObj = resultsObj.getJSONArray(0);
@@ -644,6 +668,7 @@ public class QXHandler {
                         return;
                     }
 
+
                     //put it in queue to download
                     pictureStorageServer.writePicture(postImageUrl);
 
@@ -652,6 +677,7 @@ public class QXHandler {
 
 
                 }
+
                 catch (JSONException e) {
 
                     // Log.w(TAG, e.toString());
@@ -659,6 +685,7 @@ public class QXHandler {
                 }
                 catch (IOException e) {
                     //Log.w(TAG, "IOException while closing slicer: " + e.getMessage());
+                    Log.e("WTF",e.toString());
 
                 }
             }

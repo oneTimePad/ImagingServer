@@ -25,6 +25,8 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpCookie;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -51,7 +53,7 @@ public class PictureStorageServer {
 
     public Context context;
     public String TAG ="PictureStorageServer";
-    public final long CONSUMER_SLEEP_TIME= 500;
+    public final long CONSUMER_SLEEP_TIME= 1000;
 
 
 
@@ -117,9 +119,16 @@ public class PictureStorageServer {
                         synchronized (fulleSizePendingQueue){
                             HashMap<String,String> image = fulleSizePendingQueue.remove(0);
                             QXCommunicationService.qx.setPostViewImageFormat("Original");
+                            try{
+                                Thread.sleep(5000);
+                            }
+
+                            catch (InterruptedException e){
+
+                            }
                             fullsizedownload = true;
 
-                            InputStream istream = downloadImage(image.get("url"));
+                            /*InputStream istream = downloadImage(image.get("url"));
                             Log.i("FULL",image.get("url"));
 
                             try {
@@ -135,7 +144,7 @@ public class PictureStorageServer {
                             } catch (IOException e) {
                                 Log.e(TAG,"consumer died");
                                 //noting really to do
-                            }
+                            }*/
 
                         }
                     }
@@ -154,19 +163,15 @@ public class PictureStorageServer {
 
                             //get image url
                             String image = imagePendingQueue.remove(0);
-                            Log.i("POSTVIEW","start");
-                           QXCommunicationService.qx.setPostViewImageFormat("2M");
+
+                          //QXCommunicationService.qx.setPostViewImageFormat("Original");
                            // Log.i("POSTVIEW","2M");
                             //download
-                            InputStream istream = downloadImage(image);
-                            i++;
-                            if(i%5==0) {
-                                QXCommunicationService.qx.setPostViewImageFormat("Original");
-                                Log.i("POSTVIEW", "Original");
-                                istream = downloadImage(image);
-                            }
+                            String fileName = downloadImage(image);
+                            pushImage(fileName,image);
+                            /*
                             try {
-                                if (istream != null) {
+                                if (istreoam != null) {
                                     //write the image to storage
                                     String imageFileName = writeToStorage(istream,QXCommunicationService.qx.getImageFormat());
                                     istream.close();
@@ -177,6 +182,12 @@ public class PictureStorageServer {
                             } catch (IOException e) {
                                 Log.e(TAG,"consumer died");
                                 //noting really to do
+                            }*/
+                            i++;
+                            if(i==5) {
+                                HashMap<String,String> hs = new HashMap<>();
+                                hs.put("url",image);
+                               // fulleSizePendingQueue.add(hs);
                             }
                         }
                         }
@@ -267,12 +278,23 @@ public class PictureStorageServer {
      * @param imageUrl url for image
      * @return input stream for download image to get bytes
      */
-    private InputStream downloadImage(String imageUrl) {
-        InputStream istream = null;
+    private String downloadImage(String imageUrl) {
+        String istream = null;
 
             try {
                 Log.i("URL", imageUrl);
-                istream = (InputStream) new URL(imageUrl).getContent();
+                URL url = new URL(imageUrl);
+                HttpURLConnection con = (HttpURLConnection)url.openConnection();
+                con.setRequestMethod("GET");
+                con.setDoInput(true);
+                con.connect();
+                InputStream Tistream=con.getInputStream();
+                if(Tistream == null){
+                    Log.i("DEAD","DEAD");
+                }
+                istream = writeToStorage(Tistream,QXCommunicationService.qx.getImageFormat());
+                con.disconnect();
+
 
 
             } catch (MalformedURLException e) {
@@ -293,12 +315,13 @@ public class PictureStorageServer {
      * @return name of image in fs
      * @throws IOException
      */
-    private String writeToStorage(InputStream image,String size) throws IOException{
+    public String writeToStorage(InputStream image,String size) throws IOException{
 
 
 
         FileOutputStream outStream = null;
         String fileName = null;
+        Log.i("WRITING","WRITING");
         try{
             //write image to disk
             fileName= String.format(size+":"+System.currentTimeMillis()/1000 + "%04d.jpg", ++picNum);

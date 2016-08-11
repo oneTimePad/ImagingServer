@@ -355,7 +355,7 @@ public final class SimpleHttpClient {
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 inputStream = httpConn.getInputStream();
                 response = new JSONEncoder(inputStream).encodeJSON();
-                Log.i("RESP",response.toString());
+                Log.i("RESP", "REQUEST:" +postData.toString() +  " RESPONSE"+ response.toString());
 
             }
             if (inputStream == null) {
