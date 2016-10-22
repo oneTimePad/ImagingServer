@@ -519,13 +519,6 @@ function PictureArray(){
 		});
 	}
 
-	function getFullSize(pk){
-		$.ajax({
-			url:"{% url 'gcs-getFullSize'%}",
-			type: "POST",
-			data: {'pk': pk}});
-	}
-
 
 	//wanna do some testing before I add this
 	function loop(){
@@ -1035,21 +1028,7 @@ $(function(){
 
 });
 
-function zoomIn(){
-	$.ajax({
-		url:"{%url 'gcs-postZoom' %}",
-		type:"POST",
-		data:{'direction':"in"}
-	});
-}
 
-function zoomOut(){
-	$.ajax({
-		url:"{%url 'gcs-postZoom' %}",
-		type:"POST",
-		data:{'direction':"out"}
-	});
-}
 </script>
 </head>
 
@@ -1067,10 +1046,7 @@ function zoomOut(){
 
 
 						<form >
-									<button onclick="zoomIn()" type="button" class ="btn btn-primary"/>Zoom In </button>
-
-									<button onclick="zoomOut()" type="button" class ="btn btn-primary"/>Zoom Out </button>
-
+								
 									<input id="time_interval" type="number" value="0"/>
 
 									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
@@ -1136,30 +1112,6 @@ function zoomOut(){
 
 
 
-	<div id="info">
-		<fieldset class="schedule-border">
-			<legend class="scheduler-border">Phone Status</legend>
-			<form>
-				<div>
-					<label for="connectinfo">GCS connection:    </label>
-					<input  id="connectinfo" class="box red"></input>
-				</div>
-
-				<div>
-					<label for="qxinfo"> QX connection: </label>
-					<input id="qxinfo" class="box red"></input>
-				</div>
-				<div>
-					<label for="timeinfo">Trigger time:   </label>
-					<span ><b id="timeinfo">0</b></span>
-			</form>
-
-		</fieldset>
-		<h3 id="target-label">Targets</h3>
-		<div id="targets">
-
-		</div>
-	</div>
 
 </body>
 

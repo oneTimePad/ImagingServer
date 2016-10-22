@@ -561,17 +561,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		serPic = PictureSerializer(picture)
 		return Response({'type':'picture','pk':picture.pk,'image':serPic.data})
 
-	@list_route(methods=['post'])
-	def postZoom(self,request,pk=None):
-		connectionCheck()
-
-		if not "direction" in request.data:
-			return HttpResponseForbidden()
-		cache.set("zoom",request.data)
-		return Response({'ok':'ok'})
-
-
-	@list_route(methods=['post'])
+	list_route(methods=['post'])
 	def getFullSize(self,request,pk=None):
 		connectionCheck()
 		#pdb.set_trace()
@@ -637,21 +627,6 @@ class GCSViewset(viewsets.ModelViewSet):
 			target.alphanumeric_color = "gray"
 		target.crop(size_data=sizeData,parent_pic=picture)
 		target.save()
-	#	if target.ptype == "qrc":
-			#attempt to decode qrc/ NOT TESTED
-	#		try:
-
-				#with open(target.picture.path, 'rb') as image_file:
-				 #   image = Image.open(image_file)
-				  #  image.load()
-				#codes = zbarlight.scan_codes('qrcode', image)
-				#if (len(codes)>0):
-				#	target.description = codes[0].decode('utf-8')
-				#	target.save()
-
-			#if it fails, just no description
-	#		except Exception as e:
-	#			pass
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
