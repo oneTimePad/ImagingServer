@@ -306,14 +306,15 @@ class DroneViewset(viewsets.ModelViewSet):
 		#fetch phone client information
 
 		dataDict = {}
-		androidId=0
+		#androidId=0	androidId shouldnt be necessary anymore
 		timeReceived = time()
+		#code is receiving data and storing it in dataDict
 		try:
 			dataDict = request.data
-			androidId = dataDict['id']
+			#androidId = dataDict['id']
 		except MultiValueDictKeyError:
 			dataDict =  json.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
-			androidId = dataDict['id']
+			#androidId = dataDict['id']
 
 
 		#requestTime = dataDict['timeCache']
@@ -409,7 +410,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			cache.set("time",dataDict['time'],None)
 
 
-
+		#determines whether camera is triggering
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))

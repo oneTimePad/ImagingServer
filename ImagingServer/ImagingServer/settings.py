@@ -48,7 +48,7 @@ SESSION_REDIS_PREFIX = 'session'
 CACHES = {
      'default':{
          'BACKEND': 'redis_cache.RedisCache',
-         'LOCATION': '/tmp/redis.sock',
+         'LOCATION': '/var/run/redis/redis.sock',
      }
  }
 
