@@ -305,20 +305,25 @@ class DroneViewset(viewsets.ModelViewSet):
 		#pdb.set_trace()
 		#fetch phone client information
 
-		dataDict = {}
+		dataDict = request.data
 		#androidId=0	androidId shouldnt be necessary anymore
 		timeReceived = time()
 		#code is receiving data and storing it in dataDict
-		try:
+  """
+        try:
 			dataDict = request.data
 			#androidId = dataDict['id']
 		except MultiValueDictKeyError:
 			dataDict =  json.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
 			#androidId = dataDict['id']
-
+        """
 
 		#requestTime = dataDict['timeCache']
         #determine if drone has contacted before
+
+        """
+        This can be utilized for heartbeats
+        """
 		if not cache.has_key("android"):
 			#pdb.set_trace()
 
@@ -334,14 +339,22 @@ class DroneViewset(viewsets.ModelViewSet):
 			cache.set("android","contacted",EXPIRATION)
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected', 'qxStatus': dataDict['qxStatus']})))
-		fullSizedResponse = ''
+		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
+        """
+        end of stuff for heartbeats
+        """
 
-		zoomSetting = ''
-		if cache.has_key('zoom'):
-			zoom = cache.get('zoom')
-			cache.delete('zoom')
-			zoomSetting = zoom['direction']
+
+		#fullSizedResponse = ''
+
+		#zoomSetting = ''
+		#if cache.has_key('zoom'):
+		#	zoom = cache.get('zoom')
+		#	cache.delete('zoom')
+		#	zoomSetting = zoom['direction']
+        """
+        used for uploading pictures
+        """
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
@@ -359,40 +372,40 @@ class DroneViewset(viewsets.ModelViewSet):
 			pictureObj = PictureSerializer(data = imageData)
 			if pictureObj.is_valid():
 				pictureObj = pictureObj.deserialize()
-	            #save img to obj
+         #save img to obj
 				pictureObj.photo = picture
 
 				pictureObj.save()
 				#pdb.set_trace()
 
-				if dataDict['url'] != 'FULL':
-					connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
-					channel = connection.channel()
+			#	if dataDict['url'] != 'FULL':
+                connection=pika.BlockingConnection(pika.ConnectionParameters(host ='localhost'))
+                channel = connection.channel()
 
-					channel.queue_declare(queue = 'pictures')
-					channel.basic_publish(exchange='',
-										routing_key='pictures',
-										body=str(pictureObj.pk))
-					connection.close()
-					#pdb.set_trace()
-					fullSizeList = []
-					connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-					channel = connection.channel()
-					queue = channel.queue_declare(queue='fullsize')
-					#pdb.set_trace()
-					if queue.method.message_count !=0:
-						#pdb.set_trace()
-						callback = CountCallback(queue.method.message_count,1,fullSizeList,"str")
-						channel.basic_consume(callback,queue='fullsize')
-						channel.start_consuming()
-						fullSizedResponse = fullSizeList[0][2:]
-						print(fullSizedResponse)
-					connection.close()
+                channel.queue_declare(queue = 'pictures')
+                channel.basic_publish(exchange='',
+                                    routing_key='pictures',
+                                    body=str(pictureObj.pk))
+                connection.close()
+                #pdb.set_trace()
+                fullSizeList = []
+                connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+                channel = connection.channel()
+                queue = channel.queue_declare(queue='fullsize')
+                #pdb.set_trace()
+                if queue.method.message_count !=0:
+                    #pdb.set_trace()
+                    callback = CountCallback(queue.method.message_count,1,fullSizeList,"str")
+                    channel.basic_consume(callback,queue='fullsize')
+                    channel.start_consuming()
+                    fullSizedResponse = fullSizeList[0][2:]
+                    print(fullSizedResponse)
+                connection.close()
 
 
-				else:
-					redis_publisher = RedisPublisher(facility='viewer',sessions=dataDict['session'])
-					redis_publisher.publish_message(RedisMessage(json.dumps({'fullSize':True,'pk':pictureObj.pk,'photo':pictureObj.fileName})))
+			#	else:
+			#		redis_publisher = RedisPublisher(facility='viewer',sessions=dataDict['session'])
+			#		redis_publisher.publish_message(RedisMessage(json.dumps({'fullSize':True,'pk':pictureObj.pk,'photo':pictureObj.fileName})))
 					#get session token and picture
 					#push pic to client
 
@@ -402,8 +415,14 @@ class DroneViewset(viewsets.ModelViewSet):
 		except MultiValueDictKeyError:
             #there was no picture sent
 			pass
+"""
+end picture upload stuff
+"""
 
-
+"""
+used determine if camera is triggering might or might not be needed here,
+probably used in heartbeats
+"""
 		if not cache.has_key('trigger'):
 			cache.set("trigger",dataDict['trigger'],None)
 		if not cache.has_key('time'):
