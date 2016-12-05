@@ -322,7 +322,7 @@ class DroneViewset(viewsets.ModelViewSet):
 
         """
         This can be utilized for heartbeats
-        """
+        
 		if not cache.has_key("android"):
 			#pdb.set_trace()
 
@@ -339,7 +339,7 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
-        """
+        
         end of stuff for heartbeats
         """
 
@@ -436,8 +436,38 @@ probably used in heartbeats
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
-		return Response({'trigger':cache.get("trigger"),'time':cache.get("time"),'imageformat':cache.get("imageformat"),'fullSize':fullSizedResponse,'zoom':zoomSetting})
+		return Response({})
 
+	
+	#method for receiving heartbeats
+	@list_route(methods=['post'])
+	def acceptHeartbeat(self, request):
+		global EXPIRATION
+		#check for seperate cache entry
+		"""
+		if (cache.get('heartbeat') != None):	#trigger would be 'heartbeat' for status of heartbeats
+			#SEND TRIGGER IN THIS CASE TO START
+		"""
+
+		if not cache.has_key('heartbeat'):
+			#if doesn't have key heartbeat set its cache entry
+			cache.set('heartbeat','connected',EXPIRATION)
+		else:
+            #else delete the old one
+			cache.delete('heartbeat')
+            #create a new one
+			cache.set('heartbeat','connected',EXPIRATION)
+
+		#ONCE STARTS RECEIVING HEARTBEATS
+		#cache.set('heartbeat', 'triggering', EXPIRATION)
+
+		#ONCE STOPS RECEIVING HEARTBEATS
+		#cache.set('heartbeat','stopped', EXPIRATION)
+
+		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
+
+		return Response({'heartbeat':cache.get('trigger')})
 
 '''
 Used for logging in GCS station via session auth
