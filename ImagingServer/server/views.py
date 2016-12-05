@@ -437,7 +437,7 @@ probably used in heartbeats
 	
 	#method for receiving heartbeats
 	@list_route(methods=['post'])
-	def acceptHeartbeat(self, request, pk=None):
+	def postHeartbeat(self, request, pk=None):
 		global EXPIRATION
 		#check for seperate cache entry
 		"""
@@ -467,7 +467,10 @@ probably used in heartbeats
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
-		return Response({'heartbeat':cache.get('trigger')})
+		if (cache.has_key('trigger')):
+			return Response({'heartbeat':cache.get('trigger')})
+		else:
+			return Response({})
 
 '''
 Used for logging in GCS station via session auth
