@@ -369,6 +369,7 @@ class DroneViewset(viewsets.ModelViewSet):
 
 			#make obj
 			pictureObj = PictureSerializer(data = imageData)
+			
 			if pictureObj.is_valid():
 				pictureObj = pictureObj.deserialize()
          #save img to obj
@@ -387,6 +388,7 @@ class DroneViewset(viewsets.ModelViewSet):
                                     body=str(pictureObj.pk))
                 connection.close()
                 #pdb.set_trace()
+                """
                 fullSizeList = []
                 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
                 channel = connection.channel()
@@ -400,6 +402,9 @@ class DroneViewset(viewsets.ModelViewSet):
                     fullSizedResponse = fullSizeList[0][2:]
                     print(fullSizedResponse)
                 connection.close()
+                """
+            else:
+            	return Response({"error":"Picture not valid"})
 
 
 			#	else:
@@ -411,9 +416,9 @@ class DroneViewset(viewsets.ModelViewSet):
 
 
 
-		except MultiValueDictKeyError:
+		except MultiValueDictKeyError as e:
             #there was no picture sent
-			pass
+			return Response({"error":str(e)})
 """
 end picture upload stuff
 """
@@ -427,21 +432,12 @@ probably used in heartbeats
 		if not cache.has_key('time'):
 			cache.set("time",dataDict['time'],None)
 
-
-		#determines whether camera is triggering
-		if cache.get('trigger') == 1:
-			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
-		elif cache.get('trigger')== 0:
-			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
-
 		return Response({})
 
 	
 	#method for receiving heartbeats
 	@list_route(methods=['post'])
-	def acceptHeartbeat(self, request):
+	def acceptHeartbeat(self, request, pk=None):
 		global EXPIRATION
 		#check for seperate cache entry
 		"""
@@ -464,8 +460,12 @@ probably used in heartbeats
 		#ONCE STOPS RECEIVING HEARTBEATS
 		#cache.set('heartbeat','stopped', EXPIRATION)
 
-		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
+		if cache.get('trigger') == 1:
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
+		elif cache.get('trigger')== 0:
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
 		return Response({'heartbeat':cache.get('trigger')})
 
