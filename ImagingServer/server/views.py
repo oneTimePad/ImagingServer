@@ -303,7 +303,6 @@ class DroneViewset(viewsets.ModelViewSet):
 		global DRONE_DISCONNECT_TIMEOUT
 		global GCS_SEND_TIMEOUT
 		#pdb.set_trace()
-		#fetch phone client information
 
 		dataDict = {}
 		#androidId=0	androidId shouldnt be necessary anymore
