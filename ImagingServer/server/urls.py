@@ -14,9 +14,7 @@ urlpatterns =[
 droneauthentication =[
     url(r'^drone/login$',obtain_jwt_token),
     url(r'^drone/refresh$',refresh_jwt_token),
-    url(r'^drone/verify$',verify_jwt_token),
-    url(r'^drone/heartbeat$', serverContact)    #connects to serverContact() method in view.py that receives heartbeats and images
-
+    url(r'^drone/verify$',verify_jwt_token)
 ]
 
 interopauthentication = [
@@ -33,6 +31,7 @@ gcsauthentication = [
 
 urlpatterns+=droneauthentication
 urlpatterns+=gcsauthentication
+
 urlpatterns+=interopauthentication
 
 router = SimpleRouter(trailing_slash=False)
