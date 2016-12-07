@@ -34,7 +34,7 @@ from decimal import Decimal
 import csv
 import pika
 import sys
-import qrtools
+#import qrtools
 #import zbarlight
 from PIL import Image
 #telemetry
@@ -308,52 +308,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		#androidId=0	androidId shouldnt be necessary anymore
 		timeReceived = time()
 		#code is receiving data and storing it in dataDict
-  """
-        try:
-			dataDict = request.data
-			#androidId = dataDict['id']
-		except MultiValueDictKeyError:
-			dataDict =  json.loads(str(request.data['jsonData'].rpartition('}')[0])+"}")
-			#androidId = dataDict['id']
-        """
-
-		#requestTime = dataDict['timeCache']
-        #determine if drone has contacted before
-
-        """
-        This can be utilized for heartbeats
-        
-		if not cache.has_key("android"):
-			#pdb.set_trace()
-
-			cache.set("checkallowed",True,None)
-            #if no set its cache entry
-			cache.set("android","contacted",EXPIRATION)
-			cache.delete("trigger")
-			cache.delete("time")
-		else:
-            #else delete the old one
-			cache.delete("android")
-            #create a new one
-			cache.set("android","contacted",EXPIRATION)
-
-		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
-        
-        end of stuff for heartbeats
-        """
-
-
-		#fullSizedResponse = ''
-
-		#zoomSetting = ''
-		#if cache.has_key('zoom'):
-		#	zoom = cache.get('zoom')
-		#	cache.delete('zoom')
-		#	zoomSetting = zoom['direction']
-        """
-        used for uploading pictures
-        """
+  		
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['Picture']
@@ -372,39 +327,23 @@ class DroneViewset(viewsets.ModelViewSet):
 			
 			if pictureObj.is_valid():
 				pictureObj = pictureObj.deserialize()
-         #save img to obj
+         		#save img to obj
 				pictureObj.photo = picture
 
 				pictureObj.save()
 				#pdb.set_trace()
 
-			#	if dataDict['url'] != 'FULL':
-                connection=pika.BlockingConnection(pika.ConnectionParameters(host ='localhost'))
-                channel = connection.channel()
+				#if dataDict['url'] != 'FULL':
+				connection=pika.BlockingConnection(pika.ConnectionParameters(host ='localhost'))
+				channel = connection.channel()
 
-                channel.queue_declare(queue = 'pictures')
-                channel.basic_publish(exchange='',
-                                    routing_key='pictures',
-                                    body=str(pictureObj.pk))
-                connection.close()
+				channel.queue_declare(queue = 'pictures')
+				channel.basic_publish(exchange='',routing_key='pictures',body=str(pictureObj.pk))
+				connection.close()
                 #pdb.set_trace()
-                """
-                fullSizeList = []
-                connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-                channel = connection.channel()
-                queue = channel.queue_declare(queue='fullsize')
-                #pdb.set_trace()
-                if queue.method.message_count !=0:
-                    #pdb.set_trace()
-                    callback = CountCallback(queue.method.message_count,1,fullSizeList,"str")
-                    channel.basic_consume(callback,queue='fullsize')
-                    channel.start_consuming()
-                    fullSizedResponse = fullSizeList[0][2:]
-                    print(fullSizedResponse)
-                connection.close()
-                """
-            else:
-            	return Response({"error":"Picture not valid"})
+               
+			else:
+				return Response({"error":"Picture not valid"})
 
 
 			#	else:
@@ -419,14 +358,9 @@ class DroneViewset(viewsets.ModelViewSet):
 		except MultiValueDictKeyError as e:
             #there was no picture sent
 			return Response({"error":str(e)})
-"""
-end picture upload stuff
-"""
+		#end picture upload stuff
 
-"""
-used determine if camera is triggering might or might not be needed here,
-probably used in heartbeats
-"""
+
 		if not cache.has_key('trigger'):
 			cache.set("trigger",dataDict['trigger'],None)
 		if not cache.has_key('time'):
