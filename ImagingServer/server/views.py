@@ -303,7 +303,6 @@ class DroneViewset(viewsets.ModelViewSet):
 		global DRONE_DISCONNECT_TIMEOUT
 		global GCS_SEND_TIMEOUT
 		#pdb.set_trace()
-		#fetch phone client information
 
 		dataDict = request.data
 		#androidId=0	androidId shouldnt be necessary anymore
@@ -323,7 +322,7 @@ class DroneViewset(viewsets.ModelViewSet):
 
         """
         This can be utilized for heartbeats
-        """
+        
 		if not cache.has_key("android"):
 			#pdb.set_trace()
 
@@ -340,7 +339,7 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		redis_publisher.publish_message(RedisMessage(json.dumps({'connected':'connected'})))
-        """
+        
         end of stuff for heartbeats
         """
 
@@ -370,6 +369,7 @@ class DroneViewset(viewsets.ModelViewSet):
 
 			#make obj
 			pictureObj = PictureSerializer(data = imageData)
+			
 			if pictureObj.is_valid():
 				pictureObj = pictureObj.deserialize()
          #save img to obj
@@ -388,6 +388,7 @@ class DroneViewset(viewsets.ModelViewSet):
                                     body=str(pictureObj.pk))
                 connection.close()
                 #pdb.set_trace()
+                """
                 fullSizeList = []
                 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
                 channel = connection.channel()
@@ -401,6 +402,9 @@ class DroneViewset(viewsets.ModelViewSet):
                     fullSizedResponse = fullSizeList[0][2:]
                     print(fullSizedResponse)
                 connection.close()
+                """
+            else:
+            	return Response({"error":"Picture not valid"})
 
 
 			#	else:
@@ -412,9 +416,9 @@ class DroneViewset(viewsets.ModelViewSet):
 
 
 
-		except MultiValueDictKeyError:
+		except MultiValueDictKeyError as e:
             #there was no picture sent
-			pass
+			return Response({"error":str(e)})
 """
 end picture upload stuff
 """
@@ -428,8 +432,34 @@ probably used in heartbeats
 		if not cache.has_key('time'):
 			cache.set("time",dataDict['time'],None)
 
+		return Response({})
 
-		#determines whether camera is triggering
+	
+	#method for receiving heartbeats
+	@list_route(methods=['post'])
+	def postHeartbeat(self, request, pk=None):
+		global EXPIRATION
+		#check for seperate cache entry
+		"""
+		if (cache.get('heartbeat') != None):	#trigger would be 'heartbeat' for status of heartbeats
+			#SEND TRIGGER IN THIS CASE TO START
+		"""
+
+		if not cache.has_key('heartbeat'):
+			#if doesn't have key heartbeat set its cache entry
+			cache.set('heartbeat','connected',EXPIRATION)
+		else:
+            #else delete the old one
+			cache.delete('heartbeat')
+            #create a new one
+			cache.set('heartbeat','connected',EXPIRATION)
+
+		#ONCE STARTS RECEIVING HEARTBEATS
+		#cache.set('heartbeat', 'triggering', EXPIRATION)
+
+		#ONCE STOPS RECEIVING HEARTBEATS
+		#cache.set('heartbeat','stopped', EXPIRATION)
+
 		if cache.get('trigger') == 1:
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
@@ -437,8 +467,10 @@ probably used in heartbeats
 			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
-		return Response({'trigger':cache.get("trigger"),'time':cache.get("time"),'imageformat':cache.get("imageformat"),'fullSize':fullSizedResponse,'zoom':zoomSetting})
-
+		if (cache.has_key('trigger')):
+			return Response({'heartbeat':cache.get('trigger')})
+		else:
+			return Response({})
 
 '''
 Used for logging in GCS station via session auth

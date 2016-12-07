@@ -15,6 +15,7 @@ droneauthentication =[
     url(r'^drone/login$',obtain_jwt_token),
     url(r'^drone/refresh$',refresh_jwt_token),
     url(r'^drone/verify$',verify_jwt_token),
+    url(r'^drone/heartbeat$', serverContact)    #connects to serverContact() method in view.py that receives heartbeats and images
 
 ]
 
