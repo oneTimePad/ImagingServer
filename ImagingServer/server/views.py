@@ -47,8 +47,8 @@ import pdb
 
 
 #constants from Environment Vars
-IMAGE_STORAGE = "http://localhost:8888/html/PHOTOS"
-TARGET_STORAGE = "http://localhost:8888/html/TARGETS"
+IMAGE_STORAGE = "http://localhost:8000/html/PHOTOS"
+TARGET_STORAGE = "http://localhost:8000/html/TARGETS"
 
 IMAGE  = os.getenv("IMAGE",IMAGE_STORAGE)
 TARGET = os.getenv("TARGET",TARGET_STORAGE)
@@ -298,7 +298,7 @@ class DroneViewset(viewsets.ModelViewSet):
 	parser_classes = (JSONParser,MultiPartParser,FormParser)
 
 	@list_route(methods=['post'])
-	def serverContact(self,request,pk=None):
+	def postImage(self,request,pk=None):
 		global EXPIRATION
 		global DRONE_DISCONNECT_TIMEOUT
 		global GCS_SEND_TIMEOUT
@@ -308,23 +308,19 @@ class DroneViewset(viewsets.ModelViewSet):
 		#androidId=0	androidId shouldnt be necessary anymore
 		timeReceived = time()
 		#code is receiving data and storing it in dataDict
-  		
 		try:
             #attempt to make picture model entry
-			picture = request.FILES['Picture']
-
+			picture = request.FILES['image']
 
 			imageData = {}
-			if dataDict['url'] != 'FULL':
-            #form image dict
-				imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('azimuth','pitch','roll','lat','lon','alt','timeTaken')}
-			imageData['url'] = dataDict['url']
+			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','yaw')}
+			#imageData['url'] = dataDict['url']
 			imageData['fileName'] = IMAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
 			imageData['timeReceived'] = timeReceived
 
 			#make obj
 			pictureObj = PictureSerializer(data = imageData)
-			
+
 			if pictureObj.is_valid():
 				pictureObj = pictureObj.deserialize()
          		#save img to obj
@@ -341,7 +337,7 @@ class DroneViewset(viewsets.ModelViewSet):
 				channel.basic_publish(exchange='',routing_key='pictures',body=str(pictureObj.pk))
 				connection.close()
                 #pdb.set_trace()
-               
+
 			else:
 				return Response({"error":"Picture not valid"})
 
@@ -368,7 +364,7 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		return Response({})
 
-	
+
 	#method for receiving heartbeats
 	@list_route(methods=['post'])
 	def postHeartbeat(self, request, pk=None):
