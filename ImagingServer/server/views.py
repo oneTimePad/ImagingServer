@@ -414,6 +414,10 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		#log ground station in
 		username = request.POST['username']
 		password = request.POST['password']
+
+		if (cache.has_key('trigger')):	#clears triggering key from cache if it exists	
+			cache.set('trigger', 0, None)
+
 		user = authenticate(username=username,password=password)
 		if user is not None:
 			#if user is active log use in and return redirect
