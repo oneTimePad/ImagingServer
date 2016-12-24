@@ -47,8 +47,8 @@ import pdb
 
 
 #constants from Environment Vars
-IMAGE_STORAGE = "http://localhost:8000/html/PHOTOS"
-TARGET_STORAGE = "http://localhost:8000/html/TARGETS"
+IMAGE_STORAGE = "http://localhost:8888/html/PHOTOS"
+TARGET_STORAGE = "http://localhost:8888/html/TARGETS"
 
 IMAGE  = os.getenv("IMAGE",IMAGE_STORAGE)
 TARGET = os.getenv("TARGET",TARGET_STORAGE)
@@ -356,12 +356,12 @@ class DroneViewset(viewsets.ModelViewSet):
 			return Response({"error":str(e)})
 		#end picture upload stuff
 
-
+		"""
 		if not cache.has_key('trigger'):
 			cache.set("trigger",dataDict['trigger'],None)
 		if not cache.has_key('time'):
 			cache.set("time",dataDict['time'],None)
-
+		"""
 		return Response({})
 
 
@@ -415,7 +415,7 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		username = request.POST['username']
 		password = request.POST['password']
 
-		if (cache.has_key('trigger')):	#clears triggering key from cache if it exists	
+		if (cache.has_key('trigger')):	#clears triggering key from cache if it exists
 			cache.set('trigger', 0, None)
 
 		user = authenticate(username=username,password=password)
