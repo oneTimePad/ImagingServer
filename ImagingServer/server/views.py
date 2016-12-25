@@ -47,8 +47,8 @@ import pdb
 
 
 #constants from Environment Vars
-IMAGE_STORAGE = "http://localhost:8000/html/PHOTOS"
-TARGET_STORAGE = "http://localhost:8000/html/TARGETS"
+IMAGE_STORAGE = "http://localhost:8888/html/PHOTOS"
+TARGET_STORAGE = "http://localhost:8888/html/TARGETS"
 
 IMAGE  = os.getenv("IMAGE",IMAGE_STORAGE)
 TARGET = os.getenv("TARGET",TARGET_STORAGE)
@@ -311,7 +311,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['image']
-
+			#pdb.set_trace()
 			imageData = {}
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','yaw')}
 			#imageData['url'] = dataDict['url']
@@ -356,12 +356,12 @@ class DroneViewset(viewsets.ModelViewSet):
 			return Response({"error":str(e)})
 		#end picture upload stuff
 
-
+		"""
 		if not cache.has_key('trigger'):
 			cache.set("trigger",dataDict['trigger'],None)
 		if not cache.has_key('time'):
 			cache.set("time",dataDict['time'],None)
-
+		"""
 		return Response({})
 
 
@@ -398,7 +398,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
 		if (cache.has_key('trigger')):
-			return Response({'heartbeat':cache.get('trigger')})
+			return Response({'heartbeat':cache.get('trigger'),'loop':cache.get('loop'),'delay':cache.get('delay')})
 		else:
 			return Response({})
 
@@ -415,7 +415,7 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		username = request.POST['username']
 		password = request.POST['password']
 
-		if (cache.has_key('trigger')):	#clears triggering key from cache if it exists	
+		if (cache.has_key('trigger')):	#clears triggering key from cache if it exists
 			cache.set('trigger', 0, None)
 
 		user = authenticate(username=username,password=password)
@@ -489,20 +489,24 @@ class GCSViewset(viewsets.ModelViewSet):
         #attempting to trigger
 		triggerStatus = request.data['trigger']
         #if attempting to trigger and time is 0 or there is no time
-		if triggerStatus != "0" and (float(request.data['time']) == 0 or not request.data['time']):
+		#TODO: fix this statement
+		if triggerStatus != "0" and (float(request.data['loop']) == 0 or not request.data['loop']):
             # don't do anything
 			return Response({'nothing':'nothing'})
         #if attempting to trigger and time is less than 0
-		if request.data['time'] and float(request.data['time']) < 0:
+		if request.data['loop'] and float(request.data['loop']) < 0:
             #say invalid
-			return Response({'failure':'invalid time interval'})
+			return Response({'failure':'invalid loop interval'})
+		if request.data['delay'] and float(request.data['delay']) < 0:
+			return Response({'failure':'invalid delay interval'})
         # if attempting to trigger
 
 		if triggerStatus == '1':
             #set cache to yes
 			cache.set('trigger',1,None)
             #settime
-			cache.set('time',float(request.data['time']))
+			cache.set('loop',float(request.data['loop']))
+			cache.set('delay',float(request.data['delay']))
         #if attempting to stop triggering
 		elif triggerStatus == '0':
             # set cache
@@ -533,6 +537,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			picStack.insert(0,int(pk))
 		request.session['picstack'] = picStack
 		serPics = [{'pk':picture.pk,'image':PictureSerializer(picture).data,'timeSent':time()} for picture in pics ]
+		print(serPics[0])
 		return Response(serPics)
 
 	@list_route(methods=['post'])
