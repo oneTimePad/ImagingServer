@@ -311,7 +311,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		try:
             #attempt to make picture model entry
 			picture = request.FILES['image']
-
+			#pdb.set_trace()
 			imageData = {}
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','yaw')}
 			#imageData['url'] = dataDict['url']
@@ -533,6 +533,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			picStack.insert(0,int(pk))
 		request.session['picstack'] = picStack
 		serPics = [{'pk':picture.pk,'image':PictureSerializer(picture).data,'timeSent':time()} for picture in pics ]
+		print(serPics[0])
 		return Response(serPics)
 
 	@list_route(methods=['post'])
