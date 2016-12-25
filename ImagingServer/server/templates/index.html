@@ -1046,8 +1046,10 @@ $(function(){
 
 
 						<form >
-								
-									<input id="time_interval" type="number" value="0"/>
+
+									<input id="loop_interval" type="text" value="0"/>
+
+									<input id="delay_interval" type="text", value="0"/>
 
 									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
 
@@ -1159,7 +1161,7 @@ function trigger() {
 		url:"{%url 'gcs-cameraTrigger' %}",
 		type:"POST",
 		dataType:"JSON",
-		data:{"time":$("#time_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+		data:{"loop":$("#loop_interval").val(),"delay":$("#delay_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
 		success: function(json) {
 			if (json.hasOwnProperty("failure")) {
 				bootbox.alert("Invalid Time Interval")
@@ -1168,8 +1170,8 @@ function trigger() {
 			if (json.hasOwnProperty("nothing")) {
 				return;
 			}
-			var time_int = document.getElementById("time_interval");
-			time_int.value=0;
+			//var time_int = document.getElementById("time_interval");
+			//time_int.value=0;
 			var trigger_on = document.getElementById("trigger_on");
 			$("#trigger_on").val(Math.abs(trigger_on.value-1));
 			if (trigger_on.value==0) {

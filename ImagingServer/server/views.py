@@ -398,7 +398,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
 
 		if (cache.has_key('trigger')):
-			return Response({'heartbeat':cache.get('trigger')})
+			return Response({'heartbeat':cache.get('trigger'),'loop':cache.get('loop'),'delay':cache.get('delay')})
 		else:
 			return Response({})
 
@@ -489,20 +489,24 @@ class GCSViewset(viewsets.ModelViewSet):
         #attempting to trigger
 		triggerStatus = request.data['trigger']
         #if attempting to trigger and time is 0 or there is no time
-		if triggerStatus != "0" and (float(request.data['time']) == 0 or not request.data['time']):
+		#TODO: fix this statement
+		if triggerStatus != "0" and (float(request.data['loop']) == 0 or not request.data['loop']):
             # don't do anything
 			return Response({'nothing':'nothing'})
         #if attempting to trigger and time is less than 0
-		if request.data['time'] and float(request.data['time']) < 0:
+		if request.data['loop'] and float(request.data['loop']) < 0:
             #say invalid
-			return Response({'failure':'invalid time interval'})
+			return Response({'failure':'invalid loop interval'})
+		if request.data['delay'] and float(request.data['delay']) < 0:
+			return Response({'failure':'invalid delay interval'})
         # if attempting to trigger
 
 		if triggerStatus == '1':
             #set cache to yes
 			cache.set('trigger',1,None)
             #settime
-			cache.set('time',float(request.data['time']))
+			cache.set('loop',float(request.data['loop']))
+			cache.set('delay',float(request.data['delay']))
         #if attempting to stop triggering
 		elif triggerStatus == '0':
             # set cache
