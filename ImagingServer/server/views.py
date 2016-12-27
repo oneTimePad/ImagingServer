@@ -40,7 +40,7 @@ from PIL import Image
 #telemetry
 from .types import  Telemetry,AUVSITarget
 from .exceptions import InteropError
-from .interopmethods import interop_login,get_obstacles,post_telemetry,post_target_image,post_target,get_server_info
+from .interopmethods import interop_login,get_obstacles,post_telemetry,post_target_image,post_target,get_server_info,get_missions
 import requests
 #debug
 import pdb
@@ -109,8 +109,9 @@ class CountCallback(object):
 		self.count-=1
 		if self.count == 0:
 			ch.stop_consuming()
-def interop_error_handler(error):
+def interop_error_handler(error,startTime):
 	code,reason,text = error.errorData()
+
 
 	#response to client accordingly
 	#but keep going...if something fails, respond and ignore it
@@ -156,27 +157,28 @@ def connectionCheck():
 class InteroperabilityViewset(viewsets.ModelViewSet):
 	authentication_classes = (JSONWebTokenAuthentication,)
 	permission_classes = (InteroperabilityAuthentication,)
-
 	#mavclient endpoint for getting SDA-obstacles
 	@list_route(methods=['post'])
-	def getObstacles(self,request,pk=None):
-		#fetch the current time, technically not needed, can be handed by client
-		#ignore it if you want
+	def getMission(self,request,pk=None):
+		#fetch misisons from interop server (according to spec, more than one can be returned)
 		startTime = time()
 		#fetch interop server info
 		session = cache.get("InteropClient")
 		server = cache.get("Server")
 		try:
 			#attempt to fetch obstacles
-			stationary,moving = get_obstacles(session,server,tout=5)
+			missions =get_missions(session,server,tout=5)
 			#return a json response with the time diff(again ignore if you want)
 			#json version of data (i.e. obstacles)
 			#there is no error, filled in if there is an error
-			return Response({'time':time()-startTime,'stationary':stat.serialize(),'moving':moving.serialize(),'error':None})
+
+			mission_resp = {'mission'+str(num):mission.serialize() for num,mission in enumerate(missions)}
+			mission_resp['error'] = None
+			return Response(mission_resp)
 		except InteropError as e:
 			#interop errors are handled differently
 			#this returns something in side
-			interop_error_handler(e)
+			return interop_error_handler(e,startTime)
 			#never comes here
 		#handler all connection errors
 		except requests.ConnectionError:
@@ -199,7 +201,58 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			return Response({'time':time()-startTime,'error':e})
 
 		except Exception as e:
-			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (sys.exc_info()[0])})
+			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (e)})
+
+	#mavclient endpoint for getting SDA-obstacles
+	@list_route(methods=['post'])
+	def getObstacles(self,request,pk=None):
+		#fetch the current time, technically not needed, can be handed by client
+		#ignore it if you want
+		startTime = time()
+		#fetch interop server info
+		session = cache.get("InteropClient")
+		server = cache.get("Server")
+
+		try:
+			#attempt to fetch obstacles
+			stationary,moving = get_obstacles(session,server,tout=5)
+			#return a json response with the time diff(again ignore if you want)
+			#json version of data (i.e. obstacles)
+			#there is no error, filled in if there is an error
+			resp = dict()
+			resp['stationary'] = { str(x): stat.serialize() for x,stat in enumerate(stationary)}
+			resp['moving'] = {str(x) :move.serialize() for x,move in  enumerate(moving)}
+			resp['time'] = time()-startTime
+			resp['error'] = None
+			return Response(resp)
+		except InteropError as e:
+			#interop errors are handled differently
+			#this returns something in side
+			return interop_error_handler(e,startTime)
+			#never comes here
+		#handler all connection errors
+		except requests.ConnectionError:
+			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
+
+		except requests.Timeout:
+			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
+
+		#Why would this ever happen?
+		except requests.TooManyRedirects:
+			return Response({'time':time()-startTime,'error':"WARNING:The URL redirects to itself"})
+
+		#This wouldn't happen again...
+		except requests.URLRequired:
+			return Response({'time':time()-startTime,'error':"The URL is invalid"})
+
+
+		except requests.RequestException as e:
+			# catastrophic error. bail.
+			return Response({'time':time()-startTime,'error':e})
+
+		except Exception as e:
+
+			return Response({'time':time()-startTime,'error':"Unknown error: %s" % str(e)})
 
 
 
@@ -213,7 +266,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			serverInfo = get_server_info(session,server,tout=5)
 			return Response({'time':time()-startTime,'data':json.dumps(serverInfo),'error':None})
 		except InteropError as e:
-			interop_error_handler(e)
+			return interop_error_handler(e,startTime)
 
 		except requests.ConnectionError:
 			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
@@ -235,7 +288,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			return Response({'time':time()-startTime,'error':e})
 
 		except Exception as e:
-			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (sys.exc_info()[0])})
+			return Response({'time':time()-startTime,'error':"Unknown error: %s" % str(e)})
 
 
 
@@ -244,8 +297,9 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
 
-
+		#print("REQUESTED")
 		startTime = time()
+
 		#fetch cached info
 		session = cache.get("InteropClient")
 		server = cache.get("Server")
@@ -259,10 +313,13 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 		t = Telemetry(**dict(telemData.validated_data))
 
 		try:
+			old = time()
 			post_telemetry(session,server,tout=5,telem=t)
+			#print("RETURNED")
+			print(time()-old)
 			return Response({'time':time()-startTime,'error':None})
 		except InteropError as e:
-			interop_error_handler(e)
+			return interop_error_handler(e)
 
 		except requests.ConnectionError:
 			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
@@ -284,7 +341,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			return Response({'time':time()-startTime,'error':e})
 
 		except Exception as e:
-			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (sys.exc_info()[0])})
+			return Response({'time':time()-startTime,'error':"Unknown error: %s" % str(e)})
 
 
 
@@ -450,7 +507,7 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 		login_data.update({"tout":5})
 		#create client
 		session = interop_login(**(login_data))
-
+		#client = AsyncClient(**(login_data))
 		#if it did not return a client, respnd with error
 		if not isinstance(session,requests.Session):
 			#responsd with error

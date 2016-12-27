@@ -1,5 +1,5 @@
 from .exceptions import InteropError
-from .types import AUVSITarget,ServerInfo,MovingObstacle,StationaryObstacle
+from .types import AUVSITarget,ServerInfo,MovingObstacle,StationaryObstacle,Mission
 import requests
 import json
 import pdb
@@ -42,7 +42,20 @@ def interop_login(username,password,server,tout):
         return "Unknown error: %s" % (sys.exc_info()[0])
 
 
+def get_missions(session,server,tout):
+    """GET missions.
 
+    Returns:
+        List of Mission.
+    Raises:
+        InteropError: Error from server.
+        requests.Timeout: Request timeout.
+        ValueError or AttributeError: Malformed response from server.
+    """
+    r = session.get(server+'/api/missions', timeout=tout)
+    if not r.ok:
+        raise InteropError(r)
+    return [Mission.deserialize(m) for m in r.json()]
 
 def get_server_info(session,server, tout):
     """GET server information, to be displayed to judges.
