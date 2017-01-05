@@ -134,6 +134,11 @@ class Target(models.Model):
 	def wasSent(self):
 		self.sent = True
 
+
+
+
+
+#TODO: EVERYTHING below this point is related to target geotagging
 	def findWorldCoords(self,x,y,orig_width,orig_height):
 		# divide full width / height by 2 cuz we don't need that crap
 		orig_width = orig_width / 2
