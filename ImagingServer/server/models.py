@@ -54,12 +54,12 @@ class Picture(models.Model):
 	fileName = models.CharField(max_length=100,default="photo")
 	photo = models.ImageField(storage=fs,default=0)
 	#azimuth = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	yaw = models.DecimalField(max_digits=9,decimal_places=6,default=0)
-	pitch = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	roll =models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	lat = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	lon = models.DecimalField(max_digits=9, decimal_places=6,default=0)
-	alt = models.DecimalField(max_digits=9, decimal_places=6,default=0)
+	yaw = models.DecimalField(max_digits=9,decimal_places=5,default=0)
+	pitch = models.DecimalField(max_digits=9, decimal_places=5,default=0)
+	roll =models.DecimalField(max_digits=9, decimal_places=5,default=0)
+	lat = models.DecimalField(max_digits=9, decimal_places=5,default=0)
+	lon = models.DecimalField(max_digits=9, decimal_places=5,default=0)
+	alt = models.DecimalField(max_digits=9, decimal_places=5,default=0)
 	#url = models.CharField(max_length=300,default='url')
 	#timeTaken = models.FloatField(default=0)
 	timeReceived = models.FloatField(default=0)
@@ -134,6 +134,11 @@ class Target(models.Model):
 	def wasSent(self):
 		self.sent = True
 
+
+
+
+
+#TODO: EVERYTHING below this point is related to target geotagging
 	def findWorldCoords(self,x,y,orig_width,orig_height):
 		# divide full width / height by 2 cuz we don't need that crap
 		orig_width = orig_width / 2
