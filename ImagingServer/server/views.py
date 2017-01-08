@@ -396,6 +396,8 @@ class DroneViewset(viewsets.ModelViewSet):
                 #pdb.set_trace()
 
 			else:
+				print(imageData)
+				print(pictureObj.errors)
 				return Response({"error":"Picture not valid"})
 
 
