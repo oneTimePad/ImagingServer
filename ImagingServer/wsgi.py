@@ -1,19 +1,28 @@
-# test uWSGI with low traffic:
-# uwsgi --virtualenv /path/to/virtualenv --http :9090 --gevent 100 --http-websockets --module wsgi
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatserver.settings')
+"""
+WSGI config for the interop server.
+
+It exposes the WSGI callable as a module-level variable named ``application``.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/1.6/howto/deployment/wsgi/
+"""
 
 from django.core.wsgi import get_wsgi_application
-from django.conf import settings
-from ws4redis.uwsgi_runserver import uWSGIWebsocketServer
+from django.test import Client
+import os
+import sys
 
-_django_app = get_wsgi_application()
-_websocket_app = uWSGIWebsocketServer()
-#os.environ['HTTPS'] = "on"
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ImagingServer.settings")
 
-def application(environ, start_response):
-    if environ.get('PATH_INFO').startswith(settings.WEBSOCKET_URL):
-        return _websocket_app(environ, start_response)
-    return _django_app(environ, start_response)
+# Add parent directory to Python path
+server_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path = [server_dir] + sys.path
+
+application = get_wsgi_application()
+
+# Django puts off loading many relevant modules until the first request
+# arrives. If the disk is very slow (e.g., when using Vagrant, see #8),
+# this introduces significant latency in the first request. By making a dummy
+# request here, we force Django to import everything it needs and improve
+# latency for the first real request.
+Client().get("/")
