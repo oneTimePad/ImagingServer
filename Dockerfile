@@ -48,8 +48,7 @@ COPY manage.py manage.py
 COPY server server
 COPY ImagingServer ImagingServer
 COPY fixtures fixtures
-COPY wsgi_websocket.py wsgi_websocket.py
-COPY wsgi_django.py wsgi_django.py
+
 
 RUN sudo service redis-server start && \
 	sudo service rabbitmq-server start && \
