@@ -47,8 +47,8 @@ import pdb
 
 
 #constants from Environment Vars
-IMAGE_STORAGE = "http://localhost:8888/html/PHOTOS"
-TARGET_STORAGE = "http://localhost:8888/html/TARGETS"
+IMAGE_STORAGE = "http://localhost:8888/PHOTOS"
+TARGET_STORAGE = "http://localhost:8888/TARGETS"
 
 IMAGE  = os.getenv("IMAGE",IMAGE_STORAGE)
 TARGET = os.getenv("TARGET",TARGET_STORAGE)
