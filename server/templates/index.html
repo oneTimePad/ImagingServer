@@ -300,7 +300,7 @@ function PictureArray(){
 	$(function connect_websocket_pic(){
 			//create websocket
 			var web_socket = WS4Redis({
-			uri:"{{WEBSOCKET_URI}}viewer?subscribe-session",
+			uri:"ws://127.0.0.1:8444/ws/viewer?subscribe-session",
 			//triggered when msg from server is sent
 			receive_message: parseWebSkt,
 			heartbeat_msg: {{WS4REDIS_HEARTBEAT}}

@@ -1,6 +1,6 @@
 #!/bin/bash
 source ~/.bashrc
-source ~/.virtualenvs/auvsi/bin/activate
-cd /home/ruautonomous/Auvsi/ImagingServer/ImagingServer
+source ~/.virtualenvs/igcs/bin/activate
+cd /home/ruautonomous/Auvsi/ImagingGCS
 #sleep 100;
 ./manage.py runserver 0.0.0.0:8000

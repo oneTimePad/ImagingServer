@@ -9,10 +9,10 @@
 		- build the container: sudo ./build.sh
 		- run sudo ./run.sh
 		- contact http://localhost:8443
+		- note please be patient [server takes time to start up see docker logs imaging-server for info]
+
 #Issues:
-	- the docker version currently does not load the static files [working on that]
 	- the docker version has not been tested with websockets
-	- the original version is in ImagingServerREG ( do not work on that source, it is for temporary use only)
 
 #Users
 - username: viewer1, password: ruautonomous [user for image gui]

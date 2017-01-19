@@ -18,6 +18,8 @@ RUN sudo  apt-get  update && sudo apt-get install -y \
 	apache2-utils \
 	libapache2-mod-auth-pgsql \
 	libapache2-mod-wsgi-py3 \ 
+	libapache2-mod-uwsgi\
+	uwsgi-plugin-python3 \
 	redis-server \
 	rabbitmq-server \
 	python3\
@@ -48,8 +50,11 @@ COPY manage.py manage.py
 COPY server server
 COPY ImagingServer ImagingServer
 COPY fixtures fixtures
+COPY wsgi_websocket.py wsgi_websocket.py
 
-
+RUN sudo a2enmod proxy_http
+RUN sudo a2enmod proxy
+RUN sudo a2enmod proxy_wstunnel
 RUN sudo service redis-server start && \
 	sudo service rabbitmq-server start && \
 	sleep 3
@@ -76,6 +81,7 @@ CMD sudo service redis-server start && \
     sudo service postgresql start && \
 	sleep 3 && \  
     sudo service apache2 start && \
+    #sudo  service uwsgi start && \
 	tail -f /dev/null
 
 #CMD dpkg -S mod_ssl.so
