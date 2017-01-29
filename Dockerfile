@@ -57,7 +57,7 @@ RUN sudo a2enmod proxy
 RUN sudo a2enmod proxy_wstunnel
 RUN sudo service redis-server start && \
 	sudo service rabbitmq-server start && \
-	sleep 3
+	sleep 20
 
 # run configuration for db,apache and django
 RUN ./config/configure_postgresql.sh && \
@@ -69,7 +69,7 @@ RUN ./config/configure_postgresql.sh && \
 RUN sudo service postgresql start && \
     sudo service redis-server start && \
     sudo service rabbitmq-server start && \
-	sleep 3 && \
+	sleep 50 && \
 	python3 manage.py loaddata fixtures/users.json
 
 #setup apache logs
@@ -79,7 +79,7 @@ VOLUME /var/log/apache2 /var/lib/postgresql/9.5/data
 CMD sudo service redis-server start && \
     sudo service rabbitmq-server start && \
     sudo service postgresql start && \
-	sleep 3 && \  
+	sleep 50 && \  
     sudo service apache2 start && \
     #sudo  service uwsgi start && \
 	tail -f /dev/null

@@ -65,7 +65,7 @@ INSTALLED_APPS = (
     'server',
     'ws4redis',
 )
-'''
+
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -76,7 +76,7 @@ REST_FRAMEWORK = {
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
     ),
 }
-'''
+
 
 JWT_AUTH={
 'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds= 3600),
