@@ -359,7 +359,7 @@ class DroneViewset(viewsets.ModelViewSet):
 		global DRONE_DISCONNECT_TIMEOUT
 		global GCS_SEND_TIMEOUT
 		#pdb.set_trace()
-
+	
 		dataDict = request.data
 		#androidId=0	androidId shouldnt be necessary anymore
 		timeReceived = time()
@@ -371,9 +371,8 @@ class DroneViewset(viewsets.ModelViewSet):
 			imageData = {}
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','yaw')}
 			#imageData['url'] = dataDict['url']
-			imageData['fileName'] = IMAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
+			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
 			imageData['timeReceived'] = timeReceived
-
 			#make obj
 			pictureObj = PictureSerializer(data = imageData)
 
@@ -407,10 +406,11 @@ class DroneViewset(viewsets.ModelViewSet):
 					#push pic to client
 
 
-
-
 		except MultiValueDictKeyError as e:
             #there was no picture sent
+			return Response({"error":str(e)})
+		except:
+			e = sys.exc_info()[0]
 			return Response({"error":str(e)})
 		#end picture upload stuff
 
