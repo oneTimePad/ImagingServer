@@ -23,12 +23,12 @@ from sanitizer.models import SanitizedCharField
 from rest_framework.authtoken.models import Token
 
 #important storage constants
-STORAGE = os.getenv("PICTURE_STORAGE", '/var/www/pictures/')
-STORAGE_Target = os.getenv("TARGET_STORAGE",'/var/www/targets')
+STORAGE = "/var/www/pictures"
+STORAGE_TARGET = "/var/www/targets"
 
 #uses django storage, change path to fit yours
 fs = FileSystemStorage(location=STORAGE)
-fs_targets = FileSystemStorage(location=STORAGE_Target)
+fs_targets = FileSystemStorage(location=STORAGE_TARGET)
 
 # Camera information. Nexus 6P in portrait
 # Field of View angles (1/2 image viewing angles)
@@ -217,7 +217,8 @@ class Target(models.Model):
 
 		# GEOTAGGING STUFF
 		# Get information on camera angles
-		azimuth = float(math.radians(parent_pic.azimuth)) # Angle from North
+		"""
+		#azimuth = float(math.radians(parent_pic.azimuth)) # Angle from North
 		pitch = float(math.radians(parent_pic.pitch)) # Forward/back angle
 		roll = float(math.radians(parent_pic.roll)) # Left/Right angle
 		altitude = float(parent_pic.alt)
@@ -235,8 +236,11 @@ class Target(models.Model):
 
 		# ************************* MOST IMPORTANT INFORMATION ******************************
 		# This is the calculated Latitude, Longitude of the point
-		self.latitude = latOffset + gpsLatitude
-		self.longitude = lonOffset + gpsLongitude
-
+		#self.latitude = latOffset + gpsLatitude
+		#self.longitude = lonOffset + gpsLongitude
+		"""
+		self.latitude = -1
+		self.longitude = -2
+		
 		#save to db
 		self.save()
