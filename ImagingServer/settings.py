@@ -184,4 +184,4 @@ PICTURES_URL='/pictures/'
 PICTURES_ROOT = '/var/www/pictures'
 
 TARGETS_URL='/targets/'
-TARGETS_ROOT =' /var/www/targets'
+TARGETS_ROOT ='/var/www/targets'

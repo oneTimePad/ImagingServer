@@ -1,4 +1,5 @@
 #django
+import ImagingServer.settings
 from django.http import HttpResponse,HttpResponseForbidden
 from django.core import serializers
 from django.core.cache import cache
@@ -656,7 +657,7 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def getAllTargets(self,request,pk=None):
 		connectionCheck()
-		data = [{'pk':t.pk, 'image':TARGET+"/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
+		data = [{'pk':t.pk, 'image':"/targets/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
 		return Response(json.dumps({'targets':data}))
 
 
@@ -687,7 +688,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		target.save()
 
 		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
+		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':settings.TARGETS_URL+"Target"+str(target.pk).zfill(4)+'.jpeg'})))
 		return Response("success")
 
 
