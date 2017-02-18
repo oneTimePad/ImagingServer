@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Picture Viewer</title>
-<script type="text/javascript" src="{{STATIC_URL}}js/ws4redis.js"></script>
+<!-- <script type="text/javascript" src="{{STATIC_URL}}js/ws4redis.js"></script> -->
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
@@ -26,6 +26,8 @@
 	looping = null;
 	said_no_pictures=false;
 	timeSent = 0;
+	heartbeat = null;
+	targets = {};
 
 	(function(){
 		// Convert array to object
@@ -297,16 +299,16 @@ function PictureArray(){
 			reversePicture(this.getReverse());
 		}
 	}
-	$(function connect_websocket_pic(){
-			//create websocket
-			var web_socket = WS4Redis({
-			uri:"ws://127.0.0.1:8444/ws/viewer?subscribe-session",
-			//triggered when msg from server is sent
-			receive_message: parseWebSkt,
-			heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
-			});
-		}
-	)
+	// $(function connect_websocket_pic(){
+	// 		//create websocket
+	// 		var web_socket = WS4Redis({
+	// 		uri:"ws://127.0.0.1:8444/ws/viewer?subscribe-session",
+	// 		//triggered when msg from server is sent
+	// 		receive_message: parseWebSkt,
+	// 		heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+	// 		});
+	// 	}
+	// )
 	//sets up form submission
 	$(function form_submit_setup() {
 		//on user submit
@@ -369,6 +371,8 @@ function PictureArray(){
 			}
 		})
 	})
+
+	/*
 	//handles picture received from websocket
 	function parseWebSkt(response){
 		//parse json server response
@@ -453,6 +457,7 @@ function PictureArray(){
 			})
 		}
 	}
+	*/
 	/*
 	retrieve next NUM_FETCH pics
 	*/
@@ -522,11 +527,91 @@ function PictureArray(){
 
 	//wanna do some testing before I add this
 	function loop(){
-			if(image_cache!=null){
-				looping = setInterval(function(){
+		if(image_cache!=null){
+			looping = setInterval(function(){
 
-					image_cache.next();},$("#loop_interval").val()*1000);
+				image_cache.next();},$("#loop_interval").val()*1000);
+		}
+	}
+
+	function pollHeartbeat() {
+		$.ajax({
+			url:"{% url 'gcs-getHeartbeat' %}",
+			type:"POST",
+			success: function(response) {
+				json_response = JSON.parse(response)
+				if (json_response.hasOwnProperty("heartbeat") && json_response["heartbeat"] == "connected") {
+					document.getElementById("connectinfo").className="box green";
+					console.log(json_response);
+				}
+				else {
+					console.log(json_response);
+					document.getElementById("connectinfo").className="box red";
+				}
+				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
+					$("#trigger_on").html("Stop Triggering");
+					document.getElementById("trigger_on").value = 0;
+				}
+				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false") {
+					$("#trigger_on").html("Start Triggering");
+					document.getElementById("trigger_on").value = 1;
+				}
 			}
+		});
+		// Check to see if targets have changed
+		$.ajax({
+			url:"{% url 'gcs-getAllTargets' %}",
+			type:"POST",
+			success: function(response) {
+				// keep track of existing targets to see if any were removed
+				targets_copy = $.extend({}, targets);
+				resp_targets = JSON.parse(response).targets;
+				resp_targets.forEach(function(t) {
+					if (document.getElementById(t.pk) == null) {
+						// create target
+						let div = document.createElement("div");
+						div.className = "thumb-div";
+						let image = document.createElement("img");
+						image.className = "thumbnail";
+						image.src = t.image;
+						image.id = t.pk;
+						if (t.sent) {
+							image.classList.add("sent");
+						}
+						targets[t.pk] = div;
+						image.addEventListener("click", function(e) {
+							if (e.ctrlKey) {
+								//ctrl+clicking to select/toggle targets to send
+								pk = this.id;
+								$("#"+pk).toggleClass("selected");
+							}
+							else {
+								picview = false;
+								setFocusedImage(this);
+							}
+							return false;
+						});
+						div.appendChild(image);
+						$("#targets").append(div);						
+					}
+					else {
+						targets_copy[t.pk] = undefined;
+						if (t.sent) {
+							// if the target has been sent, make sure it is marked sent
+							var elem = document.getElementById(t.pk);
+							elem.classList.add("sent");
+						}
+					}
+					for (t in targets_copy) {
+						if (targets_copy[t] != undefined) {
+							// target was deleted
+							$(targets_copy[t]).remove();
+						}
+					}
+
+				});
+			}
+		});
 	}
 
 	function stoploop(){
@@ -587,16 +672,16 @@ function PictureArray(){
 			url:"{% url 'gcs-getAllTargets' %}",
 			type:"POST",
 			success: function(response) {
-				targets = JSON.parse(response).targets;
-				targets.forEach(function(t) {
-					var div = document.createElement("div");
+				resp_targets = JSON.parse(response).targets;
+				resp_targets.forEach(function(t) {
+					let div = document.createElement("div");
 					div.className = "thumb-div";
-					image = document.createElement("img");
+					let image = document.createElement("img");
 					image.className = "thumbnail";
 					image.src = t.image;
 					image.id = t.pk;
 					if (t.sent) {
-						image.className += " sent";
+						image.classList.add("sent");
 					}
 					image.addEventListener("click", function(e) {
 						if (e.ctrlKey) {
@@ -615,6 +700,8 @@ function PictureArray(){
 				});
 			}
 		});
+		
+		window.setInterval(pollHeartbeat, 1000);
 
 		//event listener for entire window (for keys)
 		document.addEventListener("keyup", function(key) {
@@ -654,6 +741,7 @@ function PictureArray(){
 			}
 		});
 	}
+
 	function setDimensions() {
 		var height = window.innerHeight - $("#navbar").height() - 35;
 		$("#left-panel").css("height", height + "px");
@@ -1036,36 +1124,30 @@ $(function(){
 
 	<nav id="navbar">
 		<div class="title">RU Autonomous</div>
-
-
+			<div id="connectinfo">Connection</div>	
 
 			<div class="form">
 
-
-
-
-
 						<form >
+								<input id="loop_interval" type="text" value="0"/>
 
-									<input id="loop_interval" type="text" value="0"/>
+								<input id="delay_interval" type="text", value="0"/>
 
-									<input id="delay_interval" type="text", value="0"/>
+								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
 
-									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+								<input id="loop_interval"  type="number" value="0"/>
 
-									<input id="loop_interval"  type="number" value="0"/>
+								<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button>
 
-									<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button>
+								<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
 
-									<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
+								<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
 
-									<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
-
-							</form>
-							<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-								{% csrf_token %}
-								<button type="submit" class="btn btn-primary">Logout</button>
-							</form>
+						</form>
+						<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+							{% csrf_token %}
+							<button type="submit" class="btn btn-primary">Logout</button>
+						</form>
 
 
 		</div>

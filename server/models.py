@@ -24,7 +24,7 @@ from rest_framework.authtoken.models import Token
 
 #important storage constants
 STORAGE = os.getenv("PICTURE_STORAGE", '/var/www/pictures/')
-STORAGE_Target = os.getenv("TARGET_STORAGE",'/var/www/targets')
+STORAGE_Target = os.getenv("TARGET_STORAGE",'/var/www/targets/')
 
 #uses django storage, change path to fit yours
 fs = FileSystemStorage(location=STORAGE)
