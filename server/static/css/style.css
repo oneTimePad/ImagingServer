@@ -67,9 +67,11 @@ nav form {
   padding: 5px 10px;
 }
 #targets {
-
+  display: inline-block;
+  float: left;
+  margin: 5px;
   overflow-y: scroll;
-
+  width: 100%;
 }
 
 

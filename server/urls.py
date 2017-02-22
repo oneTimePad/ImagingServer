@@ -46,4 +46,4 @@ router.register(r'interop',InteroperabilityViewset,'interop')
 urlpatterns+=router.urls
 urlpatterns+= static(settings.STATIC_URL,document_root=settings.STATIC_ROOT)
 urlpatterns+= static(settings.PICTURES_URL,document_root=settings.PICTURES_ROOT)
-urlpatterns+= static(settings.TARGETS_URL,docuemtn_root=settings.TARGETS_ROOT)
+urlpatterns+= static(settings.TARGETS_URL,document_root=settings.TARGETS_ROOT)

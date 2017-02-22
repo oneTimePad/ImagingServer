@@ -542,10 +542,8 @@ function PictureArray(){
 				json_response = JSON.parse(response)
 				if (json_response.hasOwnProperty("heartbeat") && json_response["heartbeat"] == "connected") {
 					document.getElementById("connectinfo").className="box green";
-					console.log(json_response);
 				}
 				else {
-					console.log(json_response);
 					document.getElementById("connectinfo").className="box red";
 				}
 				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
@@ -567,7 +565,7 @@ function PictureArray(){
 				targets_copy = $.extend({}, targets);
 				resp_targets = JSON.parse(response).targets;
 				resp_targets.forEach(function(t) {
-					if (document.getElementById(t.pk) == null) {
+					if (!targets[t.pk]) {
 						// create target
 						let div = document.createElement("div");
 						div.className = "thumb-div";
@@ -603,7 +601,7 @@ function PictureArray(){
 						}
 					}
 					for (t in targets_copy) {
-						if (targets_copy[t] != undefined) {
+						if (!targets_copy[t]) {
 							// target was deleted
 							$(targets_copy[t]).remove();
 						}
@@ -680,6 +678,7 @@ function PictureArray(){
 					image.className = "thumbnail";
 					image.src = t.image;
 					image.id = t.pk;
+					targets[t.pk] = div;
 					if (t.sent) {
 						image.classList.add("sent");
 					}
@@ -913,8 +912,8 @@ function PictureArray(){
 			canvas.height = $("#focused").height();
 			canvas.style.display = "block";
 			var ctx = canvas.getContext("2d");
-
 			ctx.fillStyle="rgba(210,220,255,0.6)";
+
 			function setBox() {
 				boxW = p1[0]-p2[0];
 				boxH = p1[1]-p2[1];
@@ -933,6 +932,7 @@ function PictureArray(){
 				else {
 					corner[1] = p2[1];
 				}
+				ctx.fillStyle="rgba(210,220,255,0.6)";
 				ctx.clearRect(0,0,canvas.width,canvas.height);
 				ctx.fillRect(corner[0],corner[1],boxW,boxH);
 			}
@@ -954,13 +954,15 @@ function PictureArray(){
 			if (firstinit) {
 				firstinit = false;
 				canvas.addEventListener("dblclick", function toggle(event) {
+					this.width = $("#focused").width();
+					this.height = $("#focused").height();
 					panning = !panning;
 					cropinit = false;
 					//console.log("dblclick "+panning+" "+cropinit);
 				});
 				canvas.addEventListener("mousedown", function setP1(event) {
 					if (!panning) {
-						p1 = [event.layerX, event.layerY];
+						p1 = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						cropinit = true;
 					}
 					//console.log("mousedown "+panning+" "+cropinit);
@@ -978,23 +980,23 @@ function PictureArray(){
 				});
 				canvas.addEventListener("mousemove", function drawBox(event) {
 					if (panning) {
-						var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
+						var tx = this.width/2 - (event.pageX - canvas.offsetLeft); //canvas has the same width and height as the image
 						if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
 						if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
-						var ty = this.height/2 - event.layerY;
+						var ty = this.height/2 - (event.pageY - canvas.offsetTop);
 						if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
 						if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
 						$("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
 					}
 					else if (cropinit) {
-						p2 = [event.layerX, event.layerY];
+						p2 = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						setBox();
 					}
 					//console.log("mousemove "+panning+" "+cropinit);
 				});
 				canvas.addEventListener("mouseup", function finishBox(event) {
 					if (cropinit) {
-						p2=[event.layerX, event.layerY];
+						p2=[event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						setBox();
 						finalizeBox();
 						cropinit = false;
@@ -1133,7 +1135,10 @@ $(function(){
 
 								<input id="delay_interval" type="text", value="0"/>
 
-								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+									<input id="gain" type="text", value="0"/>
+									
+									<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
 
 								<input id="loop_interval"  type="number" value="0"/>
 
@@ -1177,9 +1182,10 @@ $(function(){
 		</div>
 		<div id="data">
 			<h3 id="focus-type">Picture Data</h3>
-
-				<table id="focus-data"></table>
-
+			<table id="focus-data"></table>
+		</div>
+		<div id="targets">
+			<h3 id="target-label">Targets</h3>
 		</div>
 	</div>
 
@@ -1188,7 +1194,7 @@ $(function(){
 		<div id="container">
 			<canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
 			<img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
- 	</div>
+ 		</div>
 	</div>
 
 
@@ -1228,16 +1234,25 @@ $(document).ready(function(){
 		]
 	});
 });
-function set_smart_trigger(){
-	var smart_trigger= document.getElementById("smart_trigger")
-	$("#smart_trigger").val(Math.abs(smart_trigger.value-1))
-	if(smart_trigger.value==false){
-		$("#smart_trigger").html("Smart Triggering On")
-	}
-	else {
-		$("#smart_trigger").html("Smart Triggering Off")
-	}
+
+
+function set_gain() {
+	$.ajax({
+		url: "{%url 'gcs-cameraGain' %}",
+		type: "POST",
+		dataType: "JSON",
+		data: {"gain":$("#gain").val()},
+		success: function(json){
+			console.log("gain set with: "+$("#gain").val() );
+			if (json.hasOwnProperty("error")){
+				bootbox.alert(json.error);
+				return;
+			}
+			return;
+		}
+		})
 }
+
 function trigger() {
 	$.ajax({
 		url:"{%url 'gcs-cameraTrigger' %}",

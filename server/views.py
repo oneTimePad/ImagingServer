@@ -1,4 +1,5 @@
 #django
+import ImagingServer.settings
 from django.http import HttpResponse,HttpResponseForbidden
 from django.core import serializers
 from django.core.cache import cache
@@ -34,14 +35,13 @@ from decimal import Decimal
 import csv
 import pika
 import sys
-#import qrtools
-#import zbarlight
 from PIL import Image
 #telemetry
 from .types import  Telemetry,AUVSITarget
 from .exceptions import InteropError
 from .interopmethods import interop_login,get_obstacles,post_telemetry,post_target_image,post_target,get_server_info,get_missions
 import requests
+
 #debug
 import pdb
 
@@ -127,7 +127,7 @@ def interop_error_handler(error,startTime):
 	elif code == 403:
 			creds = cache.get("Creds")
 			times = 5
-			for i in xrange(0,times):
+			for i in range(0,times):
 				try:
 					interop_login(username=creds['username'],password=creds['password'],server=creds['server'],tout=5)
 					return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
@@ -447,18 +447,22 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		#ONCE STOPS RECEIVING HEARTBEATS
 		#cache.set('heartbeat','stopped', EXPIRATION)
-
-		# if cache.get('trigger') == 1:
-		# 	redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-		# 	redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
-		# elif cache.get('trigger')== 0:
-		# 	redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-		# 	redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
-
-		if (cache.has_key('trigger')):
-			return Response({'heartbeat':cache.get('trigger'),'loop':cache.get('loop'),'delay':cache.get('delay')})
-		else:
-			return Response({})
+		"""
+		if cache.get('trigger') == 1:
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
+		elif cache.get('trigger')== 0:
+			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
+			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
+		"""
+		response = {'heartbeat':cache.get('trigger')}
+		if cache.has_key('trigger'):
+			response.update({'loop':cache.get('loop'),'delay':cache.get('delay')})
+		if cache.has_key('gain'):
+			response.update({'gain':float(cache.get('gain'))})
+			cache.delete('gain')
+		
+		return Response(response)
 
 '''
 Used for logging in GCS station via session auth
@@ -537,6 +541,14 @@ class GCSViewset(viewsets.ModelViewSet):
 		logout(request)
 		#redirect to login page
 		return redirect(reverse('gcs-login'))
+
+	@list_route(methods=['post'])
+	def cameraGain(self,request,pk=None):
+		connectionCheck()
+		if cache.get('trigger') == 0:
+			return Response({'error': 'not triggering'})
+		cache.set('gain',request.data['gain'])
+		return Response({})
 
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):
@@ -643,7 +655,7 @@ class GCSViewset(viewsets.ModelViewSet):
 	@list_route(methods=['post'])
 	def getAllTargets(self,request,pk=None):
 		connectionCheck()
-		data = [{'pk':t.pk, 'image':TARGET_STORAGE+"/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
+		data = [{'pk':t.pk, 'image':"/targets/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
 		return Response(json.dumps({'targets':data}))
 
 	@list_route(methods=['post'])
@@ -674,6 +686,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 		# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
 		# redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
+
 		return Response("success")
 
 	@list_route(methods=['post'])
