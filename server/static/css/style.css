@@ -45,6 +45,13 @@ nav form {
 #time_interval,#loop_interval {
   max-width:5em;
 }
+#connectinfo {
+  width: 25px;
+  height: 25px;
+  display: inline-block;
+  float: right;
+  margin: 10px;
+}
 
 
 /*set a max height for the following with JS*/

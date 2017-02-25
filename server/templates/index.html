@@ -24,6 +24,7 @@
 	next_array = null;
 	firstinit = true;
 	looping = null;
+	isLooping = true;
 	said_no_pictures=false;
 	timeSent = 0;
 	heartbeat = null;
@@ -529,8 +530,8 @@ function PictureArray(){
 	function loop(){
 		if(image_cache!=null){
 			looping = setInterval(function(){
-
 				image_cache.next();},$("#loop_interval").val()*1000);
+			console.log("loop");
 		}
 	}
 
@@ -541,10 +542,10 @@ function PictureArray(){
 			success: function(response) {
 				json_response = JSON.parse(response)
 				if (json_response.hasOwnProperty("heartbeat") && json_response["heartbeat"] == "connected") {
-					document.getElementById("connectinfo").className="box green";
+					document.getElementById("connectinfo").className="green";
 				}
 				else {
-					document.getElementById("connectinfo").className="box red";
+					document.getElementById("connectinfo").className="red";
 				}
 				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
 					$("#trigger_on").html("Stop Triggering");
@@ -614,6 +615,7 @@ function PictureArray(){
 
 	function stoploop(){
 		clearTimeout(looping);
+		console.log("stop loop");
 	}
 
 	window.onload = function() {
@@ -703,12 +705,13 @@ function PictureArray(){
 		window.setInterval(pollHeartbeat, 1000);
 
 		//event listener for entire window (for keys)
-		document.addEventListener("keyup", function(key) {
+		document.addEventListener("keyup", function(evt) {
 			var enter = 13;
 			var leftarrow = 37;
 			var rightarrow = 39;
 			var del = 46;
-			switch (key.keyCode) {
+			var space = 32;
+			switch (evt.keyCode) {
 				case leftarrow:
 					//asynchronously ask for next image and add it
 					//since we might have to fetch it
@@ -719,7 +722,7 @@ function PictureArray(){
 				case rightarrow:
 					//asynchronously ask for next image since
 					if(picview&&image_cache){
-					image_cache.next();
+						image_cache.next();
 					}
 					break;
 				case enter:
@@ -737,15 +740,29 @@ function PictureArray(){
 						});
 					}
 					break;
+				case space:
+					if (isLooping) {
+						stoploop();
+						isLooping = false;
+						console.log("pause");
+					}
+					else {
+						loop();
+						isLooping = true;
+						console.log("start");
+					}
+					evt.preventDefault();
 			}
 		});
+		loop();
 	}
 
 	function setDimensions() {
 		var height = window.innerHeight - $("#navbar").height() - 35;
 		$("#left-panel").css("height", height + "px");
 		$("#picture").css("height", height + "px");
-		$("#targets").css("height", height + "px");
+		var heightinfo = $("#form").height();
+		$("#targets").css("height", (height - 2*heightinfo-40) + "px");
 	}
 	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
@@ -911,6 +928,9 @@ function PictureArray(){
 			canvas.width = $("#focused").width();
 			canvas.height = $("#focused").height();
 			canvas.style.display = "block";
+			var container = document.getElementById("container");
+			container.width = $("#focused").width();
+			container.height = $("#focused").height();
 			var ctx = canvas.getContext("2d");
 			ctx.fillStyle="rgba(210,220,255,0.6)";
 
@@ -954,8 +974,6 @@ function PictureArray(){
 			if (firstinit) {
 				firstinit = false;
 				canvas.addEventListener("dblclick", function toggle(event) {
-					this.width = $("#focused").width();
-					this.height = $("#focused").height();
 					panning = !panning;
 					cropinit = false;
 					//console.log("dblclick "+panning+" "+cropinit);
@@ -1052,8 +1070,11 @@ function dump_targets() {
 function interop_login() {
 	window.open('/interoplogin')
 }
+
 //enable and disable picture looping fct
 $(function(){
+	/*
+	// looping is now done by default and toggled using the space bar
 	$("#loopbtn").on("click",function loophandler(){
 		//if not enabled
 		if($(this).val()==1){
@@ -1070,6 +1091,7 @@ $(function(){
 		  this.value=1;
 		}
 	});
+	*/
 
 	$("#id_description").css("display","none");
 	$("label[for='id_description']").css("display","none");
@@ -1126,35 +1148,34 @@ $(function(){
 
 	<nav id="navbar">
 		<div class="title">RU Autonomous</div>
-			<div id="connectinfo">Connection</div>	
 
 			<div class="form">
 
-						<form >
-								<input id="loop_interval" type="text" value="0"/>
+					<form >
+							<input id="loop_interval" type="text" value="0"/>
 
-								<input id="delay_interval" type="text", value="0"/>
+							<input id="delay_interval" type="text", value="0"/>
 
-									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-									<input id="gain" type="text", value="0"/>
-									
-									<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
+								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+								<input id="gain" type="text", value="0"/>
+								
+								<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
 
-								<input id="loop_interval"  type="number" value="0"/>
+							<input id="loop_interval"  type="number" value="0"/>
 
-								<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button>
+							<!-- <button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button> -->
 
-								<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
+							<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
 
-								<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
+							<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
 
-						</form>
-						<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-							{% csrf_token %}
-							<button type="submit" class="btn btn-primary">Logout</button>
-						</form>
-
-
+					</form>
+					<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+						{% csrf_token %}
+						<button type="submit" class="btn btn-primary">Logout</button>
+					</form>
+			</div>
+			<div id="connectinfo"></div>	
 		</div>
 
 	</nav>
