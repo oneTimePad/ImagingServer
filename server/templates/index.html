@@ -372,6 +372,9 @@ function PictureArray(){
 			}
 		})
 	})
+	/*
+	   start Loop
+	*/
 
 	/*
 	//handles picture received from websocket
@@ -528,6 +531,17 @@ function PictureArray(){
 
 	//wanna do some testing before I add this
 	function loop(){
+		if(image_cache == null){
+			console.log("image cache is null");
+		}
+		setInterval(function(){
+			if(image_cache == null){
+				forwardPicture();
+			}
+			else{
+				clearInterval();
+			}
+		},100);
 		if(image_cache!=null){
 			looping = setInterval(function(){
 				image_cache.next();},$("#loop_interval").val()*1000);
@@ -547,11 +561,12 @@ function PictureArray(){
 				else {
 					document.getElementById("connectinfo").className="red";
 				}
-				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
+				console.log("triggering" +json_response["triggering"]);
+				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "1"){
 					$("#trigger_on").html("Stop Triggering");
 					document.getElementById("trigger_on").value = 0;
 				}
-				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false") {
+				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "0") {
 					$("#trigger_on").html("Start Triggering");
 					document.getElementById("trigger_on").value = 1;
 				}
@@ -824,11 +839,10 @@ function PictureArray(){
 			$("#focus-data").empty()
 				.append("<tr><td>Latitude</td><td>"+Math.trunc(lat)+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
 				.append("<tr><td>Longitude</td><td>"+Math.trunc(lon)+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
-				.append("<tr><td>Altitude</td><td>"+pic_curr_props.alt+"</td></tr>")
-				.append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
+				.append("<tr><td>AltitudeMSL</td><td>"+pic_curr_props.alt+"</td></tr>")
+				.append("<tr><td>Altitude</td><td>"+pic_curr_props.rel_alt+"</td></tr>")
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
 				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>")
-				.append("<tr><td>Taken</td><td>"+pic_curr_props.timeTaken+"</td></tr>")
 				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>");
 				//.append("<tr><td><button id='picfullSize' onclick='getFullSize(" + curr+");' class='btn btn-primary'>Full Sized</button></td></tr>");
 
@@ -1152,12 +1166,12 @@ $(function(){
 			<div class="form">
 
 					<form >
-							<input id="loop_interval" type="text" value="0"/>
+							<input id="fps" type="text" value="0"/>
 
-							<input id="delay_interval" type="text", value="0"/>
+							<input id="gain" type="text", value="0"/>
 
 								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-								<input id="gain" type="text", value="0"/>
+								<input id="new_gain" type="text", value="0"/>
 								
 								<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
 
@@ -1262,9 +1276,9 @@ function set_gain() {
 		url: "{%url 'gcs-cameraGain' %}",
 		type: "POST",
 		dataType: "JSON",
-		data: {"gain":$("#gain").val()},
+		data: {"new_gain":$("#new_gain").val()},
 		success: function(json){
-			console.log("gain set with: "+$("#gain").val() );
+			console.log("gain set with: "+$("#new_gain").val() );
 			if (json.hasOwnProperty("error")){
 				bootbox.alert(json.error);
 				return;
@@ -1279,7 +1293,7 @@ function trigger() {
 		url:"{%url 'gcs-cameraTrigger' %}",
 		type:"POST",
 		dataType:"JSON",
-		data:{"loop":$("#loop_interval").val(),"delay":$("#delay_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+		data:{"fps":$("#fps").val(),"gain":$("#gain").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
 		success: function(json) {
 			if (json.hasOwnProperty("failure")) {
 				bootbox.alert("Invalid Time Interval")

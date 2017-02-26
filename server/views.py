@@ -369,7 +369,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			picture = request.FILES['image']
 			#pdb.set_trace()
 			imageData = {}
-			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','yaw')}
+			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','rel_alt','yaw')}
 			#imageData['url'] = dataDict['url']
 			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
 			imageData['timeReceived'] = timeReceived
@@ -447,20 +447,13 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		#ONCE STOPS RECEIVING HEARTBEATS
 		#cache.set('heartbeat','stopped', EXPIRATION)
-		"""
-		if cache.get('trigger') == 1:
-			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
-		elif cache.get('trigger')== 0:
-			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
-		"""
+
 		response = {'heartbeat':cache.get('trigger')}
 		if cache.has_key('trigger'):
-			response.update({'loop':cache.get('loop'),'delay':cache.get('delay')})
-		if cache.has_key('gain'):
-			response.update({'gain':float(cache.get('gain'))})
-			cache.delete('gain')
+			response.update({'fps':cache.get('fps'),'gain':cache.get('gain')})
+		if cache.has_key('new_gain'):
+			response.update({'new_gain':float(cache.get('new_gain'))})
+			cache.delete('new_gain')
 		
 		return Response(response)
 
@@ -547,7 +540,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		connectionCheck()
 		if cache.get('trigger') == 0:
 			return Response({'error': 'not triggering'})
-		cache.set('gain',request.data['gain'])
+		cache.set('new_gain',request.data['new_gain'])
 		return Response({})
 
 	@list_route(methods=['post'])
@@ -558,23 +551,23 @@ class GCSViewset(viewsets.ModelViewSet):
 		triggerStatus = request.data['trigger']
         #if attempting to trigger and time is 0 or there is no time
 		#TODO: fix this statement
-		if triggerStatus != "0" and (float(request.data['loop']) == 0 or not request.data['loop']):
+		if triggerStatus != "0" and (float(request.data['fps']) == 0 or not request.data['fps']):
             # don't do anything
 			return Response({'nothing':'nothing'})
         #if attempting to trigger and time is less than 0
-		if request.data['loop'] and float(request.data['loop']) < 0:
+		if request.data['fps'] and float(request.data['fps']) < 0:
             #say invalid
-			return Response({'failure':'invalid loop interval'})
-		if request.data['delay'] and float(request.data['delay']) < 0:
-			return Response({'failure':'invalid delay interval'})
+			return Response({'failure':'invalid fps'})
+		if request.data['gain'] and float(request.data['gain']) < 0:
+			return Response({'failure':'invalid gain'})
         # if attempting to trigger
 
 		if triggerStatus == '1':
             #set cache to yes
 			cache.set('trigger',1,None)
             #settime
-			cache.set('loop',float(request.data['loop']))
-			cache.set('delay',float(request.data['delay']))
+			cache.set('fps',float(request.data['fps']))
+			cache.set('gain',float(request.data['gain']))
         #if attempting to stop triggering
 		elif triggerStatus == '0':
             # set cache
@@ -803,7 +796,10 @@ class GCSViewset(viewsets.ModelViewSet):
 	def getHeartbeat(self, request, pk=None):
 		connectionCheck()
 		heartbeat = cache.get('heartbeat', 'disconnected') # connected if drone posted heartbeat or defaults to disconnected
-		trigger = cache.get('trigger')
+		if cache.has_key('trigger'):
+			trigger = cache.get('trigger')
+		else:
+			trigger = 0
 		return Response(json.dumps({'heartbeat':heartbeat, 'triggering':trigger}))
 
 
