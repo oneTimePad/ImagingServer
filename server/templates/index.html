@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Picture Viewer</title>
-<script type="text/javascript" src="{{STATIC_URL}}js/ws4redis.js"></script>
+<!-- <script type="text/javascript" src="{{STATIC_URL}}js/ws4redis.js"></script> -->
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
@@ -24,8 +24,11 @@
 	next_array = null;
 	firstinit = true;
 	looping = null;
+	isLooping = true;
 	said_no_pictures=false;
 	timeSent = 0;
+	heartbeat = null;
+	targets = {};
 
 	(function(){
 		// Convert array to object
@@ -297,16 +300,16 @@ function PictureArray(){
 			reversePicture(this.getReverse());
 		}
 	}
-	$(function connect_websocket_pic(){
-			//create websocket
-			var web_socket = WS4Redis({
-			uri:"ws://127.0.0.1:8444/ws/viewer?subscribe-session",
-			//triggered when msg from server is sent
-			receive_message: parseWebSkt,
-			heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
-			});
-		}
-	)
+	// $(function connect_websocket_pic(){
+	// 		//create websocket
+	// 		var web_socket = WS4Redis({
+	// 		uri:"ws://127.0.0.1:8444/ws/viewer?subscribe-session",
+	// 		//triggered when msg from server is sent
+	// 		receive_message: parseWebSkt,
+	// 		heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
+	// 		});
+	// 	}
+	// )
 	//sets up form submission
 	$(function form_submit_setup() {
 		//on user submit
@@ -369,6 +372,11 @@ function PictureArray(){
 			}
 		})
 	})
+	/*
+	   start Loop
+	*/
+
+	/*
 	//handles picture received from websocket
 	function parseWebSkt(response){
 		//parse json server response
@@ -453,6 +461,7 @@ function PictureArray(){
 			})
 		}
 	}
+	*/
 	/*
 	retrieve next NUM_FETCH pics
 	*/
@@ -522,15 +531,106 @@ function PictureArray(){
 
 	//wanna do some testing before I add this
 	function loop(){
-			if(image_cache!=null){
-				looping = setInterval(function(){
-
-					image_cache.next();},$("#loop_interval").val()*1000);
+		if(image_cache == null){
+			console.log("image cache is null");
+		}
+		setInterval(function(){
+			if(image_cache == null){
+				forwardPicture();
 			}
+			else{
+				clearInterval();
+			}
+		},100);
+		if(image_cache!=null){
+			looping = setInterval(function(){
+				image_cache.next();},$("#loop_interval").val()*1000);
+			console.log("loop");
+		}
+	}
+
+	function pollHeartbeat() {
+		$.ajax({
+			url:"{% url 'gcs-getHeartbeat' %}",
+			type:"POST",
+			success: function(response) {
+				json_response = JSON.parse(response)
+				if (json_response.hasOwnProperty("heartbeat") && json_response["heartbeat"] == "connected") {
+					document.getElementById("connectinfo").className="green";
+				}
+				else {
+					document.getElementById("connectinfo").className="red";
+				}
+				console.log("triggering" +json_response["triggering"]);
+				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "1"){
+					$("#trigger_on").html("Stop Triggering");
+					document.getElementById("trigger_on").value = 0;
+				}
+				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "0") {
+					$("#trigger_on").html("Start Triggering");
+					document.getElementById("trigger_on").value = 1;
+				}
+			}
+		});
+		// Check to see if targets have changed
+		$.ajax({
+			url:"{% url 'gcs-getAllTargets' %}",
+			type:"POST",
+			success: function(response) {
+				// keep track of existing targets to see if any were removed
+				targets_copy = $.extend({}, targets);
+				resp_targets = JSON.parse(response).targets;
+				resp_targets.forEach(function(t) {
+					if (!targets[t.pk]) {
+						// create target
+						let div = document.createElement("div");
+						div.className = "thumb-div";
+						let image = document.createElement("img");
+						image.className = "thumbnail";
+						image.src = t.image;
+						image.id = t.pk;
+						if (t.sent) {
+							image.classList.add("sent");
+						}
+						targets[t.pk] = div;
+						image.addEventListener("click", function(e) {
+							if (e.ctrlKey) {
+								//ctrl+clicking to select/toggle targets to send
+								pk = this.id;
+								$("#"+pk).toggleClass("selected");
+							}
+							else {
+								picview = false;
+								setFocusedImage(this);
+							}
+							return false;
+						});
+						div.appendChild(image);
+						$("#targets").append(div);						
+					}
+					else {
+						targets_copy[t.pk] = undefined;
+						if (t.sent) {
+							// if the target has been sent, make sure it is marked sent
+							var elem = document.getElementById(t.pk);
+							elem.classList.add("sent");
+						}
+					}
+					for (t in targets_copy) {
+						if (!targets_copy[t]) {
+							// target was deleted
+							$(targets_copy[t]).remove();
+						}
+					}
+
+				});
+			}
+		});
 	}
 
 	function stoploop(){
 		clearTimeout(looping);
+		console.log("stop loop");
 	}
 
 	window.onload = function() {
@@ -587,16 +687,17 @@ function PictureArray(){
 			url:"{% url 'gcs-getAllTargets' %}",
 			type:"POST",
 			success: function(response) {
-				targets = JSON.parse(response).targets;
-				targets.forEach(function(t) {
-					var div = document.createElement("div");
+				resp_targets = JSON.parse(response).targets;
+				resp_targets.forEach(function(t) {
+					let div = document.createElement("div");
 					div.className = "thumb-div";
-					image = document.createElement("img");
+					let image = document.createElement("img");
 					image.className = "thumbnail";
 					image.src = t.image;
 					image.id = t.pk;
+					targets[t.pk] = div;
 					if (t.sent) {
-						image.className += " sent";
+						image.classList.add("sent");
 					}
 					image.addEventListener("click", function(e) {
 						if (e.ctrlKey) {
@@ -615,14 +716,17 @@ function PictureArray(){
 				});
 			}
 		});
+		
+		window.setInterval(pollHeartbeat, 1000);
 
 		//event listener for entire window (for keys)
-		document.addEventListener("keyup", function(key) {
+		document.addEventListener("keyup", function(evt) {
 			var enter = 13;
 			var leftarrow = 37;
 			var rightarrow = 39;
 			var del = 46;
-			switch (key.keyCode) {
+			var space = 32;
+			switch (evt.keyCode) {
 				case leftarrow:
 					//asynchronously ask for next image and add it
 					//since we might have to fetch it
@@ -633,7 +737,7 @@ function PictureArray(){
 				case rightarrow:
 					//asynchronously ask for next image since
 					if(picview&&image_cache){
-					image_cache.next();
+						image_cache.next();
 					}
 					break;
 				case enter:
@@ -651,14 +755,29 @@ function PictureArray(){
 						});
 					}
 					break;
+				case space:
+					if (isLooping) {
+						stoploop();
+						isLooping = false;
+						console.log("pause");
+					}
+					else {
+						loop();
+						isLooping = true;
+						console.log("start");
+					}
+					evt.preventDefault();
 			}
 		});
+		loop();
 	}
+
 	function setDimensions() {
 		var height = window.innerHeight - $("#navbar").height() - 35;
 		$("#left-panel").css("height", height + "px");
 		$("#picture").css("height", height + "px");
-		$("#targets").css("height", height + "px");
+		var heightinfo = $("#form").height();
+		$("#targets").css("height", (height - 2*heightinfo-40) + "px");
 	}
 	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
@@ -720,11 +839,10 @@ function PictureArray(){
 			$("#focus-data").empty()
 				.append("<tr><td>Latitude</td><td>"+Math.trunc(lat)+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
 				.append("<tr><td>Longitude</td><td>"+Math.trunc(lon)+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
-				.append("<tr><td>Altitude</td><td>"+pic_curr_props.alt+"</td></tr>")
-				.append("<tr><td>Azimuth</td><td>"+pic_curr_props.azimuth+"</td></tr>")
+				.append("<tr><td>AltitudeMSL</td><td>"+pic_curr_props.alt+"</td></tr>")
+				.append("<tr><td>Altitude</td><td>"+pic_curr_props.rel_alt+"</td></tr>")
 				.append("<tr><td>Pitch</td><td>"+pic_curr_props.pitch+"</td></tr>")
 				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>")
-				.append("<tr><td>Taken</td><td>"+pic_curr_props.timeTaken+"</td></tr>")
 				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>");
 				//.append("<tr><td><button id='picfullSize' onclick='getFullSize(" + curr+");' class='btn btn-primary'>Full Sized</button></td></tr>");
 
@@ -824,9 +942,12 @@ function PictureArray(){
 			canvas.width = $("#focused").width();
 			canvas.height = $("#focused").height();
 			canvas.style.display = "block";
+			var container = document.getElementById("container");
+			container.width = $("#focused").width();
+			container.height = $("#focused").height();
 			var ctx = canvas.getContext("2d");
-
 			ctx.fillStyle="rgba(210,220,255,0.6)";
+
 			function setBox() {
 				boxW = p1[0]-p2[0];
 				boxH = p1[1]-p2[1];
@@ -845,6 +966,7 @@ function PictureArray(){
 				else {
 					corner[1] = p2[1];
 				}
+				ctx.fillStyle="rgba(210,220,255,0.6)";
 				ctx.clearRect(0,0,canvas.width,canvas.height);
 				ctx.fillRect(corner[0],corner[1],boxW,boxH);
 			}
@@ -872,7 +994,7 @@ function PictureArray(){
 				});
 				canvas.addEventListener("mousedown", function setP1(event) {
 					if (!panning) {
-						p1 = [event.layerX, event.layerY];
+						p1 = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						cropinit = true;
 					}
 					//console.log("mousedown "+panning+" "+cropinit);
@@ -890,23 +1012,23 @@ function PictureArray(){
 				});
 				canvas.addEventListener("mousemove", function drawBox(event) {
 					if (panning) {
-						var tx = this.width/2 - event.layerX; //canvas has the same width and height as the image
+						var tx = this.width/2 - (event.pageX - canvas.offsetLeft); //canvas has the same width and height as the image
 						if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
 						if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
-						var ty = this.height/2 - event.layerY;
+						var ty = this.height/2 - (event.pageY - canvas.offsetTop);
 						if (ty < -1*(zoom-1)*this.height/(zoom*2)) ty = -1*(zoom-1)*this.height/(zoom*2);
 						if (ty > (zoom-1)*this.height/(zoom*2)) ty = (zoom-1)*this.height/(zoom*2);
 						$("#focused").css("transform", "scale(" + zoom + "," + zoom + ") translate("+tx+"px,"+ty+"px)");
 					}
 					else if (cropinit) {
-						p2 = [event.layerX, event.layerY];
+						p2 = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						setBox();
 					}
 					//console.log("mousemove "+panning+" "+cropinit);
 				});
 				canvas.addEventListener("mouseup", function finishBox(event) {
 					if (cropinit) {
-						p2=[event.layerX, event.layerY];
+						p2=[event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						setBox();
 						finalizeBox();
 						cropinit = false;
@@ -962,8 +1084,11 @@ function dump_targets() {
 function interop_login() {
 	window.open('/interoplogin')
 }
+
 //enable and disable picture looping fct
 $(function(){
+	/*
+	// looping is now done by default and toggled using the space bar
 	$("#loopbtn").on("click",function loophandler(){
 		//if not enabled
 		if($(this).val()==1){
@@ -980,6 +1105,7 @@ $(function(){
 		  this.value=1;
 		}
 	});
+	*/
 
 	$("#id_description").css("display","none");
 	$("label[for='id_description']").css("display","none");
@@ -1037,40 +1163,33 @@ $(function(){
 	<nav id="navbar">
 		<div class="title">RU Autonomous</div>
 
-
-
 			<div class="form">
 
+					<form >
+							<input id="fps" type="text" value="0"/>
 
+							<input id="gain" type="text", value="0"/>
 
+								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+								<input id="new_gain" type="text", value="0"/>
+								
+								<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
 
+							<input id="loop_interval"  type="number" value="0"/>
 
-						<form >
+							<!-- <button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button> -->
 
-									<input id="loop_interval" type="text" value="0"/>
+							<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
 
-									<input id="delay_interval" type="text", value="0"/>
+							<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
 
-									<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-									<input id="gain" type="text", value="0"/>
-									
-									<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
-
-									<input id="loop_interval"  type="number" value="0"/>
-
-									<button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button>
-
-									<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
-
-									<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
-
-							</form>
-							<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-								{% csrf_token %}
-								<button type="submit" class="btn btn-primary">Logout</button>
-							</form>
-
-
+					</form>
+					<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+						{% csrf_token %}
+						<button type="submit" class="btn btn-primary">Logout</button>
+					</form>
+			</div>
+			<div id="connectinfo"></div>	
 		</div>
 
 	</nav>
@@ -1098,15 +1217,10 @@ $(function(){
 		</div>
 		<div id="data">
 			<h3 id="focus-type">Picture Data</h3>
-
-				<table id="focus-data"></table>
-
+			<table id="focus-data"></table>
 		</div>
-	</div>
-
-	<div id="right-panel">
-		<h3 id="target-label">Targets</h3>
 		<div id="targets">
+			<h3 id="target-label">Targets</h3>
 		</div>
 	</div>
 
@@ -1115,7 +1229,7 @@ $(function(){
 		<div id="container">
 			<canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
 			<img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
- 	</div>
+ 		</div>
 	</div>
 
 
@@ -1162,9 +1276,9 @@ function set_gain() {
 		url: "{%url 'gcs-cameraGain' %}",
 		type: "POST",
 		dataType: "JSON",
-		data: {"gain":$("#gain").val()},
+		data: {"new_gain":$("#new_gain").val()},
 		success: function(json){
-			console.log("gain set with: "+$("#gain").val() );
+			console.log("gain set with: "+$("#new_gain").val() );
 			if (json.hasOwnProperty("error")){
 				bootbox.alert(json.error);
 				return;
@@ -1179,7 +1293,7 @@ function trigger() {
 		url:"{%url 'gcs-cameraTrigger' %}",
 		type:"POST",
 		dataType:"JSON",
-		data:{"loop":$("#loop_interval").val(),"delay":$("#delay_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+		data:{"fps":$("#fps").val(),"gain":$("#gain").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
 		success: function(json) {
 			if (json.hasOwnProperty("failure")) {
 				bootbox.alert("Invalid Time Interval")

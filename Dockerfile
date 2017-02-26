@@ -60,6 +60,9 @@ RUN sudo service redis-server start && \
 	sleep 20
 
 # run configuration for db,apache and django
+RUN chmod -R 700 ./config/configure_postgresql.sh && \
+	chmod -R 700 ./config/configure_apache.sh && \
+	chmod -R 700 ./config/configure_django.sh
 RUN ./config/configure_postgresql.sh && \
     ./config/configure_apache.sh   && \
     ./config/configure_django.sh

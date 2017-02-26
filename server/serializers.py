@@ -9,7 +9,7 @@ class PictureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Picture
-        fields = ('pitch','roll','lat','lon','alt','yaw','fileName','timeReceived')
+        fields = ('pitch','roll','lat','lon','alt','rel_alt','yaw','fileName','timeReceived')
 
     def deserialize(self):
 

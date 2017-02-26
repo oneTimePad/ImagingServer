@@ -15,8 +15,8 @@ from django.contrib.auth.signals import user_logged_in
 from django.db import transaction
 from django.contrib.sessions.models import Session
 #websockets
-from ws4redis.publisher import RedisPublisher
-from ws4redis.redis_store import RedisMessage
+# from ws4redis.publisher import RedisPublisher
+# from ws4redis.redis_store import RedisMessage
 #django-rest
 from rest_framework.response import Response
 from .permissions import DroneAuthentication,GCSAuthentication, InteroperabilityAuthentication
@@ -127,7 +127,7 @@ def interop_error_handler(error,startTime):
 	elif code == 403:
 			creds = cache.get("Creds")
 			times = 5
-			for i in xrange(0,times):
+			for i in range(0,times):
 				try:
 					interop_login(username=creds['username'],password=creds['password'],server=creds['server'],tout=5)
 					return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
@@ -137,8 +137,8 @@ def interop_error_handler(error,startTime):
 			code,_,__ = e.errorData()
 			#Everyone should be alerted of this
 			resp = {'time':time()-startTime,'error':"CRITICAL: Re-login has Failed. We will login again when allowed\nLast Error was %d" % code}
-			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'warning':resp})))
+			# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			# redis_publisher.publish_message(RedisMessage(json.dumps({'warning':resp})))
 			return Response(resp)
 
 
@@ -148,8 +148,8 @@ def connectionCheck():
 
 	if cache.has_key("checkallowed"):
 		if not cache.has_key("android"):
-			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'disconnected':'disconnected'})))
+			# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			# redis_publisher.publish_message(RedisMessage(json.dumps({'disconnected':'disconnected'})))
 			cache.delete("checkallowed")
 
 #endpoint for interoperability
@@ -369,7 +369,7 @@ class DroneViewset(viewsets.ModelViewSet):
 			picture = request.FILES['image']
 			#pdb.set_trace()
 			imageData = {}
-			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','yaw')}
+			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','rel_alt','yaw')}
 			#imageData['url'] = dataDict['url']
 			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
 			imageData['timeReceived'] = timeReceived
@@ -447,20 +447,13 @@ class DroneViewset(viewsets.ModelViewSet):
 
 		#ONCE STOPS RECEIVING HEARTBEATS
 		#cache.set('heartbeat','stopped', EXPIRATION)
-		"""
-		if cache.get('trigger') == 1:
-			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'true','time':cache.get("time")})))
-		elif cache.get('trigger')== 0:
-			redis_publisher = RedisPublisher(facility="viewer",sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'triggering':'false'})))
-		"""
+
 		response = {'heartbeat':cache.get('trigger')}
 		if cache.has_key('trigger'):
-			response.update({'loop':cache.get('loop'),'delay':cache.get('delay')})
-		if cache.has_key('gain'):
-			response.update({'gain':float(cache.get('gain'))})
-			cache.delete('gain')
+			response.update({'fps':cache.get('fps'),'gain':cache.get('gain')})
+		if cache.has_key('new_gain'):
+			response.update({'new_gain':float(cache.get('new_gain'))})
+			cache.delete('new_gain')
 		
 		return Response(response)
 
@@ -547,7 +540,7 @@ class GCSViewset(viewsets.ModelViewSet):
 		connectionCheck()
 		if cache.get('trigger') == 0:
 			return Response({'error': 'not triggering'})
-		cache.set('gain',request.data['gain'])
+		cache.set('new_gain',request.data['new_gain'])
 		return Response({})
 
 	@list_route(methods=['post'])
@@ -558,30 +551,29 @@ class GCSViewset(viewsets.ModelViewSet):
 		triggerStatus = request.data['trigger']
         #if attempting to trigger and time is 0 or there is no time
 		#TODO: fix this statement
-		if triggerStatus != "0" and (float(request.data['loop']) == 0 or not request.data['loop']):
+		if triggerStatus != "0" and (float(request.data['fps']) == 0 or not request.data['fps']):
             # don't do anything
 			return Response({'nothing':'nothing'})
         #if attempting to trigger and time is less than 0
-		if request.data['loop'] and float(request.data['loop']) < 0:
+		if request.data['fps'] and float(request.data['fps']) < 0:
             #say invalid
-			return Response({'failure':'invalid loop interval'})
-		if request.data['delay'] and float(request.data['delay']) < 0:
-			return Response({'failure':'invalid delay interval'})
+			return Response({'failure':'invalid fps'})
+		if request.data['gain'] and float(request.data['gain']) < 0:
+			return Response({'failure':'invalid gain'})
         # if attempting to trigger
 
 		if triggerStatus == '1':
             #set cache to yes
 			cache.set('trigger',1,None)
             #settime
-			cache.set('loop',float(request.data['loop']))
-			cache.set('delay',float(request.data['delay']))
+			cache.set('fps',float(request.data['fps']))
+			cache.set('gain',float(request.data['gain']))
         #if attempting to stop triggering
 		elif triggerStatus == '0':
             # set cache
 			cache.set('trigger',0,None)
         #Success
 		return Response({'Success':'Success'})
-
 
 	@transaction.atomic
 	@list_route(methods=['post'])
@@ -641,7 +633,6 @@ class GCSViewset(viewsets.ModelViewSet):
 		connection.close()
 		return Response({'ok':'ok'})
 
-
 	@list_route(methods=['post'])
 	def getTargetData(self,request,pk=None):
 		connectionCheck()
@@ -659,7 +650,6 @@ class GCSViewset(viewsets.ModelViewSet):
 		connectionCheck()
 		data = [{'pk':t.pk, 'image':"/targets/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
 		return Response(json.dumps({'targets':data}))
-
 
 	@list_route(methods=['post'])
 	def targetCreate(self,request,pk=None):
@@ -687,10 +677,10 @@ class GCSViewset(viewsets.ModelViewSet):
 		target.crop(size_data=sizeData,parent_pic=picture)
 		target.save()
 
-		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':settings.TARGETS_URL+"Target"+str(target.pk).zfill(4)+'.jpeg'})))
-		return Response("success")
+		# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+		# redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
 
+		return Response("success")
 
 	@list_route(methods=['post'])
 	def targetEdit(self,request,pk=None):
@@ -714,8 +704,8 @@ class GCSViewset(viewsets.ModelViewSet):
 			target = Target.objects.get(pk=request.data['pk'])
 			os.remove(target.picture.path)
 			target.delete()
-			redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			redis_publisher.publish_message(RedisMessage(json.dumps({'target':'delete','pk':request.data['pk']})))
+			# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+			# redis_publisher.publish_message(RedisMessage(json.dumps({'target':'delete','pk':request.data['pk']})))
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
@@ -725,8 +715,6 @@ class GCSViewset(viewsets.ModelViewSet):
 	def updateTarget(self,request,pk=None):
 		#i'm thinking about adding this...
 		pass
-
-
 
 	@list_route(methods=['post'])
 	def sendTarget(self,request,pk=None):
@@ -800,9 +788,20 @@ class GCSViewset(viewsets.ModelViewSet):
 			except Target.DoesNotExist:
 				continue
 		# websocket response for "sent"
-		redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		redis_publisher.publish_message(RedisMessage(json.dumps({'target':'sent','ids':ids})))
+		# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
+		# redis_publisher.publish_message(RedisMessage(json.dumps({'target':'sent','ids':ids})))
 		return Response({'data':data})
+
+	@list_route(methods=['post'])
+	def getHeartbeat(self, request, pk=None):
+		connectionCheck()
+		heartbeat = cache.get('heartbeat', 'disconnected') # connected if drone posted heartbeat or defaults to disconnected
+		if cache.has_key('trigger'):
+			trigger = cache.get('trigger')
+		else:
+			trigger = 0
+		return Response(json.dumps({'heartbeat':heartbeat, 'triggering':trigger}))
+
 
 #server webpage
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):

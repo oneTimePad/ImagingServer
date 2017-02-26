@@ -19,4 +19,5 @@ sudo service postgresql start
 sleep 3;
 cd ${CONFIG}/..
 python3 manage.py collectstatic --noinput
+python3 manage.py makemigrations server
 python3 manage.py migrate
