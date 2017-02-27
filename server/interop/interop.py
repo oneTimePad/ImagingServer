@@ -3,7 +3,7 @@ from .types import AUVSITarget,ServerInfo,MovingObstacle,StationaryObstacle,Miss
 import requests
 import json
 
-BAD_CREDENTIALS = 400
+BAD_REQUEST = 400
 NOT_FOUND = 404
 INTERNAL_SERVER_ERROR = 500
 
@@ -76,7 +76,7 @@ class InteropProxy(object):
 			return cls(**ser)
 
 	def login(self):
-		global BAD_CREDENTIALS
+		global BAD_REQUEST
 		global NOT_FOUND
 		global INTERNAL_SERVER_ERROR
 		#attempt to contact the login api for the interop server
@@ -89,7 +89,7 @@ class InteropProxy(object):
 		except InteropError as serverExp:
 			code,reason,text =  serverExp.errorData()
 
-			if code == BAD_CREDENTIALS:
+			if code == BAD_REQUEST:
 				return "The current user/pass combo (%s, %s) is wrong. Please try again." % username,password
 			elif code == NOT_FOUND:
 				return "A server at %s was not found. Please reenter the server IP address." % (server)

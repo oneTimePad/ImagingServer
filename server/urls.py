@@ -3,7 +3,9 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import *
+from .gcsviews import *
+from .interopviews import *
+from .droneviews import *
 from rest_framework.routers import SimpleRouter
 from rest_framework_jwt.views import obtain_jwt_token,refresh_jwt_token,verify_jwt_token
 
