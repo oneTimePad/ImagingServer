@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Picture Viewer</title>
-<!-- <script type="text/javascript" src="{{STATIC_URL}}js/ws4redis.js"></script> -->
+
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
@@ -562,11 +562,11 @@ function PictureArray(){
 					document.getElementById("connectinfo").className="red";
 				}
 				console.log("triggering" +json_response["triggering"]);
-				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "1"){
+				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
 					$("#trigger_on").html("Stop Triggering");
 					document.getElementById("trigger_on").value = 0;
 				}
-				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "0") {
+				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false") {
 					$("#trigger_on").html("Start Triggering");
 					document.getElementById("trigger_on").value = 1;
 				}

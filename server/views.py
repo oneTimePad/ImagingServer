@@ -36,10 +36,10 @@ import csv
 import pika
 import sys
 from PIL import Image
-#telemetry
-from .types import  Telemetry,AUVSITarget
-from .exceptions import InteropError
-from .interopmethods import interop_login,get_obstacles,post_telemetry,post_target_image,post_target,get_server_info,get_missions
+
+#interop
+from interop import InteropProxy,InteropError,AUVSITarget
+
 import requests
 
 #debug
@@ -47,25 +47,21 @@ import pdb
 
 
 
-#constants from Environment Vars
+#constants holding the path to dirs for pictures and targets on the server
 IMAGE_STORAGE = "/pictures"
 TARGET_STORAGE = "/targets"
 
 
 
-#important time constants
+#important time constants (chosen from testing)
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 10
 EXPIRATION = 10
-#can be removed for compeition
+
+#starts up the rabbitmq connection for distributing images
 connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
 channel = connection.channel()
 channel.queue_delete(queue='pictures')
-connection.close()
-
-connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
-channel = connection.channel()
-channel.queue_delete(queue='fullsize')
 connection.close()
 
 
@@ -75,9 +71,17 @@ saves session for logged in gcs user
 '''
 def gcs_logged_in_handler(sender,request,user,**kwargs):
 
+	"""
+	This is called when a person logs in to the viewer
+	the gcs viewer utilizes session authentication and session storage.
+	in the storage is a Stack containing the last images the viewer went through
+	this is so then can go bck to previous images
+	"""
+
 	sess, created =GCSSession.objects.get_or_create(user=user,session=request.session.session_key)
 
 	if user.userType == 'gcs':
+		#create the stack for this user
 		request.session['picstack'] = []
 
 user_logged_in.connect(gcs_logged_in_handler)
@@ -143,35 +147,33 @@ def interop_error_handler(error,startTime):
 
 
 
-#check for drone connection
-def connectionCheck():
 
-	if cache.has_key("checkallowed"):
-		if not cache.has_key("android"):
-			# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			# redis_publisher.publish_message(RedisMessage(json.dumps({'disconnected':'disconnected'})))
-			cache.delete("checkallowed")
 
 #endpoint for interoperability
 class InteroperabilityViewset(viewsets.ModelViewSet):
+	#defined the authentication utilized for this viewset
 	authentication_classes = (JSONWebTokenAuthentication,)
+	#defines the permissions for this user
 	permission_classes = (InteroperabilityAuthentication,)
-	#mavclient endpoint for getting SDA-obstacles
+
 	@list_route(methods=['post'])
 	def getMission(self,request,pk=None):
+		"""
+		proxy method for fecthing the mission information from the interop server
+		for the mission loading client
+		"""
+
 		#fetch misisons from interop server (according to spec, more than one can be returned)
 		startTime = time()
-		#fetch interop server info
-		session = cache.get("InteropClient")
-		server = cache.get("Server")
-		try:
-			#attempt to fetch obstacles
-			missions =get_missions(session,server,tout=5)
-			#return a json response with the time diff(again ignore if you want)
-			#json version of data (i.e. obstacles)
-			#there is no error, filled in if there is an error
 
+		#this is used to make requests to the interop server
+		isession = InteropProxy.deserialize(cache.get("InteropProxy"))
+		try:
+			#make a request for the mission information	
+			missions = isession.get_missions()
+			#put the different missions in dictionary format and serialize them to json
 			mission_resp = {'mission'+str(num):mission.serialize() for num,mission in enumerate(missions)}
+			#say there is no error
 			mission_resp['error'] = None
 			return Response(mission_resp)
 		except InteropError as e:
@@ -202,26 +204,30 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 		except Exception as e:
 			return Response({'time':time()-startTime,'error':"Unknown error: %s" % (e)})
 
-	#mavclient endpoint for getting SDA-obstacles
 	@list_route(methods=['post'])
 	def getObstacles(self,request,pk=None):
+		"""
+		proxy method for fetching the locations(status) of the stationary/moving obstacles
+		for the SDA client from the interop server
+		"""
 		#fetch the current time, technically not needed, can be handed by client
 		#ignore it if you want
 		startTime = time()
-		#fetch interop server info
-		session = cache.get("InteropClient")
-		server = cache.get("Server")
+		#this is used to make requests to the interop server
+		isession = InteropProxy.deserialize(cache.get("InteropProxy"))
 
 		try:
 			#attempt to fetch obstacles
-			stationary,moving = get_obstacles(session,server,tout=5)
-			#return a json response with the time diff(again ignore if you want)
-			#json version of data (i.e. obstacles)
-			#there is no error, filled in if there is an error
+			stationary,moving = isession.get_obstacles()
+			#put the response in dictionary format
 			resp = dict()
+			#serialize the statinary obstacles to a dictionary (format for json)
 			resp['stationary'] = { str(x): stat.serialize() for x,stat in enumerate(stationary)}
+			#serialize the moving obstacles to a dictionary (format for json)
 			resp['moving'] = {str(x) :move.serialize() for x,move in  enumerate(moving)}
+			#time it took for this request from server's perspective
 			resp['time'] = time()-startTime
+			#there was no error
 			resp['error'] = None
 			return Response(resp)
 		except InteropError as e:
@@ -254,69 +260,31 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			return Response({'time':time()-startTime,'error':"Unknown error: %s" % str(e)})
 
 
-
-	#mavclient endpoint for getting server time
-	@list_route(methods=['post'])
-	def getServerInfo(self,request,pk=None):
-		startTime = time()
-		session = cache.get("InteropClient")
-		server = cache.get("Server")
-		try:
-			serverInfo = get_server_info(session,server,tout=5)
-			return Response({'time':time()-startTime,'data':json.dumps(serverInfo),'error':None})
-		except InteropError as e:
-			return interop_error_handler(e,startTime)
-
-		except requests.ConnectionError:
-			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
-
-		except requests.Timeout:
-			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
-
-		#Why would this ever happen?
-		except requests.TooManyRedirects:
-			return Response({'time':time()-startTime,'error':"WARNING:The URL redirects to itself"})
-
-		#This wouldn't happen again...
-		except requests.URLRequired:
-			return Response({'time':time()-startTime,'error':"The URL is invalid"})
-
-
-		except requests.RequestException as e:
-			# catastrophic error. bail.
-			return Response({'time':time()-startTime,'error':e})
-
-		except Exception as e:
-			return Response({'time':time()-startTime,'error':"Unknown error: %s" % str(e)})
-
-
-
-	#posting telemetry wendpoint for mission planner
-	#mission planner client logins in and get JWT
 	@list_route(methods=['post'])
 	def postTelemetry(self,request,pk=None):
-
-		#print("REQUESTED")
+		"""
+		proxy method for publishing telemetry information from the telemetry
+		client to the interop server
+		"""
 		startTime = time()
 
-		#fetch cached info
-		session = cache.get("InteropClient")
-		server = cache.get("Server")
+		#this is used to make requests to the interop server
+		isession = InteropProxy.deserialize(cache.get("InteropProxy"))
 
 		#verify telemtry data
 		telemData = TelemetrySerializer(data = request.data)
 		if not telemData.is_valid():
 			return Response({'time':time()-startTime,'error':"Invalid data"})
 
-		#create telemtry data
+		#create the telemetry data object
 		t = Telemetry(**dict(telemData.validated_data))
 
 		try:
-			old = time()
-			post_telemetry(session,server,tout=5,telem=t)
-			#print("RETURNED")
-			print(time()-old)
+			#make the post request to the interop server with the telemetry data
+			isession.post_telemetry(telem=t)
+
 			return Response({'time':time()-startTime,'error':None})
+		#catch the exceptions that could occur
 		except InteropError as e:
 			return interop_error_handler(e)
 
@@ -343,98 +311,112 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			return Response({'time':time()-startTime,'error':"Unknown error: %s" % str(e)})
 
 
+class InteropLogin(View,TemplateResponseMixin,ContextMixin):
+	"""
+	the imaging GCS needs to login to the interop server to obtain the requests.session object
+	"""
+	template_name = 'interoplogin.html'
+	content_type = 'text/html'
+
+	def post(self,request,format=None):
+		#validate interop credential data (url,username,password)
+		serverCreds = ServerCredsSerializer(data=request.POST)
+		if not serverCreds.is_valid():
+			#respond with Error
+			return HttpResponseForbidden("invalid server creds %s" % serverCreds.errors)
+		login_data = dict(serverCreds.validated_data)
+
+		#create client
+		isession = InteropProxy(**login_data)
+		error = isession.login()
+		if error is not None:
+			return Response({'error',str(error)})
+		#serialize and store in cache
+		cache.set('InteropProxy',isession.serialize())
+		return HttpResponse("Success")
+
+	def get(self,request):
+		return self.render_to_response(self.get_context_data())
 
 
-
-#endpoint for drone
 class DroneViewset(viewsets.ModelViewSet):
 
+	"""
+	This viewset contain all endpoints that could be called
+	by the onboard computer.
+	"""
+	#utilized json-web-token auth
 	authentication_classes = (JSONWebTokenAuthentication,)
 	permission_classes = (DroneAuthentication,)
 	parser_classes = (JSONParser,MultiPartParser,FormParser)
 
 	@list_route(methods=['post'])
 	def postImage(self,request,pk=None):
-		global EXPIRATION
-		global DRONE_DISCONNECT_TIMEOUT
-		global GCS_SEND_TIMEOUT
-		#pdb.set_trace()
-	
+		"""
+		called by OBC to post images and their associated data
+		"""
+
 		dataDict = request.data
-		#androidId=0	androidId shouldnt be necessary anymore
 		timeReceived = time()
 		#code is receiving data and storing it in dataDict
 		try:
-            #attempt to make picture model entry
+           	#fetch the image from the request data
 			picture = request.FILES['image']
-			#pdb.set_trace()
-			imageData = {}
+			#parse out all the image data to form the dict that will be put in the db
 			imageData = {elmt : round(Decimal(dataDict[elmt]),5) for elmt in ('pitch','roll','lat','lon','alt','rel_alt','yaw')}
-			#imageData['url'] = dataDict['url']
+			#add the image file name
 			imageData['fileName'] = IMAGE_STORAGE+"/"+(str(picture.name).replace(' ','_').replace(',','').replace(':',''))
+			#add the timereceived by the server (system time)
 			imageData['timeReceived'] = timeReceived
-			#make obj
+			#takes in the image data in json to form an object for the db
 			pictureObj = PictureSerializer(data = imageData)
-
+			#valid all the info is good and there for putting the image data in the db
 			if pictureObj.is_valid():
+				#take the serialized image data and convert it to a 'Picture' object from models
 				pictureObj = pictureObj.deserialize()
-         		#save img to obj
+				#add the actual image to the 'Picture' object
 				pictureObj.photo = picture
-
+				#save the changes
 				pictureObj.save()
-				#pdb.set_trace()
-
-				#if dataDict['url'] != 'FULL':
+				#open the image queue (RabbitMQ connection)
 				connection=pika.BlockingConnection(pika.ConnectionParameters(host ='localhost'))
 				channel = connection.channel()
-
+				#publish the image to the queue so it can be viewed
 				channel.queue_declare(queue = 'pictures')
 				channel.basic_publish(exchange='',routing_key='pictures',body=str(pictureObj.pk))
 				connection.close()
-                #pdb.set_trace()
 
 			else:
-				print(imageData)
-				print(pictureObj.errors)
-				return Response({"error":"Picture not valid"})
+				return Response({"error":str(pictureObj.errors)})
 
-
-			#	else:
-			#		redis_publisher = RedisPublisher(facility='viewer',sessions=dataDict['session'])
-			#		redis_publisher.publish_message(RedisMessage(json.dumps({'fullSize':True,'pk':pictureObj.pk,'photo':pictureObj.fileName})))
-					#get session token and picture
-					#push pic to client
-
-
+		#thrown when a certain key in the request data doesn't exist
 		except MultiValueDictKeyError as e:
             #there was no picture sent
 			return Response({"error":str(e)})
-		except:
-			e = sys.exc_info()[0]
+		#unknown error occured
+		except Exception as e:
 			return Response({"error":str(e)})
-		#end picture upload stuff
 
-		"""
-		if not cache.has_key('trigger'):
-			cache.set("trigger",dataDict['trigger'],None)
-		if not cache.has_key('time'):
-			cache.set("time",dataDict['time'],None)
-		"""
+		#all good, just return an empty response
 		return Response({})
 
 
-	#method for receiving heartbeats
+
 	@list_route(methods=['post'])
 	def postHeartbeat(self, request, pk=None):
-		global EXPIRATION
-		#check for seperate cache entry
+
 		"""
-		if (cache.get('heartbeat') != None):	#trigger would be 'heartbeat' for status of heartbeats
-			#SEND TRIGGER IN THIS CASE TO START
+		heartbeats are posted by the OBC to notify the viewer it is still connected
+		In addition, they are used to respond with commands from the imaging server (trigger,change gain...)
 		"""
 
+		#bring the defined expiration defined as 'connection loss' into scope
+		global EXPIRATION
+
+		#if the cache entry doesn't exist add it
+		#if the cache entry expired, restablish it as the OBC just contacted us
 		if not cache.has_key('heartbeat'):
-			#if doesn't have key heartbeat set its cache entry
+			#create a new cache entry that will expire in EXPIRATION
 			cache.set('heartbeat','connected',EXPIRATION)
 		else:
             #else delete the old one
@@ -442,26 +424,23 @@ class DroneViewset(viewsets.ModelViewSet):
             #create a new one
 			cache.set('heartbeat','connected',EXPIRATION)
 
-		#ONCE STARTS RECEIVING HEARTBEATS
-		#cache.set('heartbeat', 'triggering', EXPIRATION)
-
-		#ONCE STOPS RECEIVING HEARTBEATS
-		#cache.set('heartbeat','stopped', EXPIRATION)
-
+		#form the heartbeat response containing the status of triggering
 		response = {'heartbeat':cache.get('trigger')}
 		if cache.has_key('trigger'):
+			#add the initla fps and gain settings (won't hurt to keep sending it )
 			response.update({'fps':cache.get('fps'),'gain':cache.get('gain')})
+		#if there was a new gain change, send it (the view for gain change already checks if triggering)
 		if cache.has_key('new_gain'):
 			response.update({'new_gain':float(cache.get('new_gain'))})
 			cache.delete('new_gain')
-		
+
 		return Response(response)
 
-'''
-Used for logging in GCS station via session auth
-'''
-class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 
+class GCSLogin(View,TemplateResponseMixin,ContextMixin):
+	"""
+	Used for logging in GCS view station via session auth
+	"""
 	template_name = 'loginpage.html'
 	content_type='text/html'
 
@@ -470,14 +449,14 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		username = request.POST['username']
 		password = request.POST['password']
 
-		if (cache.has_key('trigger')):	#clears triggering key from cache if it exists
-			cache.set('trigger', 0, None)
-
+		if cache.has_key('trigger') == "true":	#clears triggering key from cache if it exists
+			cache.set('trigger', "false", None)
+		
+		#authenticate the user, we use session auth here
 		user = authenticate(username=username,password=password)
 		if user is not None:
 			#if user is active log use in and return redirect
 			if user.is_active:
-
 				login(request,user)
 
 
@@ -487,39 +466,13 @@ class GCSLogin(View,TemplateResponseMixin,ContextMixin):
 		return HttpResponseForbidden()
 
 	def get(self,request):
+		"""
+		just renders the template for the login page
+		"""
 		return self.render_to_response(self.get_context_data())
 
 
-class InteropLogin(View,TemplateResponseMixin,ContextMixin):
-	template_name = 'interoplogin.html'
-	content_type = 'text/html'
 
-	def post(self,request,format=None):
-		#pdb.set_trace()
-		#validate interop credential data
-		serverCreds = ServerCredsSerializer(data=request.POST)
-		if not serverCreds.is_valid():
-			#respond with Error
-			return HttpResponseForbidden("invalid server creds %s" % serverCreds.errors)
-		login_data = dict(serverCreds.validated_data)
-		login_data.update({"tout":5})
-		#create client
-		session = interop_login(**(login_data))
-		#client = AsyncClient(**(login_data))
-		#if it did not return a client, respnd with error
-		if not isinstance(session,requests.Session):
-			#responsd with error
-			return HttpResponse(session)
-		#success
-		else:
-			#save session and server route
-			cache.set("Creds",serverCreds,None)
-			cache.set("InteropClient",session,None)
-			cache.set("Server",serverCreds.validated_data['server'],None)
-			return HttpResponse('Success')
-
-	def get(self,request):
-		return self.render_to_response(self.get_context_data())
 
 #endpoint for GCS
 class GCSViewset(viewsets.ModelViewSet):
@@ -537,21 +490,26 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def cameraGain(self,request,pk=None):
-		connectionCheck()
-		if cache.get('trigger') == 0:
+		"""
+			allows GCS viewer to control the gain of the camera in flight
+			args := new_gain (new analog gain)
+		"""
+		if cache.get('trigger') == "false":
 			return Response({'error': 'not triggering'})
 		cache.set('new_gain',request.data['new_gain'])
 		return Response({})
 
 	@list_route(methods=['post'])
 	def cameraTrigger(self,request,pk=None):
-		#pdb.set_trace()
-		connectionCheck()
+		"""
+			start the camera trigger
+			args := fps (frame rate), gain (initial anlog gain)
+		"""
         #attempting to trigger
 		triggerStatus = request.data['trigger']
         #if attempting to trigger and time is 0 or there is no time
 		#TODO: fix this statement
-		if triggerStatus != "0" and (float(request.data['fps']) == 0 or not request.data['fps']):
+		if triggerStatus != "false" and (float(request.data['fps']) == 0 or not request.data['fps']):
             # don't do anything
 			return Response({'nothing':'nothing'})
         #if attempting to trigger and time is less than 0
@@ -561,85 +519,79 @@ class GCSViewset(viewsets.ModelViewSet):
 		if request.data['gain'] and float(request.data['gain']) < 0:
 			return Response({'failure':'invalid gain'})
         # if attempting to trigger
-
-		if triggerStatus == '1':
+		if triggerStatus == "true":
             #set cache to yes
-			cache.set('trigger',1,None)
+			cache.set('trigger',"true",None)
             #settime
 			cache.set('fps',float(request.data['fps']))
 			cache.set('gain',float(request.data['gain']))
         #if attempting to stop triggering
-		elif triggerStatus == '0':
+		elif triggerStatus == "false":
             # set cache
-			cache.set('trigger',0,None)
+			cache.set('trigger',"false",None)
         #Success
 		return Response({'Success':'Success'})
 
 	@transaction.atomic
 	@list_route(methods=['post'])
 	def forwardPicture(self,request,pk=None):
-		connectionCheck()
+		"""
+			called by GCS viewer to request more pictures to view in the 'forward direction'
+			arg:= numPics (number of pics requested)
+		"""
 
+		#set up the connection to the RabbitMq image Queue
 		connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 		channel = connection.channel()
 		queue = channel.queue_declare(queue='pictures')
+		#create a list of pics for 'numPics' and wait until we have at least numPics to return
 		picList = []
 		numPics = int(request.POST['numPics'])
 		callback = CountCallback(queue.method.message_count,numPics,picList,"int")
 		channel.basic_consume(callback,queue='pictures')
 		channel.start_consuming()
-		#pdb.set_trace()
+		# we now have at least numpics in the list
 		connection.close()
 		pics = [Picture.objects.get(pk=int(id)) for id in picList]
-		#pdb.set_trace()
+		#get the GCS viewer's picStack (pics they have viewed so far)
 		picStack = request.session['picstack']
+		#push these by id onto the session stack
 		for pk in picList:
 			picStack.insert(0,int(pk))
 		request.session['picstack'] = picStack
+		#serialize the picture objects to json and return them to the GCS viewer
 		serPics = [{'pk':picture.pk,'image':PictureSerializer(picture).data,'timeSent':time()} for picture in pics ]
-		print(serPics[0])
 		return Response(serPics)
 
 	@list_route(methods=['post'])
 	def reversePicture(self,request,pk=None):
-		connectionCheck()
-		#pdb.set_trace()
+		"""
+			utilizes the viewers pic stack to requests older pictures this viewer saw but 
+			that the GCS client side no longer has cached (cache miss)
+			arg:= currPic (current pic the viewer is at)
+		"""
+		# get the pic stack and verify the index the user is at is valid
 		index = request.POST['curPic']
 		picStack = request.session['picstack']
 		if int(index) >= len(picStack):
 			return Response({'type':'nopicture'})
+		#get the request pic
 		picture = Picture.objects.get(pk=picStack[int(index)])
 		serPic = PictureSerializer(picture)
+		#serialize and return
 		return Response({'type':'picture','pk':picture.pk,'image':serPic.data})
 
-	list_route(methods=['post'])
-	def getFullSize(self,request,pk=None):
-		connectionCheck()
-		#pdb.set_trace()
-		if not "pk" in request.data:
-			return HttpResponseForbidden()
-
-		try:
-			picture = Picture.objects.get(pk= request.data['pk'])
-		except Picture.DoesNotExist:
-			return HttpResponseForbidden()
-		connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
-		channel = connection.channel()
-
-		channel.queue_declare(queue = 'fullsize')
-		channel.basic_publish(exchange='',
-							routing_key='fullsize',
-							body=str(request.session.session_key+'~'+picture.url))
-		connection.close()
-		return Response({'ok':'ok'})
 
 	@list_route(methods=['post'])
 	def getTargetData(self,request,pk=None):
-		connectionCheck()
+		"""
+			allows the GCS viewer to request the data associated with a given target
+			args := pk the primary key for the requested target
+		"""
 		if not "pk" in request.data:
 			return HttpResponseForbidden();
 		try:
-            #return target data dictionary
+            #serialize the target and return
 			targetData = TargetSerializer(Target.objects.get(pk = request.data['pk']))
 			return Response(targetData.data)
 		except Target.DoesNotExist:
@@ -647,45 +599,60 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def getAllTargets(self,request,pk=None):
-		connectionCheck()
+		"""
+			used to synchronize the current view of the targets in the system among viewers
+		"""
+		#return serialized data for all targets
 		data = [{'pk':t.pk, 'image':"/targets/Target"+str(t.pk).zfill(4)+'.jpeg', 'sent':str(t.sent)} for t in Target.objects.all()]
 		return Response(json.dumps({'targets':data}))
 
 	@list_route(methods=['post'])
 	def targetCreate(self,request,pk=None):
-		#pdb.set_trace()
-		connectionCheck()
+		"""
+			form target from picture
+			args := pk (primary key for picture this target is being cropped from)
+			data about the size of the target
+		"""
+
 		if not "scaleWidth" in request.data or int(request.data['scaleWidth'])==0 :
 			return HttpResponseForbidden("No crop given!")
 		if not "width" in request.data or int(request.data['width']) == 0:
 			return HttpResponseForbidden("No crop given!")
 		if not "height" in request.data or int(request.data['height']) ==0:
 			return HttpResponseForbidden("No crop given!")
+
+		# get the picture this target is from
 		try:
 			picture = Picture.objects.get(pk=request.data['pk'])
 		except Picture.DoesNotExist:
 			return HttpResponseForbidden()
+		#create a model object for this target
 		target = TargetSerializer(data={key : (request.data[key] if key in request.data else None)  for key in ('background_color','alphanumeric_color','orientation','shape','alphanumeric','ptype','description')})
+		#verify all the data is valid
 		if not target.is_valid():
 			return HttpResponseForbidden()
+		#get the data about the size of the targt (used for actual cropping)
 		sizeData = request.data
+		#get the actual target object
 		target = target.deserialize()
+		#discrepencies among grey vs gray
 		if target.background_color == "grey":
 			target.background_color = "gray"
 		if target.alphanumeric_color =="grey":
 			target.alphanumeric_color = "gray"
+		#actually crop the target out
 		target.crop(size_data=sizeData,parent_pic=picture)
+		#save the changes
 		target.save()
-
-		# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		# redis_publisher.publish_message(RedisMessage(json.dumps({'target':'create','pk':target.pk,'image':TARGET+"/Target"+str(target.pk).zfill(4)+'.jpeg'})))
 
 		return Response("success")
 
 	@list_route(methods=['post'])
 	def targetEdit(self,request,pk=None):
-		connectionCheck()
-
+		"""
+			edit a target locally
+			args := pk (primary key for the target to edit)
+		"""
 		try:
 
             #edit target with new values
@@ -698,14 +665,14 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def deleteTarget(self,request,pk=None):
-		connectionCheck()
+		"""
+			remove the target from the imaging GCS
+			args := pk (primary key of target to remove)
+		"""
 		try:
             #get target photo path and delete it
 			target = Target.objects.get(pk=request.data['pk'])
 			os.remove(target.picture.path)
-			target.delete()
-			# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-			# redis_publisher.publish_message(RedisMessage(json.dumps({'target':'delete','pk':request.data['pk']})))
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
@@ -717,21 +684,22 @@ class GCSViewset(viewsets.ModelViewSet):
 		pass
 
 	@list_route(methods=['post'])
-	def sendTarget(self,request,pk=None):
+	def sendTargetToInterop(self,request,pk=None):
+		"""
+			submits target to the Interop Server
+			args := pk (primary key of target to send)
+		"""
 
-		connectionCheck()
-		try:
-			if not cache.has_key("Server") or not cache.has_key("InteropClient"):
+		try:	
+			#this is used to make requests to the interop server
+			isession = InteropProxy.deserialize(cache.get("InteropProxy"))	
+			if not cache.has_key("InteropClient"):
 				return Response(json.dumps({'error':"Not logged into interop!"}))
-			#fetch the client
-			session = cache.get("InteropClient")
-			server = cache.get("Server")
+			#fetch the target and verify it is not already sent
 			targatAtPk = Target.objects.get(pk=int(request.data['pk']))
 			if target.sent:
 				return Response(json.dumps({'sent','Target was sent\n Would you like to send an edit?'}))
 
-			#print(targatAtPk.ptype)
-			#print(targatAtPk.shape)
 			#serialize the target
 			pretarget = TargetSubmissionSerializer(targatAtPk)
 
@@ -744,12 +712,8 @@ class GCSViewset(viewsets.ModelViewSet):
 					if dataDict[key]=='':
 						dataDict[key] =None
 				target = AUVSITarget(**dataDict)
-				if not cache.has_key("Creds"):
-					return Response(json.dumps({'error':"Not logged into interop!"}))
-				target.user = cache.get("Creds").validated_data['username']
 				#post the target
-
-				data = post_target(session,server,target,tout=5)
+				data = isession.post_target(target)
 				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
 				if isinstance(data,InteropError):
 					code, reason,text = data.errorData()
@@ -760,12 +724,13 @@ class GCSViewset(viewsets.ModelViewSet):
 				f = open(targatAtPk.picture.path, 'rb')
 				picData = f.read()
 
-				resp = post_target_image(session,server,tout =5,target_id=pid, image_binary=picData)
+				resp = isession.post_target_image(target_id=pid, image_binary=picData)
 				#test for interop error and respond accordingly
 				if isinstance(resp,InteropError):
 					code, reason,text = redis_publisher.errorData()
 					errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
 					return Response(json.dumps({'error':errorStr}))
+				#mark target as sent
 				target.wasSent()
 				return Response(json.dumps({'response':"Success"}))
 			except Exception as e:
@@ -775,7 +740,10 @@ class GCSViewset(viewsets.ModelViewSet):
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
-		connectionCheck()
+		"""
+			used to dump all target data from the db so it can be submitted as file
+		"""
+
 		ids = json.loads(request.data['ids'])
 		data = ''
 		count = 1
@@ -787,30 +755,34 @@ class GCSViewset(viewsets.ModelViewSet):
 				count+=1
 			except Target.DoesNotExist:
 				continue
-		# websocket response for "sent"
-		# redis_publisher = RedisPublisher(facility='viewer',sessions=gcsSessions())
-		# redis_publisher.publish_message(RedisMessage(json.dumps({'target':'sent','ids':ids})))
+
 		return Response({'data':data})
 
 	@list_route(methods=['post'])
 	def getHeartbeat(self, request, pk=None):
-		connectionCheck()
+		"""
+			client side viewer requests status update about whether the OBC is connected
+			and its triggering status so all viewers can synchronize on the state of the OBC
+		"""
 		heartbeat = cache.get('heartbeat', 'disconnected') # connected if drone posted heartbeat or defaults to disconnected
 		if cache.has_key('trigger'):
 			trigger = cache.get('trigger')
 		else:
-			trigger = 0
+			trigger = "false"
 		return Response(json.dumps({'heartbeat':heartbeat, 'triggering':trigger}))
 
 
-#server webpage
+
 class GCSViewer(APIView,TemplateResponseMixin,ContextMixin):
+	"""
+		serves the actual GCS viewer page to the client
+	"""
 
 	template_name = 'index.html'
 	content_type='text/html'
 
 	def get_context_data(self,**kwargs):
-		#put attrbribute form  in template context
+		#put attribute form  in template context
 		context = super(GCSViewer,self).get_context_data(**kwargs)
 		context['form'] = AttributeForm
 		return context
