@@ -37,8 +37,7 @@ import pika
 import sys
 from PIL import Image
 
-#interop
-from interop import InteropProxy,InteropError,AUVSITarget
+from .interop import AUVSITarget
 
 import requests
 

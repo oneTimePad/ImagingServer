@@ -906,7 +906,7 @@ function PictureArray(){
 	function tsubmit(pk){
 		console.log("submit")
 		$.ajax({
-			url:"{% url 'gcs-sendTarget'%}",
+			url:"{% url 'gcs-sendTargetToInterop'%}",
 			type:"POST",
 			data: {"pk":pk},
 			success:function(resp){

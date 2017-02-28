@@ -7,7 +7,7 @@ BAD_REQUEST = 400
 NOT_FOUND = 404
 INTERNAL_SERVER_ERROR = 500
 
-class JSSession(requests.session):
+class JSSession(requests.Session):
 	"""
 	extends requests.session to provide json serializability
 	for storing in Django's cache

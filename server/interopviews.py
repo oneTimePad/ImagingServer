@@ -38,7 +38,7 @@ import sys
 from PIL import Image
 
 #interop
-from interop import InteropProxy,InteropError
+from .interop import InteropProxy,InteropError
 
 import requests
 
