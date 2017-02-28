@@ -208,3 +208,45 @@ class InteropProxy(object):
 		if not r.ok:
 			return InteropError(r)
 		return r
+
+	def put_target(self, target_id, target):
+			"""PUT target.
+			Args:
+				target_id: The ID of the target to update.
+				target: The target details to update.
+			Returns:
+				Future object which contains the return value or error from the
+				underlying Client.
+			"""
+			r = self.session.post(server+'/api/targets/%d' % target_id, data=json.dumps(target.serialize()))
+			if not r.ok:
+				return InteropError(r)
+			return r.json()
+
+	def delete_target(self, target_id):
+			"""DELETE target.
+			Args:
+				target_id: The ID of the target to delete.
+			Returns:
+				Future object which contains the return value or error from the
+				underlying Client.
+			"""
+			r = self.session.delete(server+'/api/targets/%d' % target_id, data=json.dumps(target.serialize()))
+			if not r.ok:
+				return InteropError(r)
+			return r.json()
+
+	def get_target_image(self, target_id):
+			"""GET target image.
+			Args:
+				target_id: The ID of the target for which to get the image.
+			Returns:
+				The image data that was previously uploaded.
+			Returns:
+				Future object which contains the return value or error from the
+				underlying Client.
+			"""
+			r = self.session.post(server+'/api/targets/%d' % target_id, timeout = self.tout,data=json.dumps(target.serialize()))
+			if not r.ok:
+				return InteropError(r)
+			return r.json()
