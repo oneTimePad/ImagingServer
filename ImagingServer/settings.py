@@ -18,7 +18,7 @@ import datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGIN_REDIRECT_URL='/gcs/viewer'
 LOGIN_URL='/gcs/login'
-WS4REDIS_HEARTBEAT = '--heartbeat--'
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
 
@@ -37,9 +37,7 @@ AUTH_USER_MODEL = 'server.ImagingUser'
 #SESSION_COOKIE_SECURE = True
 #CSRF_COOKIE_SECURE = True
 
-WEBSOCKET_URL = '/ws/'
-WS4REDIS_EXPIRE = 0
-WS4REDIS_PREFIX = 'ws'
+
 
 
 SESSION_ENGINE = 'redis_sessions.session'
@@ -122,8 +120,8 @@ TEMPLATES = [
     },
 ]
 X_FRAMES_OPTION = "DENY"
-WSGI_APPLICATION = 'ws4redis.django_runserver.application'
-#WSGI_APPLICATION = 'AUVSIDataProc.wsgi.application'
+#WSGI_APPLICATION = 'ws4redis.django_runserver.application'
+WSGI_APPLICATION = 'ImagingServer.wsgi.application'
 
 
 # Database

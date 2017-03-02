@@ -5,8 +5,8 @@ from django.core import serializers
 from django.core.cache import cache
 from django.dispatch import *
 from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
-from .forms import AttributeForm
-from .models import *
+
+from server.models import *
 from django.utils.datastructures import MultiValueDictKeyError
 from django.contrib.auth import authenticate,login,logout,get_user_model
 from django.shortcuts import redirect
@@ -14,18 +14,16 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.signals import user_logged_in
 from django.db import transaction
 from django.contrib.sessions.models import Session
-#websockets
-# from ws4redis.publisher import RedisPublisher
-# from ws4redis.redis_store import RedisMessage
+
 #django-rest
 from rest_framework.response import Response
-from .permissions import DroneAuthentication,GCSAuthentication, InteroperabilityAuthentication
+from server.permissions import DroneAuthentication,GCSAuthentication, InteroperabilityAuthentication
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.decorators import list_route
-from .serializers import *
+from server.serializers import *
 from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
 #general
 import os
@@ -38,7 +36,7 @@ import sys
 from PIL import Image
 
 #interop
-from .interop import InteropProxy,InteropError
+from server.interop import InteropProxy,InteropError
 
 import requests
 

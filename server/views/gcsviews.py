@@ -5,8 +5,8 @@ from django.core import serializers
 from django.core.cache import cache
 from django.dispatch import *
 from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
-from .forms import AttributeForm
-from .models import *
+from server.forms import AttributeForm
+from server.models import *
 from django.utils.datastructures import MultiValueDictKeyError
 from django.contrib.auth import authenticate,login,logout,get_user_model
 from django.shortcuts import redirect
@@ -14,18 +14,16 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.signals import user_logged_in
 from django.db import transaction
 from django.contrib.sessions.models import Session
-#websockets
-# from ws4redis.publisher import RedisPublisher
-# from ws4redis.redis_store import RedisMessage
+
 #django-rest
 from rest_framework.response import Response
-from .permissions import DroneAuthentication,GCSAuthentication, InteroperabilityAuthentication
+from server.permissions import DroneAuthentication,GCSAuthentication, InteroperabilityAuthentication
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.authentication import SessionAuthentication
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.decorators import list_route
-from .serializers import *
+from server.serializers import *
 from rest_framework.parsers import MultiPartParser,JSONParser,FormParser
 #general
 import os
@@ -37,7 +35,7 @@ import pika
 import sys
 from PIL import Image
 
-from .interop import AUVSITarget
+from server.interop import AUVSITarget
 
 import requests
 
@@ -58,10 +56,10 @@ DRONE_DISCONNECT_TIMEOUT = 10
 EXPIRATION = 10
 
 #starts up the rabbitmq connection for distributing images
-connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
-channel = connection.channel()
-channel.queue_delete(queue='pictures')
-connection.close()
+#connection = pika.BlockingConnection(pika.ConnectionParameters(host = 'localhost'))
+#channel = connection.channel()
+#channel.queue_delete(queue='pictures')
+#connection.close()
 
 
 
@@ -210,7 +208,7 @@ class GCSViewset(viewsets.ModelViewSet):
 			called by GCS viewer to request more pictures to view in the 'forward direction'
 			arg:= numPics (number of pics requested)
 		"""
-
+		#return Response("hello")
 		#set up the connection to the RabbitMq image Queue
 		connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 		channel = connection.channel()
@@ -398,7 +396,7 @@ class GCSViewset(viewsets.ModelViewSet):
 				resp = isession.post_target_image(target_id=pid, image_binary=picData)
 				#test for interop error and respond accordingly
 				if isinstance(resp,InteropError):
-					code, reason,text = redis_publisher.errorData()
+					code, reason,text = resp.errorData()
 					errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
 					return Response(json.dumps({'error':errorStr}))
 				#mark target as sent

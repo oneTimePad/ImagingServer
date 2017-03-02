@@ -3,12 +3,10 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.conf.urls.static import static
-from .gcsviews import *
-from .interopviews import *
-from .droneviews import *
+from .views import *
 from rest_framework.routers import SimpleRouter
 from rest_framework_jwt.views import obtain_jwt_token,refresh_jwt_token,verify_jwt_token
-
+from django.views.decorators.csrf import csrf_exempt
 urlpatterns =[
 	#main gcs viewer endpoints
     url(r'^$',login_required(GCSViewer.as_view()),name='approot'),
