@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Picture Viewer</title>
-<!-- <script type="text/javascript" src="{{STATIC_URL}}js/ws4redis.js"></script> -->
+
 <script type="text/javascript" src="{{STATIC_URL}}js/jquery.min.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/ajaxsetup.js"></script>
 <script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
@@ -199,6 +199,7 @@ function PictureArray(){
 					}
 					PictureArray.prototype.allowForward = false;
 					//request NUM_FETCH more and set new array
+					console.log("forwardREQUEST");
 					forwardPicture();
 
 					return;
@@ -471,6 +472,7 @@ function PictureArray(){
 					type: "POST",
 					data: {'numPics': NUM_FETCH},
 					success: function(response){
+						console.log("forward_response");
 						PictureArray.prototype.allow = false;
 						cache = new PictureArray(JSON.parse(JSON.stringify(response)));
 						/*
@@ -496,7 +498,12 @@ function PictureArray(){
 						PictureArray.prototype.allowForward=true;
 						PictureArray.prototype.allow = true;
 
-				}
+					},
+				       error: function(XMLHttpRequest,textStatus,erroThrown){
+						console.log("Status: " +textStatus +" Error: "+erroThrown);
+				       		/* TODO: POSSIBLE BUG 504 may be thrown on initial request for image
+				       			due to waiting too long */
+				       }
 			});
 		}
 		/*
@@ -527,26 +534,24 @@ function PictureArray(){
 			}
 		});
 	}
-
-
 	//wanna do some testing before I add this
 	function loop(){
 		if(image_cache == null){
 			console.log("image cache is null");
 		}
-		setInterval(function(){
-			if(image_cache == null){
-				forwardPicture();
-			}
-			else{
-				clearInterval();
-			}
-		},100);
-		if(image_cache!=null){
-			looping = setInterval(function(){
-				image_cache.next();},$("#loop_interval").val()*1000);
-			console.log("loop");
-		}
+		forwardPicture();
+
+		
+	
+		looping = setInterval(function(){
+				if(image_cache != null){
+					image_cache.next();
+				}
+				
+		},$("#loop_interval").val()*1000);
+		console.log("loop");
+
+
 	}
 
 	function pollHeartbeat() {
@@ -562,13 +567,13 @@ function PictureArray(){
 					document.getElementById("connectinfo").className="red";
 				}
 				console.log("triggering" +json_response["triggering"]);
-				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "1"){
+				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
 					$("#trigger_on").html("Stop Triggering");
-					document.getElementById("trigger_on").value = 0;
+					document.getElementById("trigger_on").value = "false";
 				}
-				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "0") {
+				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false") {
 					$("#trigger_on").html("Start Triggering");
-					document.getElementById("trigger_on").value = 1;
+					document.getElementById("trigger_on").value = "true";
 				}
 			}
 		});
@@ -906,7 +911,7 @@ function PictureArray(){
 	function tsubmit(pk){
 		console.log("submit")
 		$.ajax({
-			url:"{% url 'gcs-sendTarget'%}",
+			url:"{% url 'gcs-sendTargetToInterop'%}",
 			type:"POST",
 			data: {"pk":pk},
 			success:function(resp){
@@ -1170,12 +1175,12 @@ $(function(){
 
 							<input id="gain" type="text", value="0"/>
 
-								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="true">Start Triggering</button>
 								<input id="new_gain" type="text", value="0"/>
 								
 								<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
 
-							<input id="loop_interval"  type="number" value="0"/>
+							<input id="loop_interval"  type="number" value="1"/>
 
 							<!-- <button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button> -->
 
@@ -1302,11 +1307,10 @@ function trigger() {
 			if (json.hasOwnProperty("nothing")) {
 				return;
 			}
-			//var time_int = document.getElementById("time_interval");
-			//time_int.value=0;
+
 			var trigger_on = document.getElementById("trigger_on");
-			$("#trigger_on").val(Math.abs(trigger_on.value-1));
-			if (trigger_on.value==0) {
+			$("#trigger_on").val( ((trigger_on.value == "true") ? trigger_on.value : "false"));
+			if (trigger_on.value=="false") {
 				$("#trigger_on").html("Stop Triggering");
 			}
 			else {

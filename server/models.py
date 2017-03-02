@@ -26,7 +26,7 @@ from rest_framework.authtoken.models import Token
 STORAGE = "/var/www/pictures"
 STORAGE_TARGET = "/var/www/targets"
 
-#uses django storage, change path to fit yours
+#tells Django where to store the pictures
 fs = FileSystemStorage(location=STORAGE)
 fs_targets = FileSystemStorage(location=STORAGE_TARGET)
 
@@ -41,19 +41,26 @@ fovH = 26.5 # Landscape
 METER_TO_DEGREE_CONVERSION = 0.00001/0.8627
 
 class ImagingUser(AbstractUser):
-
+	"""
+		creates a custom user model
+	"""
 	userType = models.CharField(max_length=100,default="none")
 	REQUIRED_FIELDS = ['userType']
 
 class GCSSession(models.Model):
+	"""
+		maintains state variables for a GCS viewer session
+	"""
 	user = models.ForeignKey(settings.AUTH_USER_MODEL)
 	session =models.CharField(max_length=40, null=True)
 
 
 class Picture(models.Model):
+	"""
+		represents a Picture in the db
+	"""
 	fileName = models.CharField(max_length=100,default="photo")
 	photo = models.ImageField(storage=fs,default=0)
-	#azimuth = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	yaw = models.DecimalField(max_digits=9,decimal_places=5,default=0)
 	pitch = models.DecimalField(max_digits=9, decimal_places=5,default=0)
 	roll =models.DecimalField(max_digits=9, decimal_places=5,default=0)
@@ -61,12 +68,15 @@ class Picture(models.Model):
 	lon = models.DecimalField(max_digits=9, decimal_places=5,default=0)
 	alt = models.DecimalField(max_digits=9, decimal_places=5,default=0)
 	rel_alt = models.DecimalField(max_digits=9,decimal_places=5,default=0)
-	#url = models.CharField(max_length=300,default='url')
-	#timeTaken = models.FloatField(default=0)
+
 	timeReceived = models.FloatField(default=0)
 
 
 class Target(models.Model):
+
+	"""
+		represents a target in the db
+	"""
 	ORIENTATION_CHOICES = (
 		('N','N'),
 		('NE','NE'),
@@ -118,6 +128,10 @@ class Target(models.Model):
 	description = SanitizedCharField(max_length=200,null=True,blank=True)
 
 	def edit(self,edits):
+		"""
+			allows for target data to be edited
+			args := edits (data to change in the target)
+		"""
 		self.alphanumeric=edits['alphanumeric'] if  'alphanumeric' in edits else None
 		self.alphanumeric_color = edits['alphanumeric_color'] if 'alphanumeric_color' in edits else None
 		if self.alphanumeric_color =="grey":
@@ -133,9 +147,10 @@ class Target(models.Model):
 		self.save()
 
 	def wasSent(self):
+		"""
+			mark target as was sent to the interop server
+		"""
 		self.sent = True
-
-
 
 
 

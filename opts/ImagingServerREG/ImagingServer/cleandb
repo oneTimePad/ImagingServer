@@ -1,9 +1,0 @@
-#!/bin/sh
-
-rm -rf server/migrations/*
-rm db.sqlite3
-./manage.py flush
-./manage.py makemigrations server
-./manage.py migrate
-./manage.py loaddata server/fixtures/users.json
-sudo rm -rf /var/www/html/*
