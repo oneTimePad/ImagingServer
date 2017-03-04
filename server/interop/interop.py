@@ -1,5 +1,5 @@
 from .exceptions import InteropError
-from .types import AUVSITarget,ServerInfo,MovingObstacle,StationaryObstacle,Mission
+from .types import AUVSITarget,MovingObstacle,StationaryObstacle,Mission
 import requests
 import json
 

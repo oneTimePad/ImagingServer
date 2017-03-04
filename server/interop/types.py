@@ -45,7 +45,7 @@ class ClientBaseType(object):
                 serial[attr] = data.serialize()
             elif isinstance(data, list):
                 serial[attr] = [d.serialize() for d in data]
-            else:
+            elif data is not None:
                 serial[attr] = data
         return serial
 
@@ -230,63 +230,6 @@ class MovingObstacle(ClientBaseType):
         self.sphere_radius = float(sphere_radius)
 
 
-class Target(ClientBaseType):
-    """A target.
-
-    Attributes:
-        id: Optional. The ID of the target. Assigned by the interoperability
-            server.
-        user: Optional. The ID of the user who created the target. Assigned by
-            the interoperability server.
-        type: Target type, must be one of TargetType.
-        latitude: Optional. Target latitude in decimal degrees. If provided,
-            longitude must also be provided.
-        longitude: Optional. Target longitude in decimal degrees. If provided,
-            latitude must also be provided.
-        orientation: Optional. Target orientation.
-        shape: Optional. Target shape.
-        background_color: Optional. Target color.
-        alphanumeric: Optional. Target alphanumeric. [0-9, a-z, A-Z].
-        alphanumeric_color: Optional. Target alphanumeric color.
-        description: Optional. Free-form description of the target, used for
-            certain target types.
-        autonomous: Optional; defaults to False. Indicates that this is an
-            ADLC target.
-
-    Raises:
-        ValueError: Argument not valid.
-    """
-
-    attrs = ['id', 'user', 'type', 'latitude', 'longitude', 'orientation',
-             'shape', 'background_color', 'alphanumeric', 'alphanumeric_color',
-             'description', 'autonomous']
-
-    def __init__(self,
-                 id=None,
-                 user=None,
-                 type=None,
-                 latitude=None,
-                 longitude=None,
-                 orientation=None,
-                 shape=None,
-                 background_color=None,
-                 alphanumeric=None,
-                 alphanumeric_color=None,
-                 description=None,
-                 autonomous=False):
-        self.id = id
-        self.user = user
-        self.type = type
-        self.latitude = float(latitude) if latitude is not None else None
-        self.longitude = float(longitude) if longitude is not None else None
-        self.orientation = orientation
-        self.shape = shape
-        self.background_color = background_color
-        self.alphanumeric = alphanumeric
-        self.alphanumeric_color = alphanumeric_color
-        self.description = description
-        self.autonomous = autonomous
-#TODO: remove and update to current interop spec (Added for backwards compat)
 class AUVSITarget(ClientBaseType):
     """A target.
 
@@ -309,6 +252,10 @@ class AUVSITarget(ClientBaseType):
             certain target types.
         autonomous: Optional; defaults to False. Indicates that this is an
             ADLC target.
+        team_id: Optional. The username of the team on whose behalf to submit
+            targets. Must be admin user to specify.
+        actionable_override: Optional. Manually sets the target to be
+            actionable. Must be admin user to specify.
 
     Raises:
         ValueError: Argument not valid.
@@ -316,7 +263,7 @@ class AUVSITarget(ClientBaseType):
 
     attrs = ['id', 'user', 'type', 'latitude', 'longitude', 'orientation',
              'shape', 'background_color', 'alphanumeric', 'alphanumeric_color',
-             'description', 'autonomous']
+             'description', 'autonomous', 'team_id', 'actionable_override']
 
     def __init__(self,
                  id=None,
@@ -330,7 +277,9 @@ class AUVSITarget(ClientBaseType):
                  alphanumeric=None,
                  alphanumeric_color=None,
                  description=None,
-                 autonomous=False):
+                 autonomous=False,
+                 team_id=None,
+                 actionable_override=None):
         self.id = id
         self.user = user
         self.type = type
@@ -343,22 +292,5 @@ class AUVSITarget(ClientBaseType):
         self.alphanumeric_color = alphanumeric_color
         self.description = description
         self.autonomous = autonomous
-#TODO: added for backwards compat , remove for current interop spec
-class ServerInfo(ClientBaseType):
-    """Server information to be displayed to judges.
-
-    Attributes:
-        message: Custom message from the server
-        message_timestamp (datetime.datetime): Message timestamp
-        server_time (datetime.datetime): Current server time
-
-    Raises:
-        TypeError, ValueError: Message or server timestamp could not be parsed.
-    """
-
-    attrs = ['message', 'message_timestamp', 'server_time']
-
-    def __init__(self, message, message_timestamp, server_time):
-        self.message = message
-        self.message_timestamp = dateutil.parser.parse(message_timestamp)
-        self.server_time = dateutil.parser.parse(server_time)
+        self.actionable_override = actionable_override
+        self.team_id = team_id
