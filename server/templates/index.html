@@ -16,8 +16,8 @@
 
 
 <script>
-	curr = 0; //the id of the picture/target in focus
-	picview = true;//true when a picture is in view, false when a target is in view
+	curr = 0; // the id of the picture/target in focus
+	picview = true;// true when a picture is in view, false when a target is in view
 	crop = {};
 	NUM_FETCH = 3;
 	image_cache = null; // caches the image strings
@@ -30,12 +30,14 @@
 	heartbeat = null;
 	targets = {};
 
-	(function(){
+
+	// function to convert input into JSON, which also deals with input arrays
+	(function() {
 		// Convert array to object
-		var convArrToObj = function(array){
+		var convArrToObj = function(array) {
 				var thisEleObj = new Object();
-				if(typeof array == "object"){
-						for(var i in array){
+				if (typeof array == "object") {
+						for (var i in array) {
 								var thisEle = convArrToObj(array[i]);
 								thisEleObj[i] = thisEle;
 						}
@@ -45,326 +47,331 @@
 				return thisEleObj;
 		};
 		var oldJSONStringify = JSON.stringify;
-		JSON.stringify = function(input){
-				if(oldJSONStringify(input) == '[]')
+		JSON.stringify = function(input) {
+				if (oldJSONStringify(input) == '[]')
 						return oldJSONStringify(convArrToObj(input));
 				else
 						return oldJSONStringify(input);
 		};
-})();
-//Array for holding pictures
-function PictureArray(){
-			var current; //current picture index
-			var reversal; //reverse picture index
-			var viewed;  //marker whether picture has been viewed or not
+	})();
+
+	// Class PictureArray - Array for holding pictures sent to this client
+	// Manages requesting images from the server's queue, so users can go request new images or go back to previous ones
+	function PictureArray() {
+		var current; // current picture index
+		var reversal; // reverse picture index
+		var viewed;  // marker whether picture has been viewed or not
 
 
-
-			//check if arguments exist to constructor
-			if((args=arguments[0])){
-				//for all arguments
-				for(keys in args){
-						switch (keys) {
-							//set them accordingly
-							case "current":
-								current =args['current'];
-								break;
-							case "reversal":
-								reversal = args['reversal'];
-								break;
-							case "viewed":
-								viewed = args['viewed'];
-								break;
-								//insert images into cache
-							default:
-								if(args[keys].hasOwnProperty("image")==true){
-									this.push(args[keys]);
-								}
-								break;
+		// check if arguments exist to constructor
+		// args is an array where arguments that are not explicitly handled in the constructor are stored
+		if ((args=arguments[0])) {
+			// for all arguments
+			for (keys in args) {
+				switch (keys) {
+					// set them accordingly
+					case "current":
+						current =args['current'];
+						break;
+					case "reversal":
+						reversal = args['reversal'];
+						break;
+					case "viewed":
+						viewed = args['viewed'];
+						break;
+						// insert images into cache
+					default:
+						if (args[keys].hasOwnProperty("image")) {
+							this.push(args[keys]);
 						}
+						break;
 				}
 			}
-			//if no constructor args, set defaults
-			if(current==undefined){
-				current = 0;
-			}
-			if(reversal == undefined){
-				reversal = 0;
-			}
-			//set viewed array defaults
-			if(viewed == undefined){
-				viewed = (function(length){
-					//mark the first as viewed, and the rest as not
-						var localViewed = {};
-						for(var i=0;i<length;i++){
-								localViewed[i.toString()] = 0;
-						};
-						return localViewed;
-				})(this.length);
-			}
-			//plus 1 to current
-			this.upCurrent = function(){
-					current++;
-			}
-			//minus 1 to current
-			this.downCurrent = function(){
-					current--;
-			}
-			//getter
-			this.getCurrent = function(){
-				return current;
-			}
-			//setter
-			this.setCurrent = function(c){
-				current = c;
-			}
-			//plus 1 reversal
-			this.upReverse = function(r){
-				reversal++;
-			}
-			//minus 1 reversal
-			this.downReverse = function(){
-				reversal--;
-			}
-			//setter
-			this.setReverse =function(r){
-				reversal = r;
-			}
-			//getter
-			this.getReverse = function(){
-				return reversal;
-			}
-			//mark a pic as viewed if not already
-			this.viewedIt = function(){
+		}
+		// if no constructor args, set defaults
+		if (current == undefined) {
+			current = 0;
+		}
+		if (reversal == undefined) {
+			reversal = 0;
+		}
+		// set viewed array defaults
+		if (viewed == undefined) {
+			// viewed = {};
+			// for (var i = 0; i<this.length; i++) {
+			// 	viewed[i.toString()] = 0;
+			// }
+			// umm I'll hope that the code above does the same thing
+			// there isn't much reason to declare and immediately use an anonymous function
+			// unless JS is the screwiest language ever
+			// there is much evidence that it is so I'm not going to change it for now
 
-				if(viewed[(current).toString()]==0){
-					viewed[(current).toString()]=1;
-				}
-
-			}
-			//getter
-			this.getViewed = function(){
-				return viewed;
-			}
-
-			//check if there is a replacement object
-			this.swapArray = function(){
-				//if there is one
-				if(next_array!=null){
-					//set the global cache
-					image_cache = next_array;
-					//mark the first pic as viewed
-					image_cache.viewedIt();
-					next_array = null;
-					//set the focus
-					image_cache.curr();
-					return true;
-				}
-				//else there is not one
-				return false;
-
+			viewed = (function(length) {
+				// mark the first as viewed, and the rest as not
+					var localViewed = {};
+					for (var i=0;i<length;i++) {
+							localViewed[i.toString()] = 0;
+					};
+					return localViewed;
+			})(this.length);
+		}
+		// plus 1 to current
+		this.upCurrent = function() {
+				current++;
+		}
+		// minus 1 to current
+		this.downCurrent = function() {
+				current--;
+		}
+		// getter
+		this.getCurrent = function() {
+			return current;
+		}
+		// setter
+		this.setCurrent = function(c) {
+			current = c;
+		}
+		// plus 1 reversal
+		this.upReverse = function(r) {
+			reversal++;
+		}
+		// minus 1 reversal
+		this.downReverse = function() {
+			reversal--;
+		}
+		// setter
+		this.setReverse = function(r) {
+			reversal = r;
+		}
+		// getter
+		this.getReverse = function() {
+			return reversal;
+		}
+		// mark a pic as viewed if not already
+		this.viewedIt = function() {
+			if (viewed[(current).toString()] == 0) {
+				viewed[(current).toString()]=1;
 			}
 
-			this.serializePrep = function (){
-				this.current = current;
-				this.reversal = reversal;
-				this.viewed = viewed;
+		}
+		// getter
+		this.getViewed = function() {
+			return viewed;
+		}
+
+		// check if there is a replacement object
+		this.swapArray = function() {
+			// if there is one
+			if (next_array!=null) {
+				// set the global cache
+				image_cache = next_array;
+				// mark the first pic as viewed
+				image_cache.viewedIt();
+				next_array = null;
+				// set the focus
+				image_cache.curr();
+				return true;
 			}
+			// else there is not one
+			return false;
+		}
+
+		this.serializePrep = function() {
+			this.current = current;
+			this.reversal = reversal;
+			this.viewed = viewed;
+		}
 	}
-	//give it array properties
+	// give it array properties
 	PictureArray.prototype = Array.prototype;
 
-	//don't allow user to keep asking server for image
+	// don't allow user to keep asking server for image
 	PictureArray.prototype.allowForward = true;
 
-	//this might not be necessary due to js being single-thread
+	// this might not be necessary due to js being single-thread
 	PictureArray.prototype.allow = true;
 
-	//get next picture
-	PictureArray.prototype.next = function(){
-				//if a new array has arrived, lock these allow
-				//the new array checks the current state
-				//this might not be a problem since js is single threaded
-				if(!PictureArray.prototype.allow){
-					return;
-				}
+	// get next picture
+	PictureArray.prototype.next = function() {
+		// if a new array has arrived, lock these allow
+		// the new array checks the current state
+		// this might not be a problem since js is single threaded
+		if (!PictureArray.prototype.allow) {
+			return;
+		}
+		console.log(this);
+		console.log(typeof(this));
+		console.log(this.getCurrent());
+		if (this.getCurrent()+1 == this.length) {
+			if (this.swapArray()) {
+				return;
+			}
 
-				if(this.getCurrent()+1 == this.length){
-					if(this.swapArray()){
-						return;
-					}
+			if (!PictureArray.prototype.allowForward) {
+				return;
+			}
+			PictureArray.prototype.allowForward = false;
+			// request NUM_FETCH more and set new array
+			forwardPicture();
 
-					if(!PictureArray.prototype.allowForward){
-						return;
-					}
-					PictureArray.prototype.allowForward = false;
-					//request NUM_FETCH more and set new array
-					forwardPicture();
-
-					return;
-				}
-				//if next image is a past image (not in the array)
-				else if(this.getCurrent()+1<0){
-						//update current
-						this.upCurrent();
-						this.downReverse();
-						//fetch it
-						reversePicture(this.getReverse())
-						return;
-				}
-				//if next image is in the array
-				else if(this.getCurrent()+1>=0){
-					//return next image
-					  this.upCurrent();
-						this.viewedIt();
-						setFocusedImage(this[this.getCurrent()]);
-						return;
-				}
-	}
-	//returns previous image
-	PictureArray.prototype.prev = function(){
-		//if the prev image is the first one of out the array
-		if(!PictureArray.prototype.allow){return;}
-		if(this.getCurrent()-1 == -1){
-				//update
-				this.downCurrent();
-				//this is the first image we don't have in the django user session stack
-				this.setReverse(this.length);
-				//ask for that image
-				reversePicture(this.getReverse());
+			return;
+		}
+		// if next image is a past image (not in the array)
+		else if (this.getCurrent()+1<0) {
+				// update current
+				this.upCurrent();
+				this.downReverse();
+				// fetch it
+				reversePicture(this.getReverse())
 				return;
 		}
-		//if the prev image is not in the array
-		else if(this.getCurrent()-1 < 0){
-				//update
-				this.downCurrent();
-				//move back in user session stack
-				this.upReverse();
-				//ask for the image
-				reversePicture(this.getReverse());
-				return;
-		}
-		//else if the prev image is in the array
-		else if(this.getCurrent()-1 >=0){
-			this.downCurrent();
-			//we have it, return it
+		// if next image is in the array
+		else if (this.getCurrent()+1>=0) {
+			// return next image
+			  this.upCurrent();
+				this.viewedIt();
 				setFocusedImage(this[this.getCurrent()]);
 				return;
 		}
 	}
-	//jump to next new image
-	PictureArray.prototype.jump = function(){
-		if(!PictureArray.prototype.allow){return;}
-		//find the last image we saw
+
+	// returns previous image
+	PictureArray.prototype.prev = function() {
+		// if the prev image is the first one of out the array
+		if (!PictureArray.prototype.allow) {return;}
+		if (this.getCurrent()-1 == -1) {
+				// update
+				this.downCurrent();
+				// this is the first image we don't have in the django user session stack
+				this.setReverse(this.length);
+				// ask for that image
+				reversePicture(this.getReverse());
+				return;
+		}
+		// if the prev image is not in the array
+		else if (this.getCurrent()-1 < 0) {
+				// update
+				this.downCurrent();
+				// move back in user session stack
+				this.upReverse();
+				// ask for the image
+				reversePicture(this.getReverse());
+				return;
+		}
+		// else if the prev image is in the array
+		else if (this.getCurrent()-1 >=0) {
+			this.downCurrent();
+			// we have it, return it
+				setFocusedImage(this[this.getCurrent()]);
+				return;
+		}
+	}
+
+	// jump to next new image
+	PictureArray.prototype.jump = function() {
+		if (!PictureArray.prototype.allow) {return;}
+		// find the last image we saw
 		last = 0;
 		var viewed = this.getViewed();
-		for(key in viewed){
-			if(viewed[key]==1){
+		for (key in viewed) {
+			if (viewed[key]==1) {
 				last = parseInt(key);
 			}
 		}
-		//if we exhausted it
-		if(last+1>=this.length){
-			//check if there is an array pending
-			if(this.swapArray()){
+		// if we exhausted it
+		if (last+1>=this.length) {
+			// check if there is an array pending
+			if (this.swapArray()) {
 				return;
 			}
-			//if this was already called, don't allow it to call again
-			if(!PictureArray.prototype.allowForward){
+			// if this was already called, don't allow it to call again
+			if (!PictureArray.prototype.allowForward) {
 				return;
 			}
-			//lock forward fetching
+			// lock forward fetching
 			PictureArray.prototype.allowForward = false;
-			//else grab a new one
+			// else grab a new one
 			forwardPicture();
 			return;
 		}
-		//else get the next image in the list
-		else{
-			//update current
+		// else get the next image in the list
+		else {
+			// update current
 			this.setCurrent(last+1);
-			//mark the new one as viewed
+			// mark the new one as viewed
 			this.viewedIt();
-			//set as focused
+			// set as focused
 			setFocusedImage(this[this.getCurrent()]);
 			return;
 		}
 	}
-	//sets the current image marked in the list
-	PictureArray.prototype.curr = function(){
+
+	// sets the current image marked in the list
+	PictureArray.prototype.curr = function() {
 		console.log(this.getCurrent());
-		if(this.getCurrent()>=0){
+		if (this.getCurrent()>=0) {
 			setFocusedImage(this[this.getCurrent()]);
 		}
-		else{
+		else {
 			reversePicture(this.getReverse());
 		}
 	}
-	// $(function connect_websocket_pic(){
-	// 		//create websocket
-	// 		var web_socket = WS4Redis({
-	// 		uri:"ws://127.0.0.1:8444/ws/viewer?subscribe-session",
-	// 		//triggered when msg from server is sent
-	// 		receive_message: parseWebSkt,
-	// 		heartbeat_msg: {{WS4REDIS_HEARTBEAT}}
-	// 		});
-	// 	}
-	// )
-	//sets up form submission
+
+	// sets up form submission
 	$(function form_submit_setup() {
-		//on user submit
+		// on user submit
 		$("#submit").on("click", function(event) {
-			//allow for ajax
+			// allow for ajax
 			event.preventDefault();
-			//get all form attributes
+			// get all form attributes
 			var inputs = $("#form").find(":input");
-			//array of user inputs
+			// array of user inputs
 			var input_array = {};
-			//put each one in an array
+			// put each one in an array
 			inputs.each(function() {
 				console.log(this.value);
-				if($("#id_ptype").find(":selected").text() != "QR Code"){
-					if(this.name=="description"){
+				if ($("#id_ptype").find(":selected").text() != "QR Code") {
+					if (this.name=="description") {
 						return;
 					}
-					//this still keeps happening, value gets set to ""
-					if((this.id=="palette" || this.id =="lpalette")&&this.value==""){
+					// this still keeps happening, value gets set to ""
+					if ((this.id=="palette" || this.id =="lpalette")&&this.value=="") {
 								this.value ="black";
 					}
 				}
-				else if($("#id_ptype").find(":selected").text() == "QR Code"){
-					if(this.name=="orientation"||this.name=="alphanumeric" || this.name == "alphanumeric_color" || this.name == "background_color" || this.name == "shape"){
+				else if ($("#id_ptype").find(":selected").text() == "QR Code") {
+					if (this.name=="orientation"||this.name=="alphanumeric" || this.name == "alphanumeric_color" || this.name == "background_color" || this.name == "shape") {
 						return;
 					}
 				}
 
 				input_array[this.name] = this.value;
 			});
-			//if there attributes, send them
-			if(input_array) {
+			// if there attributes, send them
+			if (input_array) {
 				if (picview) {
 					input_array['pk'] = curr;
-					for(var key in crop){
+					for (var key in crop) {
 						input_array[key] = crop[key];
 					}
-					//creating a new target
+					// creating a new target
 					$.ajax({
 						url: "{% url 'gcs-targetCreate'%}",
 						type: "POST",
 						data: input_array,
-						failure: function(response){
+						failure: function(response) {
 							bootbox.alert(response);
 						}
 					});
 				}
 				else {
-					//editing the shown target
+					// editing the shown target
 					input_array['pk'] = curr;
 					$.ajax({
 						url: "{% url 'gcs-targetEdit'%}",
 						type: "POST",
 						data: input_array,
-						success: function(json){
+						success: function(json) {
 							showTargetData($("#"+curr)[0]);
 						}
 					})
@@ -373,148 +380,55 @@ function PictureArray(){
 		})
 	})
 
-	/*
-	//handles picture received from websocket
-	function parseWebSkt(response){
-		//parse json server response
-		var json_response = JSON.parse(response);
-
-		if (json_response.hasOwnProperty("disconnected")) {
-			console.log(json_response);
-			//bootbox.alert("Android Device Disconnected");
-
-			document.getElementById("connectinfo").class="box red";
-
-		}
-
-		else if(json_response.hasOwnProperty('fullSize')){
-			console.log(json_response);
-		}
-		else if (json_response.hasOwnProperty("connected")) {
-
-			//bootbox.alert("Android Device Connected");
-
-
-			document.getElementById("connectinfo").className="box green";
-
-			if(json_response['qxStatus']==true){
-				document.getElementById("qxinfo").className="box green";
-			}
-			else{
-				document.getElementById("qxinfo").className="box red";
-			}
-		}
-
-		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
-			$("#trigger_on").html("Stop Triggering");
-			document.getElementById("trigger_on").value = 0;
-			if(json_response.hasOwnProperty("time")){
-
-				//	document.getElementById("timeinfo").innerHtml=json_response['time']+"";
-					$("#timeinfo").html(json_response['time']+"");
-			}
-		}
-		else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false"){
-			$("#trigger_on").html("Start Triggering");
-			document.getElementById("trigger_on").value = 1;
-				$("#timeinfo").html("0");
-		}
-		else if (json_response.hasOwnProperty("target") && json_response["target"] == "create") {
-			var div = document.createElement("div");
-			div.className = "thumb-div";
-			image = document.createElement("img");
-			image.className = "thumbnail";
-			image.src = json_response.image;
-			image.id = json_response.pk;
-
-			image.addEventListener("click", function(e) {
-				if (e.ctrlKey) {
-					//ctrl+clicking to select/toggle targets to send
-					pk = this.id;
-					$("#"+pk).toggleClass("selected");
+	// retrieve next NUM_FETCH pics
+	function forwardPicture() {
+		$.ajax({
+			url:"{% url 'gcs-forwardPicture'%}",
+			type: "POST",
+			data: {'numPics': NUM_FETCH},
+			success: function(response) {
+				PictureArray.prototype.allow = false;
+				cache = new PictureArray(JSON.parse(JSON.stringify(response)));
+				/*
+				for (var i=0;i<response.length;i++) {
+							cache.push(response[i]);
+				}
+				*/
+				if (image_cache==null || image_cache.getCurrent()+1==image_cache.length) {
+					image_cache = cache;
+					image_cache.viewedIt();
+					setFocusedImage(image_cache[0]);
 				}
 				else {
-					picview = false;
-					setFocusedImage(this);
+				 	console.log("cached");
+					next_array = cache;
+					next_array.serializePrep();
+					window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
 				}
-				return false;
-			});
-			div.appendChild(image);
-			$("#targets").append(div);
-		}
-		else if (json_response.hasOwnProperty("target") && json_response["target"] == "delete") {
-			$("#"+json_response["pk"]).parent().remove();
-			if(image_cache){
-				picview=true;
-				image_cache.curr();
-				$("#back").hide();
-
+				said_no_pictures = false;
+				PictureArray.prototype.allowForward=true;
+				PictureArray.prototype.allow = true;
 			}
-		}
-		else if (json_response.hasOwnProperty("target") && json_response["target"] == "sent") {
-			ids = JSON.parse(response).ids;
-			ids.forEach(function(element) {
-				$("#"+element).addClass("sent");
-			})
-		}
+		});
 	}
-	*/
-	/*
-	retrieve next NUM_FETCH pics
-	*/
-	function forwardPicture(){
-				$.ajax({
-					url:"{% url 'gcs-forwardPicture'%}",
-					type: "POST",
-					data: {'numPics': NUM_FETCH},
-					success: function(response){
-						PictureArray.prototype.allow = false;
-						cache = new PictureArray(JSON.parse(JSON.stringify(response)));
-						/*
-						for(var i=0;i<response.length;i++){
-									cache.push(response[i]);
-						}
-						*/
-						if(image_cache==null || image_cache.getCurrent()+1==image_cache.length){
-							image_cache = cache;
-							image_cache.viewedIt();
-							setFocusedImage(image_cache[0]);
-						}
-						else{
-							 	console.log("cached");
-								next_array = cache;
 
-								next_array.serializePrep();
-
-								window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
-
-						}
-						said_no_pictures = false;
-						PictureArray.prototype.allowForward=true;
-						PictureArray.prototype.allow = true;
-
-				}
-			});
-		}
-		/*
-		get a pic in the past if cache doesn't have it
-		*/
-	function reversePicture(index){
+	// get a past pic if cache doesn't have it (makes request to server)
+	function reversePicture(index) {
 		$.ajax({
 			url:"{% url 'gcs-reversePicture'%}",
 			type: "POST",
 			data: {'curPic': index},
-			success: function(response){
+			success: function(response) {
 				// if we received a response
-				if(response.hasOwnProperty('type')==true){
-					if(response['type']=='picture'){
+				if (response.hasOwnProperty('type')==true) {
+					if (response['type']=='picture') {
 						setFocusedImage(response);
 					}
-					//no more pics left to go back to
-					else if(response['type'] == 'nopicture'){
+					// no more pics left to go back to
+					else if (response['type'] == 'nopicture') {
 						image_cache.upCurrent();
 						image_cache.downReverse();
-						if(!said_no_pictures){
+						if (!said_no_pictures) {
 							said_no_pictures=true;
 							bootbox.alert("no more old pictures");
 						}
@@ -526,15 +440,24 @@ function PictureArray(){
 	}
 
 
-	//wanna do some testing before I add this
-	function loop(){
-		if(image_cache!=null){
-			looping = setInterval(function(){
-				image_cache.next();},$("#loop_interval").val()*1000);
-			console.log("loop");
+	// wanna do some testing before I add this
+	// function to keep calling image_cache.next() every loop_interval seconds
+	// setInterval keeps calling the given function
+	function loop() {
+		// do not change this to use function pointers instead of the anonymous function
+		// that messes with the value of 'this' inside the function call because javascript
+		if (image_cache!=null) {
+			looping = setInterval(function() {
+				image_cache.next();},
+				$("#loop_interval").val()*1000);
 		}
 	}
 
+	function stoploop() {
+		clearTimeout(looping); // stop calling the loop function (opposite of setInterval)
+	}
+
+	// makes request to server to get heartbeat and trigger info from onboard computer
 	function pollHeartbeat() {
 		$.ajax({
 			url:"{% url 'gcs-getHeartbeat' %}",
@@ -542,12 +465,15 @@ function PictureArray(){
 			success: function(response) {
 				json_response = JSON.parse(response)
 				if (json_response.hasOwnProperty("heartbeat") && json_response["heartbeat"] == "connected") {
+					// show green if connected
 					document.getElementById("connectinfo").className="green";
 				}
 				else {
+					// show red if not connected
 					document.getElementById("connectinfo").className="red";
 				}
-				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true"){
+				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true") {
+					// make sure trigger button reflects current status of camera 
 					$("#trigger_on").html("Stop Triggering");
 					document.getElementById("trigger_on").value = 0;
 				}
@@ -557,17 +483,18 @@ function PictureArray(){
 				}
 			}
 		});
+
 		// Check to see if targets have changed
 		$.ajax({
 			url:"{% url 'gcs-getAllTargets' %}",
 			type:"POST",
 			success: function(response) {
 				// keep track of existing targets to see if any were removed
-				targets_copy = $.extend({}, targets);
+				targets_copy = $.extend({}, targets); // shallow copy of targets hashmap
 				resp_targets = JSON.parse(response).targets;
 				resp_targets.forEach(function(t) {
 					if (!targets[t.pk]) {
-						// create target
+						// target is not in map, create target on page
 						let div = document.createElement("div");
 						div.className = "thumb-div";
 						let image = document.createElement("img");
@@ -577,10 +504,10 @@ function PictureArray(){
 						if (t.sent) {
 							image.classList.add("sent");
 						}
-						targets[t.pk] = div;
+						targets[t.pk] = div; // keep reference to parent div in hashmap
 						image.addEventListener("click", function(e) {
 							if (e.ctrlKey) {
-								//ctrl+clicking to select/toggle targets to send
+								// ctrl+clicking to select/toggle targets to send
 								pk = this.id;
 								$("#"+pk).toggleClass("selected");
 							}
@@ -594,6 +521,7 @@ function PictureArray(){
 						$("#targets").append(div);						
 					}
 					else {
+						// target already exists, remove from copy
 						targets_copy[t.pk] = undefined;
 						if (t.sent) {
 							// if the target has been sent, make sure it is marked sent
@@ -602,26 +530,23 @@ function PictureArray(){
 						}
 					}
 					for (t in targets_copy) {
+						// targets that still exist in targets_copy were not in response
+						// they were deleted from server so remove them
 						if (!targets_copy[t]) {
 							// target was deleted
 							$(targets_copy[t]).remove();
 						}
 					}
-
 				});
 			}
 		});
 	}
 
-	function stoploop(){
-		clearTimeout(looping);
-		console.log("stop loop");
-	}
-
+	// set up page when the window loads
 	window.onload = function() {
-		//making the panels the height of the window (excluding the navbar)
-		//if the window height changes, the page has to be reloaded
-		setDimensions();
+		// making the panels the height of the window (excluding the navbar)
+		// if the window height changes, the page has to be reloaded
+		setDimensions(); // set heights of various elements on page
 		img = $("#focused");
 		img.on("load", onLoad = function() {
 			aspect_ratio = this.naturalWidth/this.naturalHeight;
@@ -638,36 +563,33 @@ function PictureArray(){
 			}
 			canvasinit();
 		})
-		//if there is no state to restore
-		if(window.sessionStorage.getItem("curr") ==null){
-			//attempt to get a pic
-
+		// if there is no state to restore
+		if (window.sessionStorage.getItem("curr") == null) {
+			// attempt to get a pic
 			forwardPicture();
 
 		}
 		// else if there is a state to restore
-		else{
-
-			//restore state on refresh
-			image_cache = new PictureArray(JSON.parse(window.sessionStorage.getItem("image_cache"))); //array of images
-			if(window.sessionStorage.getItem("next_array")!=null&&window.sessionStorage.getItem("next_array")!="null"){
-
+		else {
+			// restore state on refresh
+			image_cache = new PictureArray(JSON.parse(window.sessionStorage.getItem("image_cache"))); // array of images
+			if (window.sessionStorage.getItem("next_array")!=null&&window.sessionStorage.getItem("next_array")!="null") {
 					next_array =  new PictureArray(JSON.parse(window.sessionStorage.getItem("next_array")));
 			}
-			else{
+			else {
 				next_array = null;
 			}
 			console.log(next_array);
 
-			curr = window.sessionStorage.getItem("curr"); //current pic index
-			//image_cache.current=window.sessionStorage.getItem("current"); //prototype current
-			//image_cache.reverseval=window.sessionStorage.getItem("reverseval");//prototype reverseval
-			//image_cache.viewed = JSON.parse(window.sessionStorage.getItem("viewed"));
+			curr = window.sessionStorage.getItem("curr"); // current pic index
+			// image_cache.current=window.sessionStorage.getItem("current"); // prototype current
+			// image_cache.reverseval=window.sessionStorage.getItem("reverseval");// prototype reverseval
+			// image_cache.viewed = JSON.parse(window.sessionStorage.getItem("viewed"));
 			PictureArray.prototype.allow = true;
 			PictureArray.prototype.allowForward = true;
 			image_cache.curr();
 		}
-		//displaying existing targets
+		// displaying existing targets
 		$.ajax({
 			url:"{% url 'gcs-getAllTargets' %}",
 			type:"POST",
@@ -686,7 +608,7 @@ function PictureArray(){
 					}
 					image.addEventListener("click", function(e) {
 						if (e.ctrlKey) {
-							//ctrl+clicking to select/toggle targets to send
+							// ctrl+clicking to select/toggle targets to send
 							pk = this.id;
 							$("#"+pk).toggleClass("selected");
 						}
@@ -702,9 +624,10 @@ function PictureArray(){
 			}
 		});
 		
+		// poll heartbeat every second
 		window.setInterval(pollHeartbeat, 1000);
 
-		//event listener for entire window (for keys)
+		// event listener for entire window (for keys)
 		document.addEventListener("keyup", function(evt) {
 			var enter = 13;
 			var leftarrow = 37;
@@ -713,26 +636,27 @@ function PictureArray(){
 			var space = 32;
 			switch (evt.keyCode) {
 				case leftarrow:
-					//asynchronously ask for next image and add it
-					//since we might have to fetch it
-					if(picview&&image_cache){
+					// asynchronously ask for next image and add it
+					// since we might have to fetch it
+					if (picview && image_cache) {
 						image_cache.prev();
 					}
 					break;
 				case rightarrow:
-					//asynchronously ask for next image since
-					if(picview&&image_cache){
+					// asynchronously ask for next image and add it
+					// since we might have to fetch it
+					if (picview && image_cache) {
 						image_cache.next();
 					}
 					break;
 				case enter:
-					if(picview&&image_cache){
+					if (picview && image_cache) {
 						image_cache.jump();
 					}
 					break;
 				case del:
-				//delete target
-					if(!picview) {
+					// delete target
+					if (!picview) {
 						$.ajax({
 							url:"{% url 'gcs-deleteTarget'%}",
 							type:"POST",
@@ -752,11 +676,13 @@ function PictureArray(){
 						console.log("start");
 					}
 					evt.preventDefault();
+					break;
 			}
 		});
 		loop();
 	}
 
+	// make sure all sections are shorter than the height of the page so that scrolling is not enabled
 	function setDimensions() {
 		var height = window.innerHeight - $("#navbar").height() - 35;
 		$("#left-panel").css("height", height + "px");
@@ -764,42 +690,43 @@ function PictureArray(){
 		var heightinfo = $("#form").height();
 		$("#targets").css("height", (height - 2*heightinfo-40) + "px");
 	}
-	//set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
+
+	// set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
 		console.log(new Date().getTime()/1000);
-		if(image_cache!=null&&image_cache!="null"){
-			//save all state data
+		if (image_cache!=null&&image_cache!="null") {
+			// save all state data
 			image_cache.serializePrep();
-			window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); //image array
+			window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); // image array
 			window.sessionStorage.setItem("curr",curr); // current pic id
-			if(next_array != null && next_array!="null"){
+			if (next_array != null && next_array!="null") {
 				console.log(next_array);
 				next_array.serializePrep();
 
 				window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
 
 			}
-			else{
+			else {
 				window.sessionStorage.setItem("next_array",null);
 			}
 		}
 		if (picview) {
 
-			//window.sessionStorage.setItem("allow",PictureArray.prototype.allow);
-			//window.sessionStorage.setItem("allowForward",PictureArray.prototype.allowForward);
-			//window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
-			//window.sessionStorage.setItem("reverseval",image_cache.reverseval); //protoype reverseval (reverse index)
-			//window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
+			// window.sessionStorage.setItem("allow",PictureArray.prototype.allow);
+			// window.sessionStorage.setItem("allowForward",PictureArray.prototype.allowForward);
+			// window.sessionStorage.setItem("current",image_cache.current); // prototype current (index)
+			// window.sessionStorage.setItem("reverseval",image_cache.reverseval); // protoype reverseval (reverse index)
+			// window.sessionStorage.setItem("viewed",JSON.stringify(image_cache.viewed));
 
 			curr = parseInt(image['pk']);
 			image_data = image["image"];
-			pic_curr_props = image_data;//using the string id to access the data in the map
+			pic_curr_props = image_data; // using the string id to access the data in the map
 			document.focusedImage.src=image_data['fileName'];
 			timeSent = image['timeSent'];
 
 			var lat = pic_curr_props.lat;
 			var latT = lat;
-			if(lat<0){
+			if (lat<0) {
 				latT = -1*lat;
 			}
 			var latdeg = Math.trunc(latT);
@@ -809,7 +736,7 @@ function PictureArray(){
 			var latsec = Math.trunc((((latT-latdeg)*60)-latmin)*60);
 
 			var lonT = lon;
-			if(lon<0){
+			if (lon<0) {
 				lonT = -1*lon;
 			}
 
@@ -821,6 +748,7 @@ function PictureArray(){
 
 			$("#focus-type").text("Picture Data");
 
+			// display associated metadata, like location and plane status when picture was taken
 			$("#focus-data").empty()
 				.append("<tr><td>Latitude</td><td>"+Math.trunc(lat)+"deg "+latmin+"min "+latsec+"sec"+"</td></tr>")
 				.append("<tr><td>Longitude</td><td>"+Math.trunc(lon)+"deg "+lonmin+"min "+lonsec+"sec"+"</td></tr>")
@@ -830,21 +758,22 @@ function PictureArray(){
 				.append("<tr><td>Roll</td><td>"+pic_curr_props.roll+"</td></tr>")
 				.append("<tr><td>Taken</td><td>"+pic_curr_props.timeTaken+"</td></tr>")
 				.append("<tr><td>Received</td><td>"+pic_curr_props.timeReceived+"</td></tr>");
-				//.append("<tr><td><button id='picfullSize' onclick='getFullSize(" + curr+");' class='btn btn-primary'>Full Sized</button></td></tr>");
+				// .append("<tr><td><button id='picfullSize' onclick='getFullSize(" + curr+");' class='btn btn-primary'>Full Sized</button></td></tr>");
 
-				//Add orientation
+				// Add orientation
 			PictureArray.prototype.allow = true;
 		}
-		else {
+		else { // displaying a target in focusedImage
 			$("#back").show();
-			document.focusedImage.src=image.src;
-			curr=parseInt(image.id);
-			$("#selector").css("display","none");
+			document.focusedImage.src = image.src;
+			curr = parseInt(image.id);
+			$("#selector").css("display","none"); // dont' show canvas for cropping
 			$("#focus-type").text("Target Data");
 			showTargetData(image);
 		}
 	}
 
+	// get associated metadata for target, when target is in focus after user clicks on it
 	function showTargetData(image) {
 		pk = parseInt(image.id);
 		$.ajax({
@@ -853,20 +782,15 @@ function PictureArray(){
 			dataType: "json",
 			data: {"pk": pk},
 			success: function(json) {
-
 				var lat = json.latitude;
 				var latdeg = Math.trunc(lat);
 				var latmin = Math.trunc((lat-latdeg)*60);
 				var latsec = Math.trunc((((lat-latdeg)*60)-latmin)*60);
 
-
 				var lon = json.longitude;
 				var londeg = Math.trunc(lon);
 				var lonmin = Math.trunc((lon-londeg)*60);
 				var lonsec = Math.trunc((((lon-londeg)*60)-lonmin)*60);
-
-
-
 
 				$("#focus-data").empty()
 					.append("<tr><td>Shape: </td><td>"+json.shape+"</td></tr>")
@@ -889,18 +813,19 @@ function PictureArray(){
 		})
 	}
 
-	function tsubmit(pk){
+	// submit given target to server
+	function tsubmit(pk) {
 		console.log("submit")
 		$.ajax({
 			url:"{% url 'gcs-sendTarget'%}",
 			type:"POST",
 			data: {"pk":pk},
-			success:function(resp){
+			success:function(resp) {
 				resp= JSON.parse(resp);
 				if (resp.hasOwnProperty('error')==true) {
 					bootbox.alert("Submission Failure: "+resp['error']);
 				}
-				else if(resp.hasOwnProperty('sent')==true){
+				else if (resp.hasOwnProperty('sent')==true) {
 					bootbox.alert("Target already sent");
 				}
 				else {
@@ -911,8 +836,9 @@ function PictureArray(){
 
 	}
 
-
-	//sets the canvas width and height and allows it to listen for cropping
+	// initializes canvas
+	// canvas is overlaid on image so that we can draw the cropping box on it
+	// it also listens to mouse movement, used for cropping
 	function canvasinit() {
 		if (picview) {
 			var p1;
@@ -923,7 +849,7 @@ function PictureArray(){
 			var boxW;
 			var boxH;
 			var zoom = 5;
-			//set canvas to image params
+			// set canvas to image params
 			var canvas = document.getElementById("selector");
 			canvas.width = $("#focused").width();
 			canvas.height = $("#focused").height();
@@ -937,7 +863,7 @@ function PictureArray(){
 			function setBox() {
 				boxW = p1[0]-p2[0];
 				boxH = p1[1]-p2[1];
-				//finding the top left corner
+				// finding the top left corner
 				if (boxW<0) {
 					corner[0] = p1[0];
 					boxW = -boxW;
@@ -957,35 +883,37 @@ function PictureArray(){
 				ctx.fillRect(corner[0],corner[1],boxW,boxH);
 			}
 			function finalizeBox() {
+				// get values of CSS transform on focused image
 				var transform = $("#focused").css("transform").replace("matrix(","").replace(")","").split(",");
 				var scale = parseInt(transform[0]);
 				var transx = parseInt(transform[4]);
 				var transy = parseInt(transform[5]);
 				var factor = parseInt((scale-1)/2);
 				var width = $("#focused").width();
-				var height = $("#focused").height()
+				var height = $("#focused").height();
+				// magically figure out coordinates of crop in original picture based on selection in zoomed in / scaled image
 				crop.x = parseInt((width*factor + corner[0]-transx)/scale);
 				crop.y = parseInt((height*factor + corner[1]-transy)/scale);
 				crop.width = parseInt(boxW/scale);
 				crop.height = parseInt(boxH/scale);
 				crop.scaleWidth = width;
-				//console.log("crop "+crop.x+" "+crop.y+" "+crop.width+" "+crop.height+" "+crop.scaleWidth+" "+height)
 			}
 			if (firstinit) {
+				// add all the event listeners to the canvas
 				firstinit = false;
+				// double click to stop panning over the image
 				canvas.addEventListener("dblclick", function toggle(event) {
 					panning = !panning;
 					cropinit = false;
-					//console.log("dblclick "+panning+" "+cropinit);
 				});
+				// mousedown starts crop (if not panning)
 				canvas.addEventListener("mousedown", function setP1(event) {
 					if (!panning) {
 						p1 = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						cropinit = true;
 					}
-					//console.log("mousedown "+panning+" "+cropinit);
 				});
-				//so that if the user releases the mouse after it leaves the canvas, the crop completes
+				// mouseleave completes the crop in case the user releases the mouse after it leaves the canvas
 				canvas.addEventListener("mouseleave", function() {
 					if (panning) {
 						$("#focused").css("transform", "scale(1,1)");
@@ -994,11 +922,12 @@ function PictureArray(){
 						finalizeBox();
 						cropinit = false;
 					}
-					//console.log("mouseleave "+panning+" "+cropinit);
 				});
+				// mousemove either continues panning over the image (displaying a different area)
+				// or keep resizing the crop box if a crop has been started / the mouse is down
 				canvas.addEventListener("mousemove", function drawBox(event) {
 					if (panning) {
-						var tx = this.width/2 - (event.pageX - canvas.offsetLeft); //canvas has the same width and height as the image
+						var tx = this.width/2 - (event.pageX - canvas.offsetLeft); // canvas has the same width and height as the image
 						if (tx < -1*(zoom-1)*this.width/(zoom*2)) tx = -1*(zoom-1)*this.width/(zoom*2);
 						if (tx > (zoom-1)*this.width/(zoom*2)) tx = (zoom-1)*this.width/(zoom*2);
 						var ty = this.height/2 - (event.pageY - canvas.offsetTop);
@@ -1010,8 +939,8 @@ function PictureArray(){
 						p2 = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
 						setBox();
 					}
-					//console.log("mousemove "+panning+" "+cropinit);
 				});
+				// mouseup completes the crop if one has been started
 				canvas.addEventListener("mouseup", function finishBox(event) {
 					if (cropinit) {
 						p2=[event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
@@ -1019,86 +948,135 @@ function PictureArray(){
 						finalizeBox();
 						cropinit = false;
 					}
-					//console.log("mouseup "+panning+" "+cropinit);
 				});
 			}
 			else {
+				// initialize canvas so that the image is shown at normal scale and panning is on
 				$("#focused").css("transform", "scale(1,1)");
 				panning = true;
 				cropinit = false;
 			}
 		}
 	}
-	//clear storage on logout to avoid attempting to grab
-	//a non-existant image on login
-	$(function(){
-		$("#logoutfm").submit(function(){
+
+	// clear storage on logout to avoid attempting to grab
+	// a non-existant image on login
+	$(function() {
+		$("#logoutfm").submit(function() {
 			window.sessionStorage.clear();
 		});
 	});
 
-	function backToPictures(){
-		if(image_cache){
+	function backToPictures() {
+		if (image_cache) {
 			picview = true;
 			console.log(image_cache);
 			image_cache.curr();
 		}
-		else{
+		else {
 			picview=true;
 			document.focusedImage.src ="";
 		}
 		$("#back").hide();
 	}
 
-function dump_targets() {
-	var selected = $("img.selected[id]").map(function() {return this.id;}).get();
-	if (selected==null || selected.length==0) {
-		return
+	// dump target data to popup window with text
+	function dump_targets() {
+		var selected = $("img.selected[id]").map(function() {return this.id;}).get();
+		if (selected==null || selected.length==0) {
+			return
+		}
+		$.ajax({
+			url:"{%url 'gcs-dumpTargetData' %}",
+			type:"POST",
+			data:{'ids':JSON.stringify(selected)},
+			success: function(response) {
+				window.open('data:text/plain;charset=utf-8,'+encodeURIComponent(response.data))
+			}
+		});
+		// deselecting targets
+		$("img.selected").removeClass("selected");
 	}
-	$.ajax({
-		url:"{%url 'gcs-dumpTargetData' %}",
-		type:"POST",
-		data:{'ids':JSON.stringify(selected)},
-		success: function(response) {
-			window.open('data:text/plain;charset=utf-8,'+encodeURIComponent(response.data))
-		}
-	});
-	//deselecting targets
-	$("img.selected").removeClass("selected");
-}
 
-function interop_login() {
-	window.open('/interoplogin')
-}
+	function interop_login() {
+		window.open('/interoplogin')
+	}
 
-//enable and disable picture looping fct
-$(function(){
+	// used to set the camera gain
+	function set_gain() {
+		$.ajax({
+			url: "{%url 'gcs-cameraGain' %}",
+			type: "POST",
+			dataType: "JSON",
+			data: {"gain":$("#gain").val()},
+			success: function(json) {
+				console.log("gain set with: "+$("#gain").val() );
+				if (json.hasOwnProperty("error")) {
+					bootbox.alert(json.error);
+					return;
+				}
+				return;
+			}
+		});
+	}
+
+	// used to change the camera trigger parameters
+	function trigger() {
+		$.ajax({
+			url:"{%url 'gcs-cameraTrigger' %}",
+			type:"POST",
+			dataType:"JSON",
+			data:{"loop":$("#loop_interval").val(),"delay":$("#delay_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
+			success: function(json) {
+				if (json.hasOwnProperty("failure")) {
+					bootbox.alert("Invalid Time Interval")
+					return;
+				}
+				if (json.hasOwnProperty("nothing")) {
+					return;
+				}
+				// var time_int = document.getElementById("time_interval");
+				// time_int.value=0;
+				var trigger_on = document.getElementById("trigger_on");
+				$("#trigger_on").val(Math.abs(trigger_on.value-1));
+				if (trigger_on.value==0) {
+					$("#trigger_on").html("Stop Triggering");
+				}
+				else {
+					$("#trigger_on").html("Start Triggering");
+				}
+			}
+		});
+	}
+
+	// enable and disable picture looping fct
+	// also QR code display stuff, not needed anymore
 	/*
-	// looping is now done by default and toggled using the space bar
-	$("#loopbtn").on("click",function loophandler(){
-		//if not enabled
-		if($(this).val()==1){
-			//enable
-			loop();
-			$(this).html("stop loop");
-			this.value=0;
-		}
-		//if enabled
-		else{
-			//disable
-			stoploop();
-			$(this).html("Loop Pictures");
-		  this.value=1;
-		}
-	});
-	*/
+	$(function() {
+		// looping is now done by default and toggled using the space bar
+		$("#loopbtn").on("click",function loophandler() {
+			// if not enabled
+			if ($(this).val()==1) {
+				// enable
+				loop();
+				$(this).html("stop loop");
+				this.value=0;
+			}
+			// if enabled
+			else {
+				// disable
+				stoploop();
+				$(this).html("Loop Pictures");
+			  this.value=1;
+			}
+		});
 
-	$("#id_description").css("display","none");
-	$("label[for='id_description']").css("display","none");
-	//reformat target form for qr code, qr code doesn't need shape,color ...
-	$("#id_ptype").on("change",function(){
-
-			if($(this).find(":selected").text() != "QR Code"){
+		// we shouldn't need this anymore because there is no QR code...
+		$("#id_description").css("display","none");
+		$("label[for='id_description']").css("display","none");
+		// reformat target form for qr code, qr code doesn't need shape,color ...
+		$("#id_ptype").on("change", function() {
+			if ($(this).find(":selected").text() != "QR Code") {
 				console.log("not qrc");
 				$("#bkcolor").css("display","");
 				$("#ltcolor").css("display","");
@@ -1110,12 +1088,8 @@ $(function(){
 				$("label[for='id_shape']").css("display","");
 				$("#id_description").css("display","none");
 				$("label[for='id_description']").css("display","none");
-
-
-
-
 			}
-			else if($(this).find(":selected").text()=="QR Code"){
+			else if ($(this).find(":selected").text()=="QR Code") {
 				$("#bkcolor").css("display","none");
 				$("#ltcolor").css("display","none");
 				$("#id_alphanumeric").css("display","none");
@@ -1126,58 +1100,35 @@ $(function(){
 				$("label[for='id_shape']").css("display","none");
 				$("#id_description").css("display","");
 				$("label[for='id_description']").css("display","");
-
-
-
-
-
-
 			}
-
-
-
+		});
 	});
-
-});
-
+	*/
 
 </script>
 </head>
 
 <body>
-
 	<nav id="navbar">
 		<div class="title">RU Autonomous</div>
-
-			<div class="form">
-
-					<form >
-							<input id="loop_interval" type="text" value="0"/>
-
-							<input id="delay_interval" type="text", value="0"/>
-
-								<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
-								<input id="gain" type="text", value="0"/>
-								
-								<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
-
-							<input id="loop_interval"  type="number" value="0"/>
-
-							<!-- <button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button> -->
-
-							<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
-
-							<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
-
-					</form>
-					<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-						{% csrf_token %}
-						<button type="submit" class="btn btn-primary">Logout</button>
-					</form>
-			</div>
-			<div id="connectinfo"></div>	
+		<div class="form">
+			<form >
+				<input id="loop_interval" type="text" value="0"/>
+				<input id="delay_interval" type="text", value="0"/>
+				<button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="1">Start Triggering</button>
+				<input id="gain" type="text", value="0"/>
+				<button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
+				<input id="loop_interval"  type="number" value="0"/>
+				<!-- <button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button> -->
+				<button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
+				<button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
+			</form>
+			<form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+				{% csrf_token %}
+				<button type="submit" class="btn btn-primary">Logout</button>
+			</form>
 		</div>
-
+		<div id="connectinfo"></div>	
 	</nav>
 
 	<div id="left-panel">
@@ -1187,16 +1138,13 @@ $(function(){
 				<table>
 					{{form.as_table}}
 					<tr id ="bkcolor">
-
-							<th><label for="palette">Background Color:</label></th>
-
+						<th><label for="palette">Background Color:</label></th>
 						<td><input name="background_color" value="black" type="text" id="palette"/></td>
 					</tr>
 					<tr id="ltcolor">
 						<th><label for="lpalette">Letter Color:</label></th>
 						<td><input name="alphanumeric_color" type="text" value="black" id="lpalette"/></td>
 					</tr>
-
 				</table>
 				<button type="button" class="btn btn-primary" id="submit"/>Submit</button>
 			</form>
@@ -1210,28 +1158,19 @@ $(function(){
 		</div>
 	</div>
 
-
 	<div id="picture">
 		<div id="container">
 			<canvas id="selector" style="position: absolute; z-index: 1; cursor: crosshair;"></canvas>
 			<img src="" id="focused" name="focusedImage" alt="" style="position: relative; z-index: 0;">
  		</div>
 	</div>
-
-
-
-
-
-
-
 </body>
-
-
 </html>
 
 <script>
-$(document).ready(function(){
-	//Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
+// Code for color choosing palette, at the bottom so it is loaded last
+$(document).ready(function() {
+	// Colors: White, Black, Gray, Red, Blue, Green, Yellow, Purple, Brown, or Orange
 	$("#palette").spectrum({
 		preferredFormat: "name",
 		showPaletteOnly: true,
@@ -1243,7 +1182,8 @@ $(document).ready(function(){
 		]
 	});
 });
-$(document).ready(function(){
+
+$(document).ready(function() {
 	$("#lpalette").spectrum({
 		preferredFormat: "name",
 		showPaletteOnly: true,
@@ -1255,50 +1195,4 @@ $(document).ready(function(){
 		]
 	});
 });
-
-
-function set_gain() {
-	$.ajax({
-		url: "{%url 'gcs-cameraGain' %}",
-		type: "POST",
-		dataType: "JSON",
-		data: {"gain":$("#gain").val()},
-		success: function(json){
-			console.log("gain set with: "+$("#gain").val() );
-			if (json.hasOwnProperty("error")){
-				bootbox.alert(json.error);
-				return;
-			}
-			return;
-		}
-		})
-}
-
-function trigger() {
-	$.ajax({
-		url:"{%url 'gcs-cameraTrigger' %}",
-		type:"POST",
-		dataType:"JSON",
-		data:{"loop":$("#loop_interval").val(),"delay":$("#delay_interval").val(),"trigger":$("#trigger_on").val(),"smart_trigger":$("#smart_trigger").val()},
-		success: function(json) {
-			if (json.hasOwnProperty("failure")) {
-				bootbox.alert("Invalid Time Interval")
-				return;
-			}
-			if (json.hasOwnProperty("nothing")) {
-				return;
-			}
-			//var time_int = document.getElementById("time_interval");
-			//time_int.value=0;
-			var trigger_on = document.getElementById("trigger_on");
-			$("#trigger_on").val(Math.abs(trigger_on.value-1));
-			if (trigger_on.value==0) {
-				$("#trigger_on").html("Stop Triggering");
-			}
-			else {
-				$("#trigger_on").html("Start Triggering");
-			}
-		}
-	})
-}
 </script>
