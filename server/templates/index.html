@@ -1164,27 +1164,27 @@
 	<nav id="navbar">
 		<div class="title">RU Autonomous</div>
     <div class="form">
-        <form >
-            <input id="fps" type="text" style="width: 60px;" value="0"/>
-            <input id="gain" type="text" style="width: 60px;" value="0"/>
-            <input id="ae_target" type="text" style="width: 60px;" value="0"/>
-            <select id="type">
-              <option value="auto_exposure_continuous">Continuous</option>
-              <option value="auto_exposure_init">Once</option>
-              <option value="none">Off</option>
-            <select>
-            <button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="true">Start Triggering</button>
-            <input id="new_gain" type="text", value="0"/>
-            <button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
-            <input id="loop_interval"  type="number" value="1"/>
-            <!-- <button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button> -->
-            <button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
-            <button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
-        </form>
-        <form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-primary">Logout</button>
-        </form>
+      <form >
+        <input id="fps" type="text" style="width: 60px;" value="0"/>
+        <input id="gain" type="text" style="width: 60px;" value="0"/>
+        <input id="ae_target" type="text" style="width: 60px;" value="0"/>
+        <select id="type">
+          <option value="none">Static</option>
+          <option value="auto_exposure_continuous">Continuous</option>
+          <option value="auto_exposure_init">Once</option>
+        <select>
+        <button onclick="trigger();" class ="btn btn-primary" name="trigger_on" type="button" id="trigger_on" value="true">Start Triggering</button>
+        <input id="new_gain" type="text", value="0"/>
+        <button onclick="set_gain();" class ="btn btn-primary" name="gain_change" type="button" id="gain_change">Change Gain</button>
+        <input id="loop_interval"  type="number" value="1"/>
+        <!-- <button id="loopbtn"  type="button" value=1 class="btn btn-primary">Loop Pictures</button> -->
+        <button id ="dump" onclick="dump_targets();return false;" class="btn btn-primary">Dump Target Data</button>
+        <button onclick="backToPictures();return false;" style="display:none" id="back" class="btn btn-primary">Back</button>
+      </form>
+      <form  method="post" id="logoutfm" action="{% url 'gcs-logout'%}?next={% url 'gcs-login'%}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Logout</button>
+      </form>
     </div>
     <div id="connectinfo"></div>	
 	</nav>
