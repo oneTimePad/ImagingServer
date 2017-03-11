@@ -147,6 +147,10 @@ class DroneViewset(viewsets.ModelViewSet):
 		if cache.has_key('new_gain'):
 			response.update({'new_gain':float(cache.get('new_gain'))})
 			cache.delete('new_gain')
+		if cache.has_key('mode'):
+			response.update({'mode': cache.get('mode')})
+		else:
+			response.update({'mode': {"type":"off"}})
 
 		return Response(response)
 

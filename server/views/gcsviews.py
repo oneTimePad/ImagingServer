@@ -194,6 +194,8 @@ class GCSViewset(viewsets.ModelViewSet):
             #settime
 			cache.set('fps',float(request.data['fps']))
 			cache.set('gain',float(request.data['gain']))
+			mode = {'type':request.data['type'],'ae_target':request.data['ae_target']}
+			cache.set('mode',mode)
         #if attempting to stop triggering
 		elif triggerStatus == "false":
             # set cache
