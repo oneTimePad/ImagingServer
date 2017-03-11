@@ -45,12 +45,6 @@ import pdb
 
 
 
-#constants holding the path to dirs for pictures and targets on the server
-IMAGE_STORAGE = "/pictures"
-TARGET_STORAGE = "/targets"
-
-
-
 #important time constants (chosen from testing)
 PICTURE_SEND_DELAY = 7
 DRONE_DISCONNECT_TIMEOUT = 10

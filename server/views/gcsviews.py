@@ -194,6 +194,8 @@ class GCSViewset(viewsets.ModelViewSet):
             #settime
 			cache.set('fps',float(request.data['fps']))
 			cache.set('gain',float(request.data['gain']))
+			mode = {'type':request.data['type'],'ae_target':request.data['ae_target']}
+			cache.set('mode',mode)
         #if attempting to stop triggering
 		elif triggerStatus == "false":
             # set cache
@@ -426,6 +428,100 @@ class GCSViewset(viewsets.ModelViewSet):
 				continue
 
 		return Response({'data':data})
+
+	@list_route(methods=['post'])
+	def deleteTargetImageThumbnail(self, request, pk=None):
+		try:
+			if not cache.has_key("InteropClient"):
+				return Response(json.dumps({'error':"Not logged into interop!"}))
+			#fetch the client
+			isession = cache.get("InteropClient")
+			
+			targetID = int(request.data['pk'])
+
+			if not target.sent:
+				return Response(json.dumps({'sent', 'Target was not sent \nCannotbe deleted'}))
+			try:
+				data = isession.delete_target(targetID)
+
+				#test for interopError
+				if isinstance(data,InteropError):
+					code, reason, text = data.errorData()
+					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
+					return Response(json.dumps({'error':errorStr}))
+			
+			except Exception as e:
+				return Response({'error':str(e)})
+
+		except Target.DoesNotExist:
+			return Response(json.dumps({'error':'Image does not exist'}))
+
+	@list_route(methods=['post'])
+	def deleteTargetId(self, request, pk=None):
+		try:
+			if not cache.has_key("InteropClient"):
+				return Response(json.dumps({'error':"Not logged into interop!"}))
+			#fetch the client
+			isession = cache.get("InteropClient")
+			
+			targetID = int(request.data['pk'])
+
+			if not target.sent:
+				return Response(json.dumps({'sent', 'Target was not sent \nCannotbe deleted'}))
+			try:
+				data = isession.delete_target(targetID)
+
+				#test for interopError
+				if isinstance(data,InteropError):
+					code, reason, text = data.errorData()
+					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
+					return Response(json.dumps({'error':errorStr}))
+			
+			except Exception as e:
+				return Response({'error':str(e)})
+
+		except Target.DoesNotExist:
+			return Response(json.dumps({'error':'Image does not exist'}))
+
+	@list_route(methods=['post'])
+	def updateTargetId(self, request, pk=None):
+		try:
+			if not cache.has_key("InteropClient"):
+				return Response(json.dumps({'error':"Not logged into interop!"}))
+			#fetch the client
+			isession = cache.get("InteropClient")
+			
+			targetA = Target.objects.get(pk=int(request.data['pk']))
+			targetID = int(request.data['pk'])
+
+			if not target.sent:
+				return Response(json.dumps({'sent','Target does not exist\n Characteristics can not be updated'}))
+
+			pretarget = TargetSubmissionSerializer(targetA) #serializes target
+
+			try:
+				#create dictionary to use to create AUVSITarget
+				dataDict = dict(pretarget.data)
+
+				target = AUVSITarget(**dataDict)
+				dataDict['type'] = dataDict.pop('ptype')
+				for key in dataDict:
+					if dataDict[key]=='':
+						dataDict[key] =None
+
+				#call to put_target() in interopmethods. Updates image characteristics
+				data = isession.put_target(targetID, target)
+
+				#test for interopError
+				if isinstance(data, InteropError):
+					code, reason, text = data.errorData()
+					errorStr = "Error: HTTP Code %d, reason: %s" % (code, reason)
+					return Response(json.dumps({'error':errorStr}))
+			except Exception as e:
+				return Response({'error':str(e)})
+
+		except Target.DoesNotExist:
+			return Response(json.dumps({'error':'Image does not exist'}))
 
 	@list_route(methods=['post'])
 	def getHeartbeat(self, request, pk=None):
