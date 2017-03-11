@@ -6,19 +6,22 @@ from django.conf.urls.static import static
 from .views import *
 from rest_framework.routers import SimpleRouter
 from rest_framework_jwt.views import obtain_jwt_token,refresh_jwt_token,verify_jwt_token
-
+from django.views.decorators.csrf import csrf_exempt
 urlpatterns =[
+	#main gcs viewer endpoints
     url(r'^$',login_required(GCSViewer.as_view()),name='approot'),
     url(r'^gcs/viewer$',login_required(GCSViewer.as_view()),name='index'),
 ]
 
 droneauthentication =[
+	#drone endpoints
     url(r'^drone/login$',obtain_jwt_token),
     url(r'^drone/refresh$',refresh_jwt_token),
     url(r'^drone/verify$',verify_jwt_token)
 ]
 
 interopauthentication = [
+	#interop login endpoints
     url(r'^interop/login$',obtain_jwt_token),
     url(r'^interop/refresh$',refresh_jwt_token),
     url(r'^interop/verify$',verify_jwt_token),
@@ -27,14 +30,13 @@ interopauthentication = [
 
 
 gcsauthentication = [
+	#gcs login endpoint
     url(r'^gcs/login$',GCSLogin.as_view(),name="gcs-login"),
 ]
-
+#build the endpoints list
 urlpatterns+=droneauthentication
 urlpatterns+=gcsauthentication
-
 urlpatterns+=interopauthentication
-
 router = SimpleRouter(trailing_slash=False)
 router.register(r'drone',DroneViewset,'drone')
 urlpatterns+=router.urls
@@ -44,6 +46,7 @@ urlpatterns+=router.urls
 router = SimpleRouter(trailing_slash=False)
 router.register(r'interop',InteroperabilityViewset,'interop')
 urlpatterns+=router.urls
+#add endpoints for statis content
 urlpatterns+= static(settings.STATIC_URL,document_root=settings.STATIC_ROOT)
 urlpatterns+= static(settings.PICTURES_URL,document_root=settings.PICTURES_ROOT)
 urlpatterns+= static(settings.TARGETS_URL,document_root=settings.TARGETS_ROOT)

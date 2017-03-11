@@ -1,7 +1,9 @@
 from rest_framework.permissions import BasePermission
 import pdb
 
-
+"""
+	defines what each user of the system can and cannot do
+"""
 
 class DroneAuthentication(BasePermission):
 

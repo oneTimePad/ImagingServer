@@ -1,11 +1,3 @@
-from .client import Client
-from .client import AsyncClient
+from .interop import InteropProxy
 from .exceptions import InteropError
-from .types import FlyZone
-from .types import GpsPosition
-from .types import Mission
-from .types import MovingObstacle
-from .types import StationaryObstacle
-from .types import Target
-from .types import Telemetry
-from .types import Waypoint
+from .types import Telemetry, AUVSITarget
