@@ -411,57 +411,18 @@
 				said_no_pictures = false;
 				PictureArray.prototype.allowForward=true;
 				PictureArray.prototype.allow = true;
+			},
+     			error: function(XMLHttpRequest,textStatus,erroThrown){
+				console.log("Status: " +textStatus +" Error: "+erroThrown);
+				/* TODO: POSSIBLE BUG 504 may be thrown on initial request for image
+				       			due to waiting too long */
 			}
 		});
 	}
 
-	*/
 	/*
-	retrieve next NUM_FETCH pics
+	get a pic in the past if cache doesn't have it
 	*/
-	function forwardPicture(){
-				$.ajax({
-					url:"{% url 'gcs-forwardPicture'%}",
-					type: "POST",
-					data: {'numPics': NUM_FETCH},
-					success: function(response){
-						console.log("forward_response");
-						PictureArray.prototype.allow = false;
-						cache = new PictureArray(JSON.parse(JSON.stringify(response)));
-						/*
-						for(var i=0;i<response.length;i++){
-									cache.push(response[i]);
-						}
-						*/
-						if(image_cache==null || image_cache.getCurrent()+1==image_cache.length){
-							image_cache = cache;
-							image_cache.viewedIt();
-							setFocusedImage(image_cache[0]);
-						}
-						else{
-							 	console.log("cached");
-								next_array = cache;
-
-								next_array.serializePrep();
-
-								window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
-
-						}
-						said_no_pictures = false;
-						PictureArray.prototype.allowForward=true;
-						PictureArray.prototype.allow = true;
-
-					},
-				       error: function(XMLHttpRequest,textStatus,erroThrown){
-						console.log("Status: " +textStatus +" Error: "+erroThrown);
-				       		/* TODO: POSSIBLE BUG 504 may be thrown on initial request for image
-				       			due to waiting too long */
-				       }
-			});
-		}
-		/*
-		get a pic in the past if cache doesn't have it
-		*/
 	function reversePicture(index){
 		$.ajax({
 			url:"{% url 'gcs-reversePicture'%}",
@@ -496,17 +457,17 @@
 		if (image_cache==null) {
 			console.log("image cache is null");
 		}
-    else {
-      forwardPicture();
+    		else {
+      			forwardPicture();
   		// do not change this to use function pointers instead of the anonymous function
 	  	// that messes with the value of 'this' inside the function call because javascript
-      looping = setInterval(function(){
-          if (image_cache != null) {
-            image_cache.next();
-          }
-      }, $("#loop_interval").val()*1000);
-      console.log("loop");
-    }
+      		looping = setInterval(function(){
+          			if (image_cache != null) {
+            				image_cache.next();
+          			}
+      			}, $("#loop_interval").val()*1000);
+      			console.log("loop");
+    		}
 	}
 
 	function stoploop() {
@@ -600,6 +561,16 @@
 
 	// set up page when the window loads
 	window.onload = function() {
+		//set the handler for the select element for choosing autoexposure mode (hide auto target when not needed
+		$("#ae_target").hide();
+		$("#type").change(function(){
+			if ($(this).val() == "auto_exposure_continuous" || $(this).val() == "auto_exposure_init"){
+				$("#ae_target").show();
+	  		}
+ 			else{
+				$("#ae_target").hide();
+			}
+		});
 		// making the panels the height of the window (excluding the navbar)
 		// if the window height changes, the page has to be reloaded
 		setDimensions(); // set heights of various elements on page
