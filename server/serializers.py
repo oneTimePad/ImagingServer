@@ -1,6 +1,6 @@
 #django-rest
 from rest_framework import serializers
-
+from server.interop import AUVSITarget
 #django
 from .models import *
 
@@ -37,14 +37,26 @@ class TargetSerializer(serializers.ModelSerializer):
 	def deserialize(self):
 		return Target.objects.create(**self.validated_data)
 
-class TargetSubmissionSerializer(serializers.ModelSerializer):
+class __TargetSubmissionSerializer(serializers.ModelSerializer):
 	"""
-		formats the Target object for proper submission to the Interop Server
+		extracts targets characteristics just for interop
 	"""
 	class Meta:
 		model = Target
 		fields = ('ptype','latitude','longitude','orientation','shape','background_color','alphanumeric','alphanumeric_color','description')
 
+class TargetSubmissionSerializer(object):
+	"""
+		formats the Target object for proper submission to the Interop Server
+	"""
+	def __init__(self,args):
+		self.ser_target = __TargetSubmissionSerializer(**kwargs)
+		dataDict = dict(self.ser_target)
+		#type is a reservered word by Python,can't use it in model declaration
+		dataDict['type'] = dataDict.pop('ptype')
+		self.target = AUVSITarget(**dataDict)
+	def get_target(self):
+		return self.target
 
 class ServerCredsSerializer(serializers.Serializer):
 		"""
