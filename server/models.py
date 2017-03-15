@@ -108,7 +108,6 @@ class Target(models.Model):
 
 	TARGET_TYPES = (
 		('standard','Standard'),
-		('qrc','QR Code'),
 		('off_axis','Off-Axis'),
 		('emergent','Emergent')
 	)
