@@ -706,7 +706,7 @@
 					break;
 			}
 		});
-		loop();
+		//loop();
 	}
 
 	// make sure all sections are shorter than the height of the page so that scrolling is not enabled
@@ -1064,6 +1064,9 @@
         $("#trigger_on").val( ((trigger_on.value == "true") ? trigger_on.value : "false"));
         if (trigger_on.value=="false") {
           $("#trigger_on").html("Stop Triggering");
+	  if(looping == null){
+	  	loop();
+	  }
         }
         else {
           $("#trigger_on").html("Start Triggering");

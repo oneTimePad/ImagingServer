@@ -219,7 +219,7 @@ class InteropProxy(object):
 				Future object which contains the return value or error from the
 				underlying Client.
 			"""
-			r = self.session.post(self.server+'/api/targets/%d' % target_id, data=json.dumps(target.serialize()))
+			r = self.session.post(self.server+'/api/targets/%d' % target_id, data=json.dumps(target))
 			if not r.ok:
 				return InteropError(r)
 			return r.json()
