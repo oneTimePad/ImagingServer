@@ -245,7 +245,7 @@ class InteropProxy(object):
 				Future object which contains the return value or error from the
 				underlying Client.
 			"""
-			r = self.session.delete(self.server+'/api/targets/%d/image' % target_id)i			
+			r = self.session.delete(self.server+'/api/targets/%d/image' % target_id)			
 			if not r.ok:
 				return InteropError(r)
 			return r.json()

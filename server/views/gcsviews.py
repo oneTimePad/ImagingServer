@@ -382,7 +382,7 @@ class GCSViewset(viewsets.ModelViewSet):
 
 
 				except Exception as e:
-					return Response{'error':str(e)})
+					return Response({'error':str(e)})
 
 			os.remove(target.picture.path)
 			return HttpResponse('Success')
