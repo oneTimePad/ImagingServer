@@ -848,7 +848,6 @@
 			data: {"pk":pk},
 			success:function(resp) {
 				resp= JSON.parse(resp);
-				console.log(resp);
 				if (resp.hasOwnProperty('error')==true) {
 					bootbox.alert("Submission Failure: "+resp['error']);
 				}

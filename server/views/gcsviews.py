@@ -35,7 +35,7 @@ import pika
 import sys
 from PIL import Image
 
-
+from server.interop import InteropProxy, InteropError
 
 import requests
 
@@ -362,39 +362,39 @@ class GCSViewset(viewsets.ModelViewSet):
 		"""
 		try:
 			#this is used to make requests to the interop server
-			#isession = InteropProxy.deserialize(cache.get("InteropProxy"))
-			#if not cache.has_key("InteropClient"):
-			#	return Response(json.dumps({'error':"Not logged into interop!"}))
+			isession = InteropProxy.deserialize(cache.get("InteropProxy"))
+			if not cache.has_key("InteropClient"):
+				return Response(json.dumps({'error':"Not logged into interop!"}))
 			#fetch the target and verify it is not already sent
-			targat_model = Target.objects.get(pk=int(request.data['pk']))
+			target_model = Target.objects.get(pk=int(request.data['pk']))
 			if target_model.sent:
 				return Response(json.dumps({'sent','Target was sent\n Would you like to send an edit?'}))
 
 			try:
 				#serialize target
-				target_serialized = TargetSubmissionSerializer(targat_model).get_target()
+				target_serialized = TargetInteropSerializer(target_model).get_target()
 				#post the target
-				#data = isession.post_target(target_serialized)
+				data = isession.post_target(target_serialized)
 				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
-				#if isinstance(data,InteropError):
-				#	code, reason,text = data.errorData()
-				#	errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-				#	return Response(json.dumps({'error':errorStr}))
+				if isinstance(data,InteropError):
+					code, reason,text = data.errorData()
+					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
+					return Response(json.dumps({'error':errorStr}))
 				#retrieve image binary for sent image
-				#pid = data['id']
+				pid = data['id']
 				f = open(target_model.picture.path, 'rb')
 				picData = f.read()
 
-				#resp = isession.post_target_image(target_id=pid, image_binary=picData)
+				resp = isession.post_target_image(target_id=pid, image_binary=picData)
 				#test for interop error and respond accordingly
-				#if isinstance(resp,InteropError):
-				#	code, reason,text = resp.errorData()
-				#	errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
-				#	return Response(json.dumps({'error':errorStr}))
+				if isinstance(resp,InteropError):
+					code, reason,text = resp.errorData()
+					errorStr = "Error: HTTP Code %d, reason: %s" % code,reason
+					return Response(json.dumps({'error':errorStr}))
 				#mark target as sent
 				target_model.wasSent()
-				return Response(json.dumps({'target': dict(target_serialized)}))
-				#return Response(json.dumps({'response':"Success"}))
+
+				return Response(json.dumps({'response':"Success"}))
 			except Exception as e:
 				return Response({'error':str(e)})
 		except Target.DoesNotExist:

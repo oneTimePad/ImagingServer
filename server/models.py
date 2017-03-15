@@ -118,8 +118,8 @@ class Target(models.Model):
 	ptype = models.CharField(max_length=20,choices=TARGET_TYPES)
 	sent = models.BooleanField(default=False)
 	#latitude and longitude for top left corner of target cropped image
-	latitude = models.DecimalField(max_digits=9, decimal_places=6, default=None)
-	longitude = models.DecimalField(max_digits=9, decimal_places=6, default=None)
+	latitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
+	longitude = models.DecimalField(max_digits=9, decimal_places=6,default=0)
 	orientation =SanitizedCharField(max_length=2,null=True,blank=True,choices=ORIENTATION_CHOICES,default =None)
 	shape = SanitizedCharField(max_length=14,null=True,blank=True,choices=SHAPE_CHOICES,default = None)
 	background_color = SanitizedCharField(max_length=20,null=True,blank=True, default = None)

@@ -37,7 +37,7 @@ class TargetSerializer(serializers.ModelSerializer):
 	def deserialize(self):
 		return Target.objects.create(**self.validated_data)
 
-class __TargetSubmissionSerializer(serializers.ModelSerializer):
+class TargetSubmissionSerializer(serializers.ModelSerializer):
 	"""
 		extracts targets characteristics just for interop
 	"""
@@ -45,12 +45,12 @@ class __TargetSubmissionSerializer(serializers.ModelSerializer):
 		model = Target
 		fields = ('ptype','latitude','longitude','orientation','shape','background_color','alphanumeric','alphanumeric_color','description')
 
-class TargetSubmissionSerializer(object):
+class TargetInteropSerializer(object):
 	"""
 		formats the Target object for proper submission to the Interop Server
 	"""
-	def __init__(self,args):
-		self.ser_target = __TargetSubmissionSerializer(**kwargs)
+	def __init__(self,target):
+		self.ser_target = TargetSubmissionSerializer(target).data
 		dataDict = dict(self.ser_target)
 		#type is a reservered word by Python,can't use it in model declaration
 		dataDict['type'] = dataDict.pop('ptype')
