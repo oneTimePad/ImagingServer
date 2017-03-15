@@ -51,6 +51,7 @@ class InteropProxy(object):
 		self.tout = tout
 		self.username = username
 		self.password = password
+		self.server = server
 	def serialize(self):
 		"""
 		converts the object the json format to be stored in django's cache
@@ -81,7 +82,7 @@ class InteropProxy(object):
 		global INTERNAL_SERVER_ERROR
 		#attempt to contact the login api for the interop server
 		try:
-			self.session.post(server+'/api/login',data=
+			self.session.post(self.server+'/api/login',data=
 				{'username':username,
 				'password':password},timeout=self.tout)
 			return None
@@ -92,13 +93,13 @@ class InteropProxy(object):
 			if code == BAD_REQUEST:
 				return "The current user/pass combo (%s, %s) is wrong. Please try again." % username,password
 			elif code == NOT_FOUND:
-				return "A server at %s was not found. Please reenter the server IP address." % (server)
+				return "A server at %s was not found. Please reenter the server IP address." % (self.server)
 			elif code == INTERNAL_SERVER_ERROR:
 				return "Internal issues with their code. Stopping."
 
 		#deals with timeout error
 		except requests.ConnectionError:
-			return "A server at %s was not found. Please reenter the server IP address." % (server)
+			return "A server at %s was not found. Please reenter the server IP address." % (self.server)
 
 		except requests.Timeout:
 			return "The server timed out."
@@ -218,7 +219,7 @@ class InteropProxy(object):
 				Future object which contains the return value or error from the
 				underlying Client.
 			"""
-			r = self.session.post(server+'/api/targets/%d' % target_id, data=json.dumps(target.serialize()))
+			r = self.session.post(self.server+'/api/targets/%d' % target_id, data=json.dumps(target))
 			if not r.ok:
 				return InteropError(r)
 			return r.json()
@@ -231,10 +232,24 @@ class InteropProxy(object):
 				Future object which contains the return value or error from the
 				underlying Client.
 			"""
-			r = self.session.delete(server+'/api/targets/%d' % target_id, data=json.dumps(target.serialize()))
+			r = self.session.delete(self.server+'/api/targets/%d' % target_id, data=json.dumps(target.serialize()))
 			if not r.ok:
 				return InteropError(r)
 			return r.json()
+	
+	def delete_target_image(self, target_id):
+			"""DELETE target image.
+			Args:
+				target_id: The ID of the target to delete.
+			Returns:
+				Future object which contains the return value or error from the
+				underlying Client.
+			"""
+			r = self.session.delete(self.server+'/api/targets/%d/image' % target_id)			
+			if not r.ok:
+				return InteropError(r)
+			return r.json()
+	
 
 	def get_target_image(self, target_id):
 			"""GET target image.
@@ -246,7 +261,7 @@ class InteropProxy(object):
 				Future object which contains the return value or error from the
 				underlying Client.
 			"""
-			r = self.session.post(server+'/api/targets/%d' % target_id, timeout = self.tout,data=json.dumps(target.serialize()))
+			r = self.session.post(self.server+'/api/targets/%d' % target_id, timeout = self.tout,data=json.dumps(target.serialize()))
 			if not r.ok:
 				return InteropError(r)
 			return r.json()
