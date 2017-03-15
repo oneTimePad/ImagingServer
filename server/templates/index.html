@@ -330,7 +330,7 @@
 			// put each one in an array
 			inputs.each(function() {
 				console.log(this.value);
-				if ($("#id_ptype").find(":selected").text() != "QR Code") {
+				if ($("#id_ptype").find(":selected").text() != "Emergent") {
 					if (this.name=="description") {
 						return;
 					}
@@ -339,7 +339,7 @@
 								this.value ="black";
 					}
 				}
-				else if ($("#id_ptype").find(":selected").text() == "QR Code") {
+				else if ($("#id_ptype").find(":selected").text() == "Emergent") {
 					if (this.name=="orientation"||this.name=="alphanumeric" || this.name == "alphanumeric_color" || this.name == "background_color" || this.name == "shape") {
 						return;
 					}
