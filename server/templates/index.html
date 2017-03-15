@@ -490,7 +490,7 @@
 					document.getElementById("connectinfo").className="red";
 				}
 				if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "true") {
-					// make sure trigger button reflects current status of camera 
+					// make sure trigger button reflects current status of camera
 					$("#trigger_on").html("Stop Triggering");
 					document.getElementById("trigger_on").value = "false";
 				}
@@ -535,7 +535,7 @@
 							return false;
 						});
 						div.appendChild(image);
-						$("#targets").append(div);						
+						$("#targets").append(div);
 					}
 					else {
 						// target already exists, remove from copy
@@ -650,7 +650,7 @@
 				});
 			}
 		});
-		
+
 		// poll heartbeat every second
 		window.setInterval(pollHeartbeat, 1000);
 
@@ -1157,7 +1157,7 @@
         <button type="submit" class="btn btn-primary">Logout</button>
       </form>
     </div>
-    <div id="connectinfo"></div>	
+    <div id="connectinfo"></div>
 	</nav>
 
 	<div id="left-panel">
