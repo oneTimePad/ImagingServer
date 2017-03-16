@@ -68,7 +68,7 @@ def interop_error_handler(error,startTime):
 	METHOD_NOT_ALLOWED = 405
 	INTERNAL_SERVER_ERROR =500
 
-	code,reason,text = error.errorData()
+	code = error.response.status_code
 
 
 	#response to client accordingly
@@ -91,8 +91,9 @@ def interop_error_handler(error,startTime):
 				error = isession.login()
 				if error is None:
 					return Response({'time':time()-startTime,'error':"Had to relogin in. Succeeded"})
-			return Response({'time':time()-startTime,'error':"CRITICAL: Re-login failed with %s" % error})	
-
+			return Response({'time':time()-startTime,'error':"CRITICAL: Re-login failed with %s" % str(error)})	
+	else:
+		return str(error)
 
 
 #endpoint for interoperability
