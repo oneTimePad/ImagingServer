@@ -82,7 +82,7 @@ class InteropProxy(object):
 		"""
 		deserializes the InteropProxy object
 		"""
-		pdb.set_trace()
+
 		if isinstance(ser,cls):
 			return ser
 		else:
