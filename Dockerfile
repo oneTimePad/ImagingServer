@@ -79,7 +79,8 @@ RUN sudo service postgresql start && \
 VOLUME /var/log/apache2 /var/lib/postgresql/9.5/data
 
 #start daemons
-CMD sudo service redis-server start && \
+CMD pip install pdb && apt-get update && apt-get install nano && \
+    sudo service redis-server start && \
     sudo service rabbitmq-server start && \
     sudo service postgresql start && \
 	sleep 50 && \  

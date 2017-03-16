@@ -269,16 +269,17 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 		serverCreds = ServerCredsSerializer(data=request.POST)
 		if not serverCreds.is_valid():
 			#respond with Error
-			return HttpResponseForbidden("invalid server creds %s" % serverCreds.errors)
+			return HttpResponse("invalid server creds %s" % serverCreds.errors)
 		login_data = dict(serverCreds.validated_data)
 
 		#create client
 		isession = InteropProxy(**login_data)
 		error = isession.login()
 		if error is not None:
-			return Response({'error',str(error)})
+			return HttpResponse(str(error))
 		#serialize and store in cache
 		cache.set('InteropProxy',isession.serialize())
+
 		return HttpResponse("Success")
 
 	def get(self,request):
