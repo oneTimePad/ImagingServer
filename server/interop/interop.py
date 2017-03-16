@@ -94,20 +94,26 @@ class InteropProxy(object):
 		global INTERNAL_SERVER_ERROR
 		#attempt to contact the login api for the interop server
 		try:
-			self.session.post(self.server+'/api/login',data=
+			r = self.session.post(self.server+'/api/login',data=
 				{'username':self.username,
 				'password':self.password},timeout=self.tout)
+			if not r.ok:
+				raise InteropError(r)
 			return None
 		#catch exceptions
 		except InteropError as serverExp:
-			code,reason,text =  serverExp.errorData()
+
+			code = serverExp.response.status_code
 
 			if code == BAD_REQUEST:
-				return "The current user/pass combo (%s, %s) is wrong. Please try again." % self.username,self.password
+				return "The current user/pass combo (%s, %s) is wrong. Please try again." % (self.username,self.password)
 			elif code == NOT_FOUND:
 				return "A server at %s was not found. Please reenter the server IP address." % (self.server)
 			elif code == INTERNAL_SERVER_ERROR:
 				return "Internal issues with their code. Stopping."
+			else:
+				return str(serverExp)
+
 
 		#deals with timeout error
 		except requests.ConnectionError:
