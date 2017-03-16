@@ -2,7 +2,7 @@ from .exceptions import InteropError
 from .types import AUVSITarget,MovingObstacle,StationaryObstacle,Mission
 import requests
 import json
-
+import pdb
 BAD_REQUEST = 400
 NOT_FOUND = 404
 INTERNAL_SERVER_ERROR = 500
@@ -14,13 +14,18 @@ class JSSession(requests.Session):
 	"""
 
 	def serialize(self):
-		attrs = ['headers','cookies','auth','timeout','proxies','hooks','params','config','verify']
+
+		attrs = ['headers','cookies','auth','proxies','hooks','params','verify']
 		
 		session_data = {}
 		
 		for attr in attrs:
-			session_data[attr] = getattr(self,attr)
-
+			if attr == 'headers':
+				session_data[attr] = dict(getattr(self,attr))
+			elif attr == 'cookies':
+				session_data[attr] = requests.utils.dict_from_cookiejar(getattr(self,attr))
+			else:
+				session_data[attr] = getattr(self,attr)		
 		return json.dumps(session_data)
 	
 	@classmethod
@@ -29,13 +34,17 @@ class JSSession(requests.Session):
 			return s
 		session_data = json.loads(s)
 
-		if 'auth' in session_data:
+		if 'auth' in session_data and session_data['auth'] is not None:
 			session_data['auth'] = tuple(session_data['auth'])
 
-		if 'cookies' in session_data:
-			session_data['cookies'] = dict((key.encode() ,val) for key, val in session_data['cookies'].items())
+		if 'cookies' in session_data and session_data['cookies'] is not None:
+			session_data['cookies'] = requests.utils.cookiejar_from_dict(session_data['cookies']) 
+		
+		new_session = JSSession()
+		for attr in session_data.keys():
+			setattr(new_session,attr,session_data[attr])
 
-		req.session(**session_data)
+		return new_session
 
 
 class InteropProxy(object):
@@ -44,10 +53,9 @@ class InteropProxy(object):
 	"""
 
 
-
-	def __init__(self,username,password,server,tout=5, restored_session = None):
+	def __init__(self,username,password,server,tout=5, session = None):
 		#attempt to restore the serialized session if possible
-		self.session = JSSession.deserialize(restored_session) if restored_session is not None else JSSession()
+		self.session = JSSession.deserialize(session) if session is not None else JSSession()
 		self.tout = tout
 		self.username = username
 		self.password = password
@@ -56,9 +64,12 @@ class InteropProxy(object):
 		"""
 		converts the object the json format to be stored in django's cache
 		"""
+
+		attrs = ['session','tout','username','password','server']
+
 		serial = {}
-		for attr in self.attrs:
-			data = self.__dict[attr]
+		for attr in attrs:
+			data = self.__dict__[attr]
 			if isinstance(data,JSSession):
 				serial[attr] = data.serialize()
 			#must be string then
@@ -71,6 +82,7 @@ class InteropProxy(object):
 		"""
 		deserializes the InteropProxy object
 		"""
+		pdb.set_trace()
 		if isinstance(ser,cls):
 			return ser
 		else:
@@ -83,15 +95,15 @@ class InteropProxy(object):
 		#attempt to contact the login api for the interop server
 		try:
 			self.session.post(self.server+'/api/login',data=
-				{'username':username,
-				'password':password},timeout=self.tout)
+				{'username':self.username,
+				'password':self.password},timeout=self.tout)
 			return None
 		#catch exceptions
 		except InteropError as serverExp:
 			code,reason,text =  serverExp.errorData()
 
 			if code == BAD_REQUEST:
-				return "The current user/pass combo (%s, %s) is wrong. Please try again." % username,password
+				return "The current user/pass combo (%s, %s) is wrong. Please try again." % self.username,self.password
 			elif code == NOT_FOUND:
 				return "A server at %s was not found. Please reenter the server IP address." % (self.server)
 			elif code == INTERNAL_SERVER_ERROR:
