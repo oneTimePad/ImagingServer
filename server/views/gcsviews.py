@@ -324,23 +324,30 @@ class GCSViewset(viewsets.ModelViewSet):
 			edit a target locally
 			args := pk (primary key for the target to edit)
 		"""
+
 		try:
 		
             #edit target with new values
 			target = Target.objects.get(pk=request.data['pk'])
-			target.edit(request.data)
 			new_target_data=  dict()
 			if target.sent:
+
+				if not cache.has_key("InteropProxy"):
+					return Response(json.dumps({'error':"Not logged into interop!"}))
 				#this is used to make requests to the interop server
 				isession = InteropProxy.deserialize(cache.get("InteropProxy"))
-				if not cache.has_key("InteropClient"):
-					return Response(json.dumps({'error':"Not logged into interop!"}))
 				#find target characteristics that are being changed
 				target_ser = TargetSerializer(target)
-				for key in request.data:
-					if request.data[key] != target_ser.data[key]:
+				for key in dict(target_ser.data).keys():
+					if key in request.data and request.data[key] != target_ser.data[key]:
 						new_target_data[key] = request.data[key]
-				isession.put_target(new_target_data)
+				data = isession.put_target(target.interop_id,new_target_data)
+				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
+				if isinstance(data,InteropError):
+					return Response(json.dumps({'error':str(data)}))
+				target.edit(request.data)
+
+
 						
 
 			return HttpResponse('Success')
@@ -354,32 +361,29 @@ class GCSViewset(viewsets.ModelViewSet):
 			remove the target from the imaging GCS
 			args := pk (primary key of target to remove)
 		"""
+
 		try:
             #get target photo path and delete it
 			target = Target.objects.get(pk=request.data['pk'])
 			if target.sent:
 				try:
+
+					if not cache.has_key("InteropProxy"):
+						return Response(json.dumps({'error':"Not logged into interop!"}))
 					#this is used to make requests to the interop server
 					isession = InteropProxy.deserialize(cache.get("InteropProxy"))
-					if not cache.has_key("InteropClient"):
-						return Response(json.dumps({'error':"Not logged into interop!"}))
 
-					data = isession.delete_target_image(targetID)
+					data = isession.delete_target_image(target.interop_id)
 
-					#test for interopError
+					#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
 					if isinstance(data,InteropError):
-						code, reason, text = data.errorData()
-						errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-						return Response({'error':errorStr})
+						return Response(json.dumps({'error':str(data)}))
+					data = isession.delete_target(target.interop_id)
+
+					#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
+					if isinstance(data,InteropError):
+						return Response(json.dumps({'error':str(data)}))
 					
-					data = isession.delete_target(targetID)
-
-					#test for interopError
-					if isinstance(data,InteropError):
-						code, reason, text = data.errorData()
-						errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-						return json.dumps({'error':errorStr})
-
 
 				except Exception as e:
 					return Response({'error':str(e)})
@@ -397,11 +401,13 @@ class GCSViewset(viewsets.ModelViewSet):
 			submits target to the Interop Server
 			args := pk (primary key of target to send)
 		"""
+
 		try:
+
+			if not cache.has_key("InteropProxy"):
+				return Response(json.dumps({'error':"Not logged into interop!"}))
 			#this is used to make requests to the interop server
 			isession = InteropProxy.deserialize(cache.get("InteropProxy"))
-			if not cache.has_key("InteropClient"):
-				return Response(json.dumps({'error':"Not logged into interop!"}))
 			#fetch the target and verify it is not already sent
 			target_model = Target.objects.get(pk=int(request.data['pk']))
 			if target_model.sent:
@@ -414,11 +420,11 @@ class GCSViewset(viewsets.ModelViewSet):
 				data = isession.post_target(target_serialized)
 				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
 				if isinstance(data,InteropError):
-					code, reason,text = data.errorData()
-					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-					return Response(json.dumps({'error':errorStr}))
+						return Response(json.dumps({'error':str(data)}))
 				#retrieve image binary for sent image
 				pid = data['id']
+				target_model.interop_id = pid
+				target_model.save()
 				f = open(target_model.picture.path, 'rb')
 				picData = f.read()
 
@@ -436,6 +442,8 @@ class GCSViewset(viewsets.ModelViewSet):
 				return Response({'error':str(e)})
 		except Target.DoesNotExist:
 			return Response(json.dumps({'error':'Image does not exist'}))
+		except Exception as e:
+			return Response(json.dumps({'error':str(e)}))
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):

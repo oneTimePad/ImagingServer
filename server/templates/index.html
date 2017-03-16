@@ -365,6 +365,7 @@
 					});
 				}
 				else {
+					console.log("calling edit");
 					// editing the shown target
 					input_array['pk'] = curr;
 					$.ajax({
@@ -385,6 +386,7 @@
 
 	// retrieve next NUM_FETCH pics
 	function forwardPicture() {
+
 		$.ajax({
 			url:"{% url 'gcs-forwardPicture'%}",
 			type: "POST",
@@ -457,8 +459,7 @@
 		if (image_cache==null) {
 			console.log("image cache is null");
 		}
-    		else {
-      			forwardPicture();
+          	forwardPicture();
   		// do not change this to use function pointers instead of the anonymous function
 	  	// that messes with the value of 'this' inside the function call because javascript
       		looping = setInterval(function(){
@@ -467,11 +468,12 @@
           			}
       			}, $("#loop_interval").val()*1000);
       			console.log("loop");
-    		}
+    		
 	}
 
 	function stoploop() {
 		clearTimeout(looping); // stop calling the loop function (opposite of setInterval)
+		looping = null;
 	}
 
 	// makes request to server to get heartbeat and trigger info from onboard computer
@@ -493,6 +495,10 @@
 					// make sure trigger button reflects current status of camera
 					$("#trigger_on").html("Stop Triggering");
 					document.getElementById("trigger_on").value = "false";
+					if(looping == null){
+	  					loop();
+	  				}
+
 				}
 				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false") {
 					$("#trigger_on").html("Start Triggering");
@@ -591,11 +597,11 @@
 			canvasinit();
 		})
 		// if there is no state to restore
-		if (window.sessionStorage.getItem("curr") == null) {
+		/*if (window.sessionStorage.getItem("curr") == null) {
 			// attempt to get a pic
 			forwardPicture();
 
-		}
+		}*/
 		// else if there is a state to restore
 		else {
 			// restore state on refresh
@@ -1060,6 +1066,8 @@
         if (json.hasOwnProperty("nothing")) {
           return;
         }
+	/*
+	   useless since poll heartbeat handles this
         var trigger_on = document.getElementById("trigger_on");
         $("#trigger_on").val( ((trigger_on.value == "true") ? trigger_on.value : "false"));
         if (trigger_on.value=="false") {
@@ -1071,6 +1079,7 @@
         else {
           $("#trigger_on").html("Start Triggering");
         }
+	*/
       }
     });
   }
