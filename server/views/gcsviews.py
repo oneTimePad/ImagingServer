@@ -345,7 +345,7 @@ class GCSViewset(viewsets.ModelViewSet):
 				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
 				if isinstance(data,InteropError):
 					return Response(json.dumps({'error':str(data)}))
-				target.edit(request.data)
+			target.edit(request.data)
 
 
 						
