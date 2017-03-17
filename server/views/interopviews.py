@@ -36,7 +36,7 @@ import sys
 from PIL import Image
 
 #interop
-from server.interop import InteropProxy,InteropError
+from server.interop import InteropProxy,InteropError,Telemetry
 
 import requests
 
