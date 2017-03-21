@@ -34,3 +34,4 @@ texttable==0.8.7
 vital-tools==0.1.7
 websocket-client==0.40.0
 uwsgi==2.0.14
+pdb
