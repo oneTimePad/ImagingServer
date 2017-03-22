@@ -54,6 +54,9 @@ class TargetInteropSerializer(object):
 		dataDict = dict(self.ser_target)
 		#type is a reservered word by Python,can't use it in model declaration
 		dataDict['type'] = dataDict.pop('ptype')
+		for key in dataDict.keys():
+			if dataDict[key] == '':
+				dataDict[key] = None
 		self.target = AUVSITarget(**dataDict)
 	def get_target(self):
 		return self.target

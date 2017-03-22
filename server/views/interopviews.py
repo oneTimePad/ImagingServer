@@ -36,7 +36,7 @@ import sys
 from PIL import Image
 
 #interop
-from server.interop import InteropProxy,InteropError
+from server.interop import InteropProxy,InteropError,Telemetry
 
 import requests
 
@@ -84,7 +84,7 @@ def interop_error_handler(error,startTime):
 		return Response({'time':time()-startTime,'error':"WARNING: Interop Internal Server Error"})
 	#EXCEPT FOR THIS
 	elif code == FORBIDDEN:
-			isession = InteropProxy.deserialize(cache.get("InteropClient"))
+			isession = InteropProxy.deserialize(cache.get("InteropProxy"))
 			times = 5
 			error = None
 			for i in range(0,times):
@@ -112,7 +112,8 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 
 		#fetch misisons from interop server (according to spec, more than one can be returned)
 		startTime = time()
-
+		if not cache.has_key("InteropProxy"):
+			return Response(json.dumps({'error':"Not logged into interop!"}))
 		#this is used to make requests to the interop server
 		isession = InteropProxy.deserialize(cache.get("InteropProxy"))
 		try:
@@ -130,7 +131,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			#never comes here
 		#handler all connection errors
 		except requests.ConnectionError:
-			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
+			return Response({'time':time()-startTime,'error':"WARNING: Encountered connection error." })
 
 		except requests.Timeout:
 			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
@@ -160,6 +161,9 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 		#fetch the current time, technically not needed, can be handed by client
 		#ignore it if you want
 		startTime = time()
+		if not cache.has_key("InteropProxy"):
+			return Response(json.dumps({'error':"Not logged into interop!"}))
+
 		#this is used to make requests to the interop server
 		isession = InteropProxy.deserialize(cache.get("InteropProxy"))
 
@@ -184,7 +188,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			#never comes here
 		#handler all connection errors
 		except requests.ConnectionError:
-			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
+			return Response({'time':time()-startTime,'error':"WARNING: Encountered connection error." })
 
 		except requests.Timeout:
 			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
@@ -214,6 +218,8 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 		client to the interop server
 		"""
 		startTime = time()
+		if not cache.has_key("InteropProxy"):
+			return Response(json.dumps({'error':"Not logged into interop!"}))
 
 		#this is used to make requests to the interop server
 		isession = InteropProxy.deserialize(cache.get("InteropProxy"))
@@ -236,7 +242,7 @@ class InteroperabilityViewset(viewsets.ModelViewSet):
 			return interop_error_handler(e)
 
 		except requests.ConnectionError:
-			return Response({'time':time()-startTime,'error':"WARNING: A server was found. Encountered connection error." })
+			return Response({'time':time()-startTime,'error':"WARNING: Encountered connection error." })
 
 		except requests.Timeout:
 			return Response({'time':time()-startTime,'error':"WARNING: The server timed out."})
@@ -279,7 +285,7 @@ class InteropLogin(View,TemplateResponseMixin,ContextMixin):
 		if error is not None:
 			return HttpResponse(str(error))
 		#serialize and store in cache
-		cache.set('InteropProxy',isession.serialize())
+		cache.set('InteropProxy',isession.serialize(),None)
 
 		return HttpResponse("Success")
 

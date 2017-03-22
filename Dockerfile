@@ -30,8 +30,8 @@ RUN sudo  apt-get  update && sudo apt-get install -y \
 	python3-psycopg2\
 	postgresql \
 	postgresql-client \
-	uwsgi 
-
+	uwsgi \
+	nano
 #RUN sudo apt-get install libapache2-mpm-itk && \
 #			libapache2-mod-wsgi
 #RUN sudo a2enmod wsgi
@@ -79,8 +79,7 @@ RUN sudo service postgresql start && \
 VOLUME /var/log/apache2 /var/lib/postgresql/9.5/data
 
 #start daemons
-CMD pip install pdb && apt-get update && apt-get install nano && \
-    sudo service redis-server start && \
+CMD sudo service redis-server start && \
     sudo service rabbitmq-server start && \
     sudo service postgresql start && \
 	sleep 50 && \  

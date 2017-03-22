@@ -111,7 +111,7 @@ class Target(models.Model):
 		('off_axis','Off-Axis'),
 		('emergent','Emergent')
 	)
-
+	interop_id = models.IntegerField(default=0)
 	picture = models.ImageField(storage=fs_targets,default=0)
 	#target data
 	ptype = models.CharField(max_length=20,choices=TARGET_TYPES)
@@ -150,7 +150,7 @@ class Target(models.Model):
 			mark target as was sent to the interop server
 		"""
 		self.sent = True
-
+		self.save()
 
 
 #TODO: EVERYTHING below this point is related to target geotagging

@@ -324,11 +324,32 @@ class GCSViewset(viewsets.ModelViewSet):
 			edit a target locally
 			args := pk (primary key for the target to edit)
 		"""
-		try:
 
+		try:
+		
             #edit target with new values
 			target = Target.objects.get(pk=request.data['pk'])
+			new_target_data=  dict()
+			if target.sent:
+
+				if not cache.has_key("InteropProxy"):
+					return Response(json.dumps({'error':"Not logged into interop!"}))
+				#this is used to make requests to the interop server
+				isession = InteropProxy.deserialize(cache.get("InteropProxy"))
+				#find target characteristics that are being changed
+				target_ser = TargetSerializer(target)
+				for key in dict(target_ser.data).keys():
+					if key in request.data and request.data[key] != target_ser.data[key]:
+						new_target_data[key] = request.data[key]
+				data = isession.put_target(target.interop_id,new_target_data)
+				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
+				if isinstance(data,InteropError):
+					return Response(json.dumps({'error':str(data)}))
 			target.edit(request.data)
+
+
+						
+
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			return HttpResponseForbidden()
@@ -340,19 +361,39 @@ class GCSViewset(viewsets.ModelViewSet):
 			remove the target from the imaging GCS
 			args := pk (primary key of target to remove)
 		"""
+
 		try:
             #get target photo path and delete it
 			target = Target.objects.get(pk=request.data['pk'])
+			if target.sent:
+				try:
+
+					if not cache.has_key("InteropProxy"):
+						return Response(json.dumps({'error':"Not logged into interop!"}))
+					#this is used to make requests to the interop server
+					isession = InteropProxy.deserialize(cache.get("InteropProxy"))
+
+					data = isession.delete_target_image(target.interop_id)
+
+					#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
+					if isinstance(data,InteropError):
+						return Response(json.dumps({'error':str(data)}))
+					data = isession.delete_target(target.interop_id)
+
+					#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
+					if isinstance(data,InteropError):
+						return Response(json.dumps({'error':str(data)}))
+					
+
+				except Exception as e:
+					return Response({'error':str(e)})
+
 			os.remove(target.picture.path)
 			return HttpResponse('Success')
 		except Target.DoesNotExist:
 			pass
 		return HttpResponseForbidden("Target does not exist")
 
-	@list_route(methods=['post'])
-	def updateTarget(self,request,pk=None):
-		#i'm thinking about adding this...
-		pass
 
 	@list_route(methods=['post'])
 	def sendTargetToInterop(self,request,pk=None):
@@ -360,11 +401,13 @@ class GCSViewset(viewsets.ModelViewSet):
 			submits target to the Interop Server
 			args := pk (primary key of target to send)
 		"""
+
 		try:
+
+			if not cache.has_key("InteropProxy"):
+				return Response(json.dumps({'error':"Not logged into interop!"}))
 			#this is used to make requests to the interop server
 			isession = InteropProxy.deserialize(cache.get("InteropProxy"))
-			if not cache.has_key("InteropClient"):
-				return Response(json.dumps({'error':"Not logged into interop!"}))
 			#fetch the target and verify it is not already sent
 			target_model = Target.objects.get(pk=int(request.data['pk']))
 			if target_model.sent:
@@ -377,11 +420,11 @@ class GCSViewset(viewsets.ModelViewSet):
 				data = isession.post_target(target_serialized)
 				#test for interop error and respond accordingly/MIGHT BE AN ISSUE HAVE TO TEST
 				if isinstance(data,InteropError):
-					code, reason,text = data.errorData()
-					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-					return Response(json.dumps({'error':errorStr}))
+						return Response(json.dumps({'error':str(data)}))
 				#retrieve image binary for sent image
 				pid = data['id']
+				target_model.interop_id = pid
+				target_model.save()
 				f = open(target_model.picture.path, 'rb')
 				picData = f.read()
 
@@ -399,6 +442,8 @@ class GCSViewset(viewsets.ModelViewSet):
 				return Response({'error':str(e)})
 		except Target.DoesNotExist:
 			return Response(json.dumps({'error':'Image does not exist'}))
+		except Exception as e:
+			return Response(json.dumps({'error':str(e)}))
 
 	@list_route(methods=['post'])
 	def dumpTargetData(self,request,pk=None):
@@ -419,100 +464,6 @@ class GCSViewset(viewsets.ModelViewSet):
 				continue
 
 		return Response({'data':data})
-
-	@list_route(methods=['post'])
-	def deleteTargetImageThumbnail(self, request, pk=None):
-		try:
-			if not cache.has_key("InteropClient"):
-				return Response(json.dumps({'error':"Not logged into interop!"}))
-			#fetch the client
-			isession = cache.get("InteropClient")
-
-			targetID = int(request.data['pk'])
-
-			if not target.sent:
-				return Response(json.dumps({'sent', 'Target was not sent \nCannotbe deleted'}))
-			try:
-				data = isession.delete_target(targetID)
-
-				#test for interopError
-				if isinstance(data,InteropError):
-					code, reason, text = data.errorData()
-					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-					return Response(json.dumps({'error':errorStr}))
-
-			except Exception as e:
-				return Response({'error':str(e)})
-
-		except Target.DoesNotExist:
-			return Response(json.dumps({'error':'Image does not exist'}))
-
-	@list_route(methods=['post'])
-	def deleteTargetId(self, request, pk=None):
-		try:
-			if not cache.has_key("InteropClient"):
-				return Response(json.dumps({'error':"Not logged into interop!"}))
-			#fetch the client
-			isession = cache.get("InteropClient")
-
-			targetID = int(request.data['pk'])
-
-			if not target.sent:
-				return Response(json.dumps({'sent', 'Target was not sent \nCannotbe deleted'}))
-			try:
-				data = isession.delete_target(targetID)
-
-				#test for interopError
-				if isinstance(data,InteropError):
-					code, reason, text = data.errorData()
-					errorStr = "Error: HTTP Code %d, reason: %s" % (code,reason)
-					return Response(json.dumps({'error':errorStr}))
-
-			except Exception as e:
-				return Response({'error':str(e)})
-
-		except Target.DoesNotExist:
-			return Response(json.dumps({'error':'Image does not exist'}))
-
-	@list_route(methods=['post'])
-	def updateTargetId(self, request, pk=None):
-		try:
-			if not cache.has_key("InteropClient"):
-				return Response(json.dumps({'error':"Not logged into interop!"}))
-			#fetch the client
-			isession = cache.get("InteropClient")
-
-			targetA = Target.objects.get(pk=int(request.data['pk']))
-			targetID = int(request.data['pk'])
-
-			if not target.sent:
-				return Response(json.dumps({'sent','Target does not exist\n Characteristics can not be updated'}))
-
-			pretarget = TargetSubmissionSerializer(targetA) #serializes target
-
-			try:
-				#create dictionary to use to create AUVSITarget
-				dataDict = dict(pretarget.data)
-
-				target = AUVSITarget(**dataDict)
-				dataDict['type'] = dataDict.pop('ptype')
-				for key in dataDict:
-					if dataDict[key]=='':
-						dataDict[key] =None
-
-				#call to put_target() in interopmethods. Updates image characteristics
-				data = isession.put_target(targetID, target)
-
-				#test for interopError
-				if isinstance(data, InteropError):
-					code, reason, text = data.errorData()
-					errorStr = "Error: HTTP Code %d, reason: %s" % (code, reason)
-					return Response(json.dumps({'error':errorStr}))
-			except Exception as e:
-				return Response({'error':str(e)})
-
-		except Target.DoesNotExist:
-			return Response(json.dumps({'error':'Image does not exist'}))
 
 	@list_route(methods=['post'])
 	def getHeartbeat(self, request, pk=None):

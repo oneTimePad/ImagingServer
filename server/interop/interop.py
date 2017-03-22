@@ -211,7 +211,7 @@ class InteropProxy(object):
 		return r.json()
 
 
-	def post_target_image(target_id, image_binary):
+	def post_target_image(self,target_id, image_binary):
 		"""ADDS or UPDATES the target image thumbnail
 
 		Args:
@@ -237,7 +237,7 @@ class InteropProxy(object):
 				Future object which contains the return value or error from the
 				underlying Client.
 			"""
-			r = self.session.post(self.server+'/api/targets/%d' % target_id, data=json.dumps(target))
+			r = self.session.put(self.server+'/api/targets/%d' % target_id, data=json.dumps(target))
 			if not r.ok:
 				return InteropError(r)
 			return r.json()
@@ -250,10 +250,10 @@ class InteropProxy(object):
 				Future object which contains the return value or error from the
 				underlying Client.
 			"""
-			r = self.session.delete(self.server+'/api/targets/%d' % target_id, data=json.dumps(target.serialize()))
+			r = self.session.delete(self.server+'/api/targets/%d' % target_id)
 			if not r.ok:
 				return InteropError(r)
-			return r.json()
+			return r.text
 	
 	def delete_target_image(self, target_id):
 			"""DELETE target image.
@@ -266,7 +266,7 @@ class InteropProxy(object):
 			r = self.session.delete(self.server+'/api/targets/%d/image' % target_id)			
 			if not r.ok:
 				return InteropError(r)
-			return r.json()
+			return r.text
 	
 
 	def get_target_image(self, target_id):
