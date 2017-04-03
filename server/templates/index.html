@@ -24,12 +24,12 @@
 	next_array = null;
 	firstinit = true;
 	looping = null;
-	isLooping = true;
+	isLooping = false;
 	said_no_pictures=false;
 	timeSent = 0;
 	heartbeat = null;
+	loop_start_by_heartbeat=0;
 	targets = {};
-
 
 	// function to convert input into JSON, which also deals with input arrays
 	(function() {
@@ -199,9 +199,9 @@
 		if (!PictureArray.prototype.allow) {
 			return;
 		}
-		console.log(this);
-		console.log(typeof(this));
-		console.log(this.getCurrent());
+		//console.log(this);
+		//console.log(typeof(this));
+		//console.log(this.getCurrent());
 		if (this.getCurrent()+1 == this.length) {
 			if (this.swapArray()) {
 				return;
@@ -308,7 +308,7 @@
 
 	// sets the current image marked in the list
 	PictureArray.prototype.curr = function() {
-		console.log(this.getCurrent());
+		//console.log(this.getCurrent());
 		if (this.getCurrent()>=0) {
 			setFocusedImage(this[this.getCurrent()]);
 		}
@@ -329,7 +329,7 @@
 			var input_array = {};
 			// put each one in an array
 			inputs.each(function() {
-				console.log(this.value);
+				//console.log(this.value);
 				if ($("#id_ptype").find(":selected").text() != "Emergent") {
 					if (this.name=="description") {
 						return;
@@ -365,7 +365,7 @@
 					});
 				}
 				else {
-					console.log("calling edit");
+				//	console.log("calling edit");
 					// editing the shown target
 					input_array['pk'] = curr;
 					$.ajax({
@@ -405,7 +405,7 @@
 					setFocusedImage(image_cache[0]);
 				}
 				else {
-				 	console.log("cached");
+				 	//console.log("cached");
 					next_array = cache;
 					next_array.serializePrep();
 					window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
@@ -457,12 +457,13 @@
 	// setInterval keeps calling the given function
 	function loop() {
 		if (image_cache==null) {
-			console.log("image cache is null");
+			//console.log("image cache is null");
 		}
           	forwardPicture();
   		// do not change this to use function pointers instead of the anonymous function
 	  	// that messes with the value of 'this' inside the function call because javascript
       		looping = setInterval(function(){
+				console.log("looping");
           			if (image_cache != null) {
             				image_cache.next();
           			}
@@ -495,14 +496,19 @@
 					// make sure trigger button reflects current status of camera
 					$("#trigger_on").html("Stop Triggering");
 					document.getElementById("trigger_on").value = "false";
-					if(looping == null){
+					if(isLooping == false && loop_start_by_heartbeat == 0){
+						isLooping=true;
+						console.log("STARTING BY HEARTBEAT");
 	  					loop();
-	  				}
+					}	  				
+					loop_start_by_heartbeat=1;
 
 				}
 				else if (json_response.hasOwnProperty("triggering") && json_response["triggering"] == "false") {
 					$("#trigger_on").html("Start Triggering");
 					document.getElementById("trigger_on").value = "true";
+					loop_start_by_heartbeat = 0;
+					console.log("ENDING BY HEARTBEAT");
 				}
 			}
 		});
@@ -612,7 +618,7 @@
 			else {
 				next_array = null;
 			}
-			console.log(next_array);
+			//console.log(next_array);
 
 			curr = window.sessionStorage.getItem("curr"); // current pic index
 			// image_cache.current=window.sessionStorage.getItem("current"); // prototype current
@@ -726,14 +732,14 @@
 
 	// set the focusedImage to the given image, also changing the value of curr, and initializes the canvas
 	function setFocusedImage(image) {
-		console.log(new Date().getTime()/1000);
+		//console.log(new Date().getTime()/1000);
 		if (image_cache!=null&&image_cache!="null") {
 			// save all state data
 			image_cache.serializePrep();
 			window.sessionStorage.setItem("image_cache",JSON.stringify(image_cache)); // image array
 			window.sessionStorage.setItem("curr",curr); // current pic id
 			if (next_array != null && next_array!="null") {
-				console.log(next_array);
+				//console.log(next_array);
 				next_array.serializePrep();
 
 				window.sessionStorage.setItem("next_array",JSON.stringify(next_array));
@@ -847,7 +853,7 @@
 
 	// submit given target to server
 	function tsubmit(pk) {
-		console.log("submit")
+		//console.log("submit")
 		$.ajax({
 			url:"{% url 'gcs-sendTargetToInterop'%}",
 			type:"POST",
@@ -1002,7 +1008,7 @@
 	function backToPictures() {
 		if (image_cache) {
 			picview = true;
-			console.log(image_cache);
+			//console.log(image_cache);
 			image_cache.curr();
 		}
 		else {
@@ -1042,7 +1048,7 @@
       dataType: "JSON",
       data: {"new_gain":$("#new_gain").val()},
       success: function(json) {
-        console.log("gain set with: "+$("#new_gain").val() );
+       // console.log("gain set with: "+$("#new_gain").val() );
         if (json.hasOwnProperty("error")){
           bootbox.alert(json.error);
           return;
